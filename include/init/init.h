@@ -43,7 +43,7 @@ void 		os_add_drv_iic_handle			(__TYPE_HW_IIC_HANDLE_TYPE * iic_handle, uint8_t 
 void 		os_add_drv_spi_handle			(__TYPE_HW_SPI_HANDLE_TYPE * iic_handle, uint8_t hw_id);
 void 		os_add_drv_adc_handle			(__TYPE_HW_ADC_HANDLE_TYPE * iic_handle, uint8_t hw_id);
 void 		os_add_drv_timer_handle			(__TYPE_HW_TIMER_HANDLE_TYPE * iic_handle, uint8_t hw_id);
-void 		os_add_drv_iwdg_handle			(__TYPE_HW_IWDG_HANDLE_TYPE * iic_handle, uint8_t hw_id);
+void 		os_add_drv_iwdg_handle			(__TYPE_HW_IWDG_HANDLE_TYPE * iic_handle);
 
 /* Entry Point of the OS and APP */
 void 		os_entry						(void);

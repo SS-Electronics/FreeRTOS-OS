@@ -95,7 +95,7 @@ void os_add_drv_timer_handle	(__TYPE_HW_TIMER_HANDLE_TYPE * handle, uint8_t hw_i
  *
  *
  * *****************************************************/
-void os_add_drv_iwdg_handle	(__TYPE_HW_IWDG_HANDLE_TYPE * handle, uint8_t hw_id)
+void os_add_drv_iwdg_handle	(__TYPE_HW_IWDG_HANDLE_TYPE * handle)
 {
 	if(IWDG_INCLUDE == 1)
 	{

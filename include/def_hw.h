@@ -122,6 +122,19 @@ typedef enum
 
 }type_drv_hw_timer_list;
 
+typedef enum
+{
+	HW_ID_ADC_1 = 0,
+	HW_ID_ADC_2,
+	HW_ID_ADC_3,
+	HW_ID_ADC_4,
+	HW_ID_ADC_5,
+	HW_ID_ADC_6,
+	HW_ID_ADC_7,
+	HW_ID_ADC_8,
+	HW_ID_ADC_9,
+	HW_ID_ADC_10
 
+}type_drv_hw_adc_list;
 
 #endif /* INCLUDE_DEF_HW_H_ */
