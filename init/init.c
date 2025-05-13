@@ -110,8 +110,9 @@ void os_add_drv_iwdg_handle	(__TYPE_HW_IWDG_HANDLE_TYPE * handle)
  */
 void os_entry(void)
 {
-	/* Drivers initialization [ Update the driver handles
-	 * as the peripherals are initialized at low level ]  */
+	/* Send the driver handles to each driver */
+	drv_serial_update_handle(&type_drv_hw_handle);
+
 
 
 //	drv_wdg_handle_ref = drv_wdg_get_handle();
