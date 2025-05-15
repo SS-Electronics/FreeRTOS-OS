@@ -24,7 +24,7 @@
  */
 
 
-#include "ringbuffer.h"
+#include <lib/ringbuffer.h>
 #include <string.h>
 #include <inttypes.h>
 

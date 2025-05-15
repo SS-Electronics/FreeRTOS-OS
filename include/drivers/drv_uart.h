@@ -22,7 +22,7 @@
 #include <def_hw.h>
 #include <conf_os.h>
 #include <lib/ringbuffer.h>
-
+#include <ipc/mqueue.h>
 
 
 

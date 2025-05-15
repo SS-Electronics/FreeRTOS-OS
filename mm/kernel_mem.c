@@ -13,10 +13,27 @@
 # GNU General Public License for more details.
 */
 
-#include <ipc/global_var.h>
-
-/* driver status variables */
+#include <os/kernel_mem.h>
 
 
 
+ void *  kmaloc(size_t size)
+ {
+    void *ret;
+	ret = pvPortMalloc(size);
 
+	return ret;
+}
+
+int32_t kfree(void *p)
+{
+    if(p != NULL)
+    {
+        vPortFree(p);
+        return ERROR_NONE;
+    }
+    else
+    {
+        return ERROR_OP;
+    }
+}

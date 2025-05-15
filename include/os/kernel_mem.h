@@ -13,10 +13,36 @@
 # GNU General Public License for more details.
 */
 
-#include <ipc/global_var.h>
 
-/* driver status variables */
+#ifndef FREERTOS_OS_INCLUDE_OS_KERNEL_MEM_H_
+#define FREERTOS_OS_INCLUDE_OS_KERNEL_MEM_H_
+
+#include <def_std.h>
+
+#include <FreeRTOS.h>
+#include <atomic.h>
+#include <queue.h>
+#include <task.h>
+#include <timers.h>
+#include <semphr.h>
+#include <event_groups.h>
+#include <stream_buffer.h>
 
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+void*  		kmaloc(size_t size);
+int32_t 	kfree(void *p);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+#endif /* FREERTOS_OS_INCLUDE_OS_KERNEL_MEM_H_ */

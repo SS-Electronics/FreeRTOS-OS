@@ -15,6 +15,7 @@
 
 #include <init/init.h>
 
+
 /* *****************************************************
  *
  *
@@ -111,7 +112,12 @@ void os_add_drv_iwdg_handle	(__TYPE_HW_IWDG_HANDLE_TYPE * handle)
 void os_entry(void)
 {
 	/* Send the driver handles to each driver */
-	drv_serial_update_handle(&type_drv_hw_handle);
+	for(int i = 0; i < NO_OF_UART; i++)
+	{
+		drv_serial_update_handle(handle_os_harware.handle_hw_uart[i], i);
+	}
+
+
 
 
 

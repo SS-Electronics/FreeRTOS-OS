@@ -13,9 +13,21 @@
 # GNU General Public License for more details.
 */
 
-#ifndef OS_KERNEL_KERNEL_H_
-#define OS_KERNEL_KERNEL_H_
+#ifndef FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_
+#define FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_
 
+
+//#include <sys/stat.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <signal.h>
+#include <time.h>
+//#include <sys/time.h>
+//#include <sys/times.h>
+
+
+#include <def_std.h>
 
 #include <FreeRTOS.h>
 #include <atomic.h>
@@ -26,10 +38,29 @@
 #include <event_groups.h>
 #include <stream_buffer.h>
 
-
-#include "kernel_mem.h"
-#include "kernel_syscall.h"
+#include <lib/ringbuffer.h>
 
 
 
-#endif /* OS_KERNEL_KERNEL_H_ */
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+
+
+
+
+
+
+#endif /* FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_ */

@@ -21,7 +21,9 @@
 #include <def_env_macros.h>
 #include <def_hw.h>
 
-/* Typedef of LOW level driver handles list */
+/* Driver related include */
+#include <drivers/drv_uart.h>
+
 
 /* Here we have accommodate all the handles as per of the requirements */
 

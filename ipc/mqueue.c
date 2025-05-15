@@ -23,6 +23,10 @@
 #if(PERIPHERAL_UART_1_EN == FLAG_SET)
 struct ringbuffer				ipc_handle_uart_1_drv_rx_handle;
 static uint8_t					ipc_handle_uart_1_drv_rx_storage[CONF_IPC_RD_UART_1_RX_SIZE];
+
+struct ringbuffer				ipc_handle_printk_buffer;
+static uint8_t					ipc_handle_printk_buffer_storage[CONF_IPC_PRINTK_BUFFER_SIZE];
+
 #endif
 
 //#if(PERIPHERAL_CAN_1_EN == FLAG_ENABLE)
@@ -88,11 +92,12 @@ static uint8_t					ipc_handle_uart_1_drv_rx_storage[CONF_IPC_RD_UART_1_RX_SIZE];
  * *****************************************************/
 status_type 	ipc_mqueue_init(void)
 {
-	kernel_status_type status = KERNEL_OK;
+	type_kernel_status status = ERROR_NONE;
 
 
 #if(CONF_INC_PROC_OS_SHELL_MGMT == 1)
 	ringbuffer_init(&ipc_handle_uart_1_drv_rx_handle, ipc_handle_uart_1_drv_rx_storage, CONF_IPC_RD_UART_1_RX_SIZE);
+	ringbuffer_init(&ipc_handle_printk_buffer, ipc_handle_printk_buffer_storage, CONF_IPC_PRINTK_BUFFER_SIZE);
 #endif
 
 	/* USB DRIVER 1 ISR to canopen read funciton linkage */

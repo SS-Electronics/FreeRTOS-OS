@@ -24,10 +24,13 @@
 
 typedef int	status_type;
 
-#define ERROR_NONE			0
-#define ERROR_OP			1
-#define ERROR_TIMEOUT		-1
-#define ERROR_NO_ACK		-2
+enum
+{
+ ERROR_NONE		=	0,
+ ERROR_OP,
+ ERROR_TIMEOUT,
+ ERROR_NO_ACK
+};
 
 
 
@@ -39,7 +42,7 @@ typedef struct
 }type_diagnostic_data;
 
 
-
+typedef int type_kernel_status;
 
 
 

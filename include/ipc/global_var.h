@@ -19,9 +19,6 @@
 
 
 /* External variables declaration */
-extern global_drv_status_type 			global_drv_status;
-extern global_debug_status_type			global_debug_status;
-extern global_service_status_type		global_service_status;
 
 
 
