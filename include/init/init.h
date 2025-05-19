@@ -27,6 +27,8 @@
 
 #include <ipc/mqueue.h>
 
+
+#include <os/kernel_services.h>
 /* Here we have accommodate all the handles as per of the requirements */
 
 

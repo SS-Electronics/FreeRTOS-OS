@@ -15,9 +15,45 @@
 
 #include <os/kernel_services.h>
 
+/* *****************************************************
+ *	Task handles
+ *
+ *
+ * *****************************************************/
+static TaskHandle_t thread_handle_service_uart_mgmt = NULL;
+static StaticTask_t thread_buff_service_uart_mgmt;
+static StackType_t  thread_stack_service_uart_mgmt[ CONF_THREAD_UART_MGMT_STACK_SIZE ];
+
+/* *****************************************************
+ *
+ *
+ *
+ * *****************************************************/
+status_type os_kernel_thread_register(void)
+{
+	status_type status = ERROR_NONE;
+
+	/* Register serial management task */
+	thread_handle_service_uart_mgmt = xTaskCreateStatic( thread_uart_mgmt,
+													    "THREAD_SERIAL_MGMT",
+														CONF_THREAD_UART_MGMT_STACK_SIZE,
+													    NULL,
+														CONF_THREAD_UART_MGMT_PRIORITY,
+														thread_stack_service_uart_mgmt,
+													    &thread_buff_service_uart_mgmt
+		                							   );
+	if( thread_handle_service_uart_mgmt == NULL )
+	{
+		/* Exception mechanism */
+		status |= ERROR_OP;
+	}
 
 
 
+
+
+	return status;
+}
 
 
 

@@ -20,12 +20,30 @@
  *
  *
  * *****************************************************/
-#if(PERIPHERAL_UART_1_EN == FLAG_SET)
+#if (NO_OF_UART > 0)
+
 struct ringbuffer				ipc_handle_uart_1_drv_rx_handle;
+
+#ifndef CONF_IPC_RD_UART_1_RX_SIZE
+#error "[ OS ] UART 1 CONF_IPC_RD_UART_1_RX_SIZE not defined...!"
+#else
 static uint8_t					ipc_handle_uart_1_drv_rx_storage[CONF_IPC_RD_UART_1_RX_SIZE];
+#endif
 
 struct ringbuffer				ipc_handle_printk_buffer;
 static uint8_t					ipc_handle_printk_buffer_storage[CONF_IPC_PRINTK_BUFFER_SIZE];
+
+#endif
+
+
+#if (NO_OF_UART > 1)
+struct ringbuffer				ipc_handle_uart_2_drv_rx_handle;
+
+#ifndef CONF_IPC_RD_UART_1_RX_SIZE
+#error "[ OS ] UART 2 CONF_IPC_RD_UART_2_RX_SIZE not defined...!"
+#else
+static uint8_t					ipc_handle_uart_2_drv_rx_storage[CONF_IPC_RD_UART_2_RX_SIZE];
+#endif
 
 #endif
 
@@ -95,11 +113,14 @@ status_type 	ipc_mqueue_init(void)
 	type_kernel_status status = ERROR_NONE;
 
 
-#if(CONF_INC_PROC_OS_SHELL_MGMT == 1)
+#if(NO_OF_UART > 0)
 	ringbuffer_init(&ipc_handle_uart_1_drv_rx_handle, ipc_handle_uart_1_drv_rx_storage, CONF_IPC_RD_UART_1_RX_SIZE);
 	ringbuffer_init(&ipc_handle_printk_buffer, ipc_handle_printk_buffer_storage, CONF_IPC_PRINTK_BUFFER_SIZE);
 #endif
 
+#if(NO_OF_UART > 1)
+	ringbuffer_init(&ipc_handle_uart_2_drv_rx_handle, ipc_handle_uart_2_drv_rx_storage, CONF_IPC_RD_UART_2_RX_SIZE);
+#endif
 	/* USB DRIVER 1 ISR to canopen read funciton linkage */
 //#if(PERIPHERAL_USB_1_EN == FLAG_ENABLE)
 //	ringbuffer_init(&pipe_usb_1_drv_rx_handle, pipe_usb_1_drv_rx_storage, PIPE_USB_1_DRV_RX_SIZE);

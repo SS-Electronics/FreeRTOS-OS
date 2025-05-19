@@ -18,7 +18,7 @@
 #if (NO_OF_UART > 0)
 
 /* Local driver handle reference*/
-static type_drv_hw_handle 		*uart_handle_ref;
+static type_drv_hw_handle 		uart_handle_ref;
 
 /* Operational Variables*/
 static uint8_t 					temp_rx_char_buff;
@@ -32,7 +32,7 @@ void	drv_serial_update_handle(__TYPE_HW_UART_HANDLE_TYPE * handle, uint8_t dev_i
 {
 	if( (handle != NULL) && (dev_id < NO_OF_UART) )
 	{
-		uart_handle_ref->handle_hw_uart[dev_id] = handle;
+		uart_handle_ref.handle_hw_uart[dev_id] = handle;
 	}
 }
 
@@ -46,10 +46,10 @@ status_type	drv_serial_init(uint8_t dev_id)
 	status_type drv_staus = ERROR_NONE;
 
 	/* Check if the handles are NULL or not */
-	if((uart_handle_ref->handle_hw_uart[dev_id] != NULL) && (dev_id < NO_OF_UART) )
+	if((uart_handle_ref.handle_hw_uart[dev_id] != NULL) && (dev_id < NO_OF_UART) )
 	{
 		/*Start the communication */
-		drv_staus |= UART_Start_Receive_IT(uart_handle_ref->handle_hw_uart[dev_id], &temp_rx_char_buff, 1);
+		drv_staus |= UART_Start_Receive_IT(uart_handle_ref.handle_hw_uart[dev_id], &temp_rx_char_buff, 1);
 	}
 	else
 	{
@@ -69,12 +69,12 @@ status_type	drv_serial_transmit(uint8_t dev_id, uint8_t* data, uint16_t len)
 	status_type status = ERROR_NONE;
 
 	/* Send one by one character if the handle is not null */
-	if((uart_handle_ref->handle_hw_uart[dev_id] != NULL) && (dev_id < NO_OF_UART) )
+	if((uart_handle_ref.handle_hw_uart[dev_id] != NULL) && (dev_id < NO_OF_UART) )
 	{
 		/* Timeout 10mS*/
 		for (int i = 0; i<len; i++)
 		{
-			status |= HAL_UART_Transmit(uart_handle_ref->handle_hw_uart[dev_id]
+			status |= HAL_UART_Transmit(uart_handle_ref.handle_hw_uart[dev_id]
 										,&data[i]
 										,1
 										,CONF_UART_TXN_TIMEOUT_MS
@@ -117,13 +117,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 	/* Put the character in queue [ Multiplexed here according the handle type */
 	/* NO context switch will happen here so no thread safe needed */
-
-	if(huart == uart_handle_ref->handle_hw_uart[HW_ID_UART_1])
+#if (NO_OF_UART > 0)
+	if(huart == uart_handle_ref.handle_hw_uart[HW_ID_UART_1])
 	{
-#if(CONF_INC_PROC_OS_SHELL_MGMT == 1)
 		ringbuffer_putchar(&ipc_handle_uart_1_drv_rx_handle, temp_rx_char_buff);
-#endif
 	}
+#endif
+
+#if (NO_OF_UART > 1)
+	if(huart == uart_handle_ref.handle_hw_uart[HW_ID_UART_2])
+	{
+		ringbuffer_putchar(&ipc_handle_uart_2_drv_rx_handle, temp_rx_char_buff);
+	}
+#endif
+
 }
 
 

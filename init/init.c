@@ -111,7 +111,7 @@ void os_add_drv_iwdg_handle	(__TYPE_HW_IWDG_HANDLE_TYPE * handle)
  */
 void os_entry(void)
 {
-	status_type status;
+	status_type status = ERROR_NONE;
 
 	/*
 	 * Send the driver handles to each driver
@@ -132,21 +132,24 @@ void os_entry(void)
 	 * */
 	status |= ipc_mqueue_init();
 
-//	drv_wdg_handle_ref = drv_wdg_get_handle();
-//
-//	drv_wdg_handle_ref->handle = handle_list->wdg_handle;
-//
-//	/* Initialize the Service */
-//	kernel_status_type status = service_init();
-//	/* is status is ok and manual tests are not
-//	 * enabled then Start the kernel */
-//	/* IF the manual tests are not enabled */
-//
-//	if(status == KERNEL_OK)
-//	{
-//		service_start_kernel();
-//	}
-//	/* Program shouldn't go after that  */
+	/*
+	 * Register all the kernel threads
+	 * */
+	status |= os_kernel_thread_register();
+
+
+
+	drv_cpu_interrupt_prio_set();
+
+	if(status == ERROR_NONE)
+	{
+		/*Start the schedular */
+		vTaskStartScheduler();
+	}
+
+
+
+	/* Program shouldn't go after that  */
 	while(1)
 	{
 

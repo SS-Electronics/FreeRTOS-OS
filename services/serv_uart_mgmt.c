@@ -40,7 +40,11 @@ void thread_uart_mgmt(void * arg)
 {
 	if(thread_uart_mgmt_init() != ERROR_NONE)
 	{
+		printk("[ ERR ] UART Management suspended!\n\r");
 		vTaskSuspend(NULL);
+	}
+	{
+		printk("[ OK ] UART Management started!\n\r");
 	}
 
 	while(1)
