@@ -17,58 +17,56 @@
 #include <os/kernel_syscall.h>
 
 
+static char temp_time_buffer[10]; // Max value of uint32_t
+static char temp_char_buffer[CONF_MAX_CHAR_IN_PRINTK]; // Max value of uint32_t
 
 
 
 
-
-
+/* *****************************************************
+ *
+ *
+ *
+ * *****************************************************/
 int32_t	printk(char* ch)
 {
+#if (NO_OF_UART > 0)
+
 	ATOMIC_ENTER_CRITICAL();
+
+	int 	len, DataIdx;
+	char 	temp_byte_buff;
+
+	memset(temp_time_buffer, 0, 10);
+	memset(temp_char_buffer, 0, CONF_MAX_CHAR_IN_PRINTK);
+
+	/*
+	 * Print the time-stamp
+	 * */
+
+	sprintf(temp_time_buffer,"[%d] ",(int)drv_time_get_ticks());
+	len = strlen((char*)temp_time_buffer);
+
+	for (DataIdx = 0; DataIdx < len; DataIdx++)
+	{
+		temp_byte_buff = temp_time_buffer[DataIdx];
+		ringbuffer_putchar(&ipc_handle_printk_buffer, temp_byte_buff);
+	}
+
+	/*
+	 * Print actual message
+	 * */
+	len = strlen(ch);
+
+	for (DataIdx = 0; DataIdx < len; DataIdx++)
+	{
+		temp_byte_buff = ch[DataIdx];
+		ringbuffer_putchar(&ipc_handle_printk_buffer, temp_byte_buff);
+	}
+
+	ATOMIC_EXIT_CRITICAL();
+#endif
 }
-
-//int printk(uint8_t *ptr)
-//{
-//#if (ITM_DEBUG_EN == 1) //  In ITM debug we don,t need time-stamp as of now
-//			drv_itm_print(ptr);
-//#else
-//	/*
-//	 * Print the time-stamp
-//	 * */
-//	int len,DataIdx;
-//
-//	if(global_debug_status.debug_global_en == FLAG_ENABLE)
-//	{
-//		sprintf((char*)timestamp_buffer,"[%d] ",(int)drv_time_get_ticks());
-//		len = strlen((char*)timestamp_buffer);
-//
-//		for (DataIdx = 0; DataIdx < len; DataIdx++)
-//		{
-//			temp_byte_buff = timestamp_buffer[DataIdx];
-//			ringbuffer_putchar(&pipe_uart_1_drv_tx_handle, temp_byte_buff);
-//		}
-//	}
-//	/*
-//	 * Print the String
-//	 * */
-//	len = strlen((char*)ptr);
-//	if(global_debug_status.debug_global_en == FLAG_ENABLE)
-//	{
-//		for (DataIdx = 0; DataIdx < len; DataIdx++)
-//		{
-//			temp_byte_buff = ptr[DataIdx];
-//			ringbuffer_putchar(&pipe_uart_1_drv_tx_handle, temp_byte_buff);
-//		}
-//		memset(ptr,0,PRINTK_BUFF_LENGTH);
-//	}
-//	ATOMIC_EXIT_CRITICAL();
-//	return len;
-//#endif
-//}
-
-
-
 
 
 /* Variables */

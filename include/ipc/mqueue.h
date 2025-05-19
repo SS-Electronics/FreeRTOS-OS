@@ -38,6 +38,7 @@
 
 #if(CONF_INC_PROC_OS_SHELL_MGMT == 1)
 extern struct ringbuffer	ipc_handle_uart_1_drv_rx_handle;
+extern struct ringbuffer	ipc_handle_printk_buffer;
 #endif
 
 //extern struct ringbuffer	pipe_uart_1_drv_tx_handle;

@@ -111,15 +111,26 @@ void os_add_drv_iwdg_handle	(__TYPE_HW_IWDG_HANDLE_TYPE * handle)
  */
 void os_entry(void)
 {
-	/* Send the driver handles to each driver */
+	status_type status;
+
+	/*
+	 * Send the driver handles to each driver
+	 *  */
 	for(int i = 0; i < NO_OF_UART; i++)
 	{
 		drv_serial_update_handle(handle_os_harware.handle_hw_uart[i], i);
 	}
 
+	for(int i = 0; i < NO_OF_TIMER; i++)
+	{
+		drv_timer_update_handle(handle_os_harware.handle_hw_timer[i], i);
+	}
 
 
-
+	/*
+	 * Initialize all the message queues
+	 * */
+	status |= ipc_mqueue_init();
 
 //	drv_wdg_handle_ref = drv_wdg_get_handle();
 //

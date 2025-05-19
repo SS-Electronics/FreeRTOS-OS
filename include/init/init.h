@@ -25,6 +25,8 @@
 #include <drivers/drv_uart.h>
 
 
+#include <ipc/mqueue.h>
+
 /* Here we have accommodate all the handles as per of the requirements */
 
 

@@ -13,57 +13,33 @@
 # GNU General Public License for more details.
 */
 
-#ifndef FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_
-#define FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_
-
-
-//#include <sys/stat.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <signal.h>
-#include <time.h>
-//#include <sys/time.h>
-//#include <sys/times.h>
-
+#ifndef KERNEL_SERVICES_H_
+#define KERNEL_SERVICES_H_
 
 #include <def_std.h>
 
-#include <FreeRTOS.h>
-#include <atomic.h>
-#include <queue.h>
-#include <task.h>
-#include <timers.h>
-#include <semphr.h>
-#include <event_groups.h>
-#include <stream_buffer.h>
+#include <os/kernel.h>
+#include <ipc/mqueue.h>
 
-#include <lib/ringbuffer.h>
+/* Driver related includes*/
+#include <conf_board.h>
+#include <drivers/drv_uart.h>
 
 
-#include <drivers/drv_time.h>
-
-
-
-
-
+/**************  API Export *****************/
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 
+void thread_uart_mgmt(void * arg);
 
 
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
+/**************  END API Export *****************/
 
 
-
-
-
-
-
-
-#endif /* FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_ */
+#endif /* KERNEL_SERVICES_H_ */
