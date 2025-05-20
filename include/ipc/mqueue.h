@@ -23,42 +23,19 @@
 #include <conf_os.h>
 #include <lib/ringbuffer.h>
 
-///* Exporting global queue handles */
-//#if(PERIPHERAL_CAN_1_EN == FLAG_ENABLE)
-//extern QueueHandle_t pipe_can_1_drv_rx_handle;
-//#endif
-//
-//#if(PERIPHERAL_CAN_2_EN == FLAG_ENABLE)
-//extern QueueHandle_t pipe_can_2_drv_rx_handle;
-//#endif
-//
-//#if(PERIPHERAL_CAN_3_EN == FLAG_ENABLE)
-//extern QueueHandle_t pipe_can_3_drv_rx_handle;
-//#endif
 
-#if(CONF_INC_PROC_OS_SHELL_MGMT == 1)
+
+#if (NO_OF_UART > 0)
 extern struct ringbuffer	ipc_handle_uart_1_drv_rx_handle;
 extern struct ringbuffer	ipc_handle_printk_buffer;
 #endif
 
-//extern struct ringbuffer	pipe_uart_1_drv_tx_handle;
+#if (NO_OF_UART > 1)
+extern struct ringbuffer	ipc_handle_uart_2_drv_tx_handle;
+extern struct ringbuffer	ipc_handle_uart_2_drv_rx_handle;
+#endif
 
-//#if(PERIPHERAL_USB_1_EN == FLAG_SET)
-//extern struct ringbuffer	pipe_usb_1_drv_rx_handle;
-//#endif
-//
-//#if(INC_SERVICE_CAN_MGMT == FLAG_SET)
-//extern QueueHandle_t pipe_can_app_tx_handle;
-//extern QueueHandle_t pipe_can_app_rx_handle;
-//#endif
-//
-//
-//#if(INC_SERVICE_IIC_MGMT == FLAG_SET)
-//extern QueueHandle_t	pipe_iic_pdu_tx_handle;
-//extern QueueHandle_t	pipe_iic_pdu_rx_handle;
-//#endif
-//
-//extern QueueHandle_t	pipe_diagnostics_handle;
+
 
 /**************  API Export *****************/
 #ifdef __cplusplus

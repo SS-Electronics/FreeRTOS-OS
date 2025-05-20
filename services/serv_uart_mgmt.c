@@ -21,7 +21,7 @@
  *
  * *****************************************************/
 static char temp_char;
-
+char data[5] = "abcde";
 /* *****************************************************
  *
  *
@@ -51,7 +51,7 @@ void thread_uart_mgmt(void * arg)
 	{
 		/* Printk related prints */
 #if defined(COMM_PRINTK_HW_ID)
-		if( ringbuffer_getchar(&ipc_handle_printk_buffer, (uint8_t*)&temp_char) == FLAG_SET)
+		if( ringbuffer_getchar(&ipc_handle_printk_buffer, (uint8_t*)&temp_char) == FLAG_SET )
 		{
 			drv_serial_transmit(COMM_PRINTK_HW_ID, (uint8_t*)&temp_char, 1);
 		}
@@ -59,7 +59,12 @@ void thread_uart_mgmt(void * arg)
 #warning "Printk hardware not configured...! Define COMM_PRINTK_HW_ID"
 #endif
 
-
+#if( (NO_OF_UART > 1) &&  COMM_PRINTK_HW_ID != HW_ID_UART_2)
+		if( ringbuffer_getchar(&ipc_handle_uart_2_drv_tx_handle, (uint8_t*)&temp_char) == FLAG_SET )
+		{
+			drv_serial_transmit(HW_ID_UART_2, (uint8_t*)&temp_char, 1);
+		}
+#endif
 
 
 

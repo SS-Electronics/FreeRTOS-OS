@@ -75,7 +75,7 @@ status_type	drv_serial_transmit(uint8_t dev_id, uint8_t* data, uint16_t len)
 		for (int i = 0; i<len; i++)
 		{
 			status |= HAL_UART_Transmit(uart_handle_ref.handle_hw_uart[dev_id]
-										,&data[i]
+										,data
 										,1
 										,CONF_UART_TXN_TIMEOUT_MS
 										);

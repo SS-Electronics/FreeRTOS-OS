@@ -137,7 +137,7 @@ void os_entry(void)
 	 * */
 	status |= os_kernel_thread_register();
 
-
+	status |= app_main();
 
 	drv_cpu_interrupt_prio_set();
 

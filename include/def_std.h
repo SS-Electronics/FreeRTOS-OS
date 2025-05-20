@@ -20,6 +20,13 @@
 
 
 
+/* Standard function prototypes */
+typedef void (*type_os_thread)( void * );
+
+
+
+
+
 
 
 typedef int	status_type;

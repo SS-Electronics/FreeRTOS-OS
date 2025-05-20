@@ -29,6 +29,45 @@
 
 #include "kernel_mem.h"
 #include "kernel_syscall.h"
+#include "kernel_services.h"
+
+
+
+
+typedef struct
+{
+	uint32_t			thread_id;
+	TaskHandle_t  		thread_handle;
+	uint32_t			thread_stack_depth;
+	void*				init_parameter;
+	int32_t				thread_priority;
+}type_thread_handles;
+
+
+
+
+
+
+
+
+
+/**************  API Export *****************/
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+int32_t		os_create_thread(type_os_thread thread_func,
+		                      const char * const thread_name,
+							  const uint32_t thread_stack_depth,
+							  void * const thread_parameters);
+
+
+
+#ifdef __cplusplus
+}
+#endif
+/**************  END API Export *****************/
 
 
 

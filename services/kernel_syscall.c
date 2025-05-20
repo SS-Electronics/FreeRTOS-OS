@@ -30,12 +30,11 @@ static char temp_char_buffer[CONF_MAX_CHAR_IN_PRINTK]; // Max value of uint32_t
  * *****************************************************/
 int32_t	printk(char* ch)
 {
+	int 	len = 0, DataIdx;
+	char 	temp_byte_buff;
 #if (NO_OF_UART > 0)
 
 	ATOMIC_ENTER_CRITICAL();
-
-	int 	len, DataIdx;
-	char 	temp_byte_buff;
 
 	memset(temp_time_buffer, 0, 10);
 	memset(temp_char_buffer, 0, CONF_MAX_CHAR_IN_PRINTK);
@@ -66,12 +65,20 @@ int32_t	printk(char* ch)
 
 	ATOMIC_EXIT_CRITICAL();
 #endif
+	return len;
 }
 
 
 /* Variables */
-extern int __io_putchar(int ch) __attribute__((weak));
-extern int __io_getchar(void) __attribute__((weak));
+int __io_putchar(int ch)
+{
+
+}
+
+int __io_getchar(void)
+{
+
+}
 
 
 char *__env[1] = { 0 };

@@ -52,7 +52,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-
+int32_t					printk(char* ch);
 
 
 #ifdef __cplusplus
