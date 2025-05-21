@@ -25,21 +25,6 @@ static type_drv_hw_handle 		*timer_handle_ref;
 
 
 
-
-
-/* *****************************************************
- *
- *
- *
- * *****************************************************/
-void	drv_timer_update_handle(__TYPE_HW_TIMER_HANDLE_TYPE * handle, uint8_t dev_id)
-{
-	if( (handle != NULL) && (dev_id < NO_OF_TIMER) )
-	{
-		timer_handle_ref->handle_hw_timer[dev_id] = handle;
-	}
-}
-
 /* *****************************************************
  *
  *
@@ -59,6 +44,23 @@ void drv_time_delay_ms(uint32_t ms)
 {
 	HAL_Delay(ms);
 }
+
+
+#if (NO_OF_TIMER > 0)
+/* *****************************************************
+ *
+ *
+ *
+ * *****************************************************/
+void	drv_timer_update_handle(__TYPE_HW_TIMER_HANDLE_TYPE * handle, uint8_t dev_id)
+{
+	if( (handle != NULL) && (dev_id < NO_OF_TIMER) )
+	{
+		timer_handle_ref->handle_hw_timer[dev_id] = handle;
+	}
+}
+
+
 
 /*************************************************************
  * Func:
@@ -240,7 +242,7 @@ uint32_t	drv_get_tim_2_encoder_ticks(void)
 //}
 //
 //
-//#endif
+#endif
 
 
 

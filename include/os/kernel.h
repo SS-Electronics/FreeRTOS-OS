@@ -51,6 +51,8 @@ typedef struct
 
 
 
+
+
 /**************  API Export *****************/
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +63,12 @@ int32_t		os_create_thread(type_os_thread thread_func,
 		                      const char * const thread_name,
 							  const uint32_t thread_stack_depth,
 							  void * const thread_parameters);
+
+void		os_delay(uint32_t ms);
+
+
+
+
 
 
 
