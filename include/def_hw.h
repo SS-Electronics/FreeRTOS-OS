@@ -44,7 +44,7 @@ typedef struct
 	__TYPE_HW_SPI_HANDLE_TYPE		*handle_hw_spi[NO_OF_SPI];
 #endif
 
-#if(NO_OF_ADC > 0)
+#if(NO_OF_TIMER > 0)
 	__TYPE_HW_ADC_HANDLE_TYPE		*handle_hw_adc[NO_OF_ADC];
 #endif
 

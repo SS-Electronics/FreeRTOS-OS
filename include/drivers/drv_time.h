@@ -31,22 +31,11 @@
 extern "C" {
 #endif
 
-
-
-
-
 uint32_t 	drv_time_get_ticks(void);
 void		drv_time_delay_ms(uint32_t ms);
-
-#if (NO_OF_TIMER > 0)
 uint32_t	drv_get_tim_3_encoder_ticks(void);
 uint32_t	drv_get_tim_2_encoder_ticks(void);
 void 		drv_set_tim_3_encoder_ticks(uint32_t tim_val);
-#endif
-
-
-
-
 
 
 #ifdef __cplusplus

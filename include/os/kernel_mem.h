@@ -40,17 +40,6 @@ void*  		kmaloc(size_t size);
 int32_t 	kfree(void *p);
 
 
-
-
-
-
-
-
-
-
-
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

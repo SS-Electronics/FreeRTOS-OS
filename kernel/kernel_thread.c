@@ -60,16 +60,7 @@ int32_t		os_create_thread(type_os_thread thread_func,
 }
 
 
-/* *****************************************************
- *
- * OS delay
- *
- * *****************************************************/
 
-void	os_delay(uint32_t ms)
-{
-	vTaskDelay(pdMS_TO_TICKS(ms));
-}
 
 
 
