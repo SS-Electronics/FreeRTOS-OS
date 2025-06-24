@@ -23,7 +23,7 @@
 #include <conf_os.h>
 #include <lib/ringbuffer.h>
 #include <ipc/mqueue.h>
-
+#include <ipc/global_var.h>
 
 
 /**************  API Export *****************/

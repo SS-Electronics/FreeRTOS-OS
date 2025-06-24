@@ -24,6 +24,7 @@
 
 static type_drv_hw_handle handle_os_harware;
 
+static int32_t mqueue_id_1_printk_buffer = 0;
 
 
 /* *****************************************************
@@ -31,6 +32,7 @@ static type_drv_hw_handle handle_os_harware;
  *
  *
  * *****************************************************/
+#if (NO_OF_UART > 0)
 void os_add_drv_uart_handle	(__TYPE_HW_UART_HANDLE_TYPE * handle, uint8_t hw_id)
 {
 	if(hw_id < NO_OF_UART)
@@ -38,12 +40,14 @@ void os_add_drv_uart_handle	(__TYPE_HW_UART_HANDLE_TYPE * handle, uint8_t hw_id)
 		handle_os_harware.handle_hw_uart[hw_id] = handle;
 	}
 }
+#endif
 
 /* *****************************************************
  *
  *
  *
  * *****************************************************/
+#if (NO_OF_IIC > 0)
 void os_add_drv_iic_handle	(__TYPE_HW_IIC_HANDLE_TYPE * handle, uint8_t hw_id)
 {
 	if(hw_id < NO_OF_IIC)
@@ -51,12 +55,14 @@ void os_add_drv_iic_handle	(__TYPE_HW_IIC_HANDLE_TYPE * handle, uint8_t hw_id)
 		handle_os_harware.handle_hw_iic[hw_id] = handle;
 	}
 }
+#endif
 
 /* *****************************************************
  *
  *
  *
  * *****************************************************/
+#if (NO_OF_SPI > 0)
 void os_add_drv_spi_handle	(__TYPE_HW_SPI_HANDLE_TYPE * handle, uint8_t hw_id)
 {
 	if(hw_id < NO_OF_SPI)
@@ -64,12 +70,14 @@ void os_add_drv_spi_handle	(__TYPE_HW_SPI_HANDLE_TYPE * handle, uint8_t hw_id)
 		handle_os_harware.handle_hw_spi[hw_id] = handle;
 	}
 }
+#endif
 
 /* *****************************************************
  *
  *
  *
  * *****************************************************/
+#if (NO_OF_ADC > 0)
 void os_add_drv_adc_handle	(__TYPE_HW_ADC_HANDLE_TYPE * handle, uint8_t hw_id)
 {
 	if(hw_id < NO_OF_ADC)
@@ -77,12 +85,14 @@ void os_add_drv_adc_handle	(__TYPE_HW_ADC_HANDLE_TYPE * handle, uint8_t hw_id)
 		handle_os_harware.handle_hw_adc[hw_id] = handle;
 	}
 }
+#endif
 
 /* *****************************************************
  *
  *
  *
  * *****************************************************/
+#if (NO_OF_TIMER > 0)
 void os_add_drv_timer_handle	(__TYPE_HW_TIMER_HANDLE_TYPE * handle, uint8_t hw_id)
 {
 	if(hw_id < NO_OF_TIMER)
@@ -90,18 +100,32 @@ void os_add_drv_timer_handle	(__TYPE_HW_TIMER_HANDLE_TYPE * handle, uint8_t hw_i
 		handle_os_harware.handle_hw_timer[hw_id] = handle;
 	}
 }
+#endif
 
 /* *****************************************************
  *
  *
  *
  * *****************************************************/
+#if (IWDG_INCLUDE > 0)
 void os_add_drv_iwdg_handle	(__TYPE_HW_IWDG_HANDLE_TYPE * handle)
 {
 	if(IWDG_INCLUDE == 1)
 	{
 		handle_os_harware.handle_hw_iwdg = handle;
 	}
+}
+#endif
+
+/* *****************************************************
+ *
+ * week definition  of app_main()
+ *
+ * *****************************************************/
+__attribute__((weak)) int app_main(void)
+{
+
+	return ERROR_NONE;
 }
 
 
@@ -116,28 +140,36 @@ void os_entry(void)
 	/*
 	 * Send the driver handles to each driver
 	 *  */
+#if (NO_OF_UART > 0)
 	for(int i = 0; i < NO_OF_UART; i++)
 	{
 		drv_serial_update_handle(handle_os_harware.handle_hw_uart[i], i);
 	}
+#endif
 
+#if (NO_OF_IIC > 0)
 	for(int i = 0; i < NO_OF_TIMER; i++)
 	{
-		drv_timer_update_handle(handle_os_harware.handle_hw_timer[i], i);
+//		drv_iic_update_handle(handle_os_harware.handle_hw_iic[i], i);
 	}
-
+#endif
 
 	/*
 	 * Initialize all the message queues
 	 * */
 	status |= ipc_mqueue_init();
 
+
+
 	/*
 	 * Register all the kernel threads
 	 * */
 	status |= os_kernel_thread_register();
 
+
+	/* Entry point to the main */
 	status |= app_main();
+
 
 	drv_cpu_interrupt_prio_set();
 
@@ -156,6 +188,9 @@ void os_entry(void)
 	}
 
 }
+
+
+
 
 
 

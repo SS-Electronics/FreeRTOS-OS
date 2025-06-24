@@ -19,9 +19,28 @@
 
 static char temp_time_buffer[10]; // Max value of uint32_t
 static char temp_char_buffer[CONF_MAX_CHAR_IN_PRINTK]; // Max value of uint32_t
+static struct ringbuffer* printk_ringbuffer_handle;
 
 
 
+/* *****************************************************
+ *
+ *
+ *
+ * *****************************************************/
+void printk_init(void)
+{
+#ifdef COMM_PRINTK_HW_ID
+
+	if(COMM_PRINTK_HW_ID < NO_OF_UART)
+	{
+		printk_ringbuffer_handle = (struct ringbuffer*)ipc_mqueue_get_handle(global_uart_tx_mqueue_list[COMM_PRINTK_HW_ID]);
+	}
+
+#else
+#error 'printk support serial device not defined define COMM_PRINTK_HW_ID <hw id > !'
+#endif
+}
 
 /* *****************************************************
  *
@@ -49,7 +68,7 @@ int32_t	printk(char* ch)
 	for (DataIdx = 0; DataIdx < len; DataIdx++)
 	{
 		temp_byte_buff = temp_time_buffer[DataIdx];
-		ringbuffer_putchar(&ipc_handle_printk_buffer, temp_byte_buff);
+		ringbuffer_putchar(printk_ringbuffer_handle, temp_byte_buff);
 	}
 
 	/*
@@ -60,7 +79,7 @@ int32_t	printk(char* ch)
 	for (DataIdx = 0; DataIdx < len; DataIdx++)
 	{
 		temp_byte_buff = ch[DataIdx];
-		ringbuffer_putchar(&ipc_handle_printk_buffer, temp_byte_buff);
+		ringbuffer_putchar(printk_ringbuffer_handle, temp_byte_buff);
 	}
 
 	ATOMIC_EXIT_CRITICAL();

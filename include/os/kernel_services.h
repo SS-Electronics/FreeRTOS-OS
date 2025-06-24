@@ -36,7 +36,7 @@ status_type os_kernel_thread_register(void);
 
 
 void thread_uart_mgmt(void * arg);
-
+void therad_iic_mgmt(void * arg);
 
 
 #ifdef __cplusplus

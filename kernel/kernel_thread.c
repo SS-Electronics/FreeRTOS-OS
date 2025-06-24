@@ -42,16 +42,24 @@ int32_t		os_create_thread(type_os_thread thread_func,
 		(thread_stack_depth != 0)
 	  )
 	{
-		xTaskCreate(thread_func, thread_name, thread_stack_depth, thread_parameters, 1, &app_thread_handles[registered_thread_index].thread_handle);
+		BaseType_t returned = xTaskCreate(thread_func, thread_name, thread_stack_depth, thread_parameters, 1, &app_thread_handles[registered_thread_index].thread_handle);
 
-		int32_t current_thread_id = thread_counter++;
-		registered_thread_index++;
+		if(returned != pdTRUE)
+		{
+			int32_t current_thread_id = thread_counter++;
+			registered_thread_index++;
 
-		app_thread_handles[registered_thread_index].thread_id				= current_thread_id;
-		app_thread_handles[registered_thread_index].thread_priority 		= 1;
-		app_thread_handles[registered_thread_index].thread_stack_depth		= thread_stack_depth;
+			app_thread_handles[registered_thread_index].thread_id				= current_thread_id;
+			app_thread_handles[registered_thread_index].thread_priority 		= 1;
+			app_thread_handles[registered_thread_index].thread_stack_depth		= thread_stack_depth;
 
-		return current_thread_id;
+			return current_thread_id;
+		}
+		else
+		{
+			return 0;
+		}
+
 	}
 	else
 	{
@@ -59,8 +67,33 @@ int32_t		os_create_thread(type_os_thread thread_func,
 	}
 }
 
+/* *****************************************************
+ *
+ * OS Thread Resume
+ *
+ * *****************************************************/
+void	os_resume_thread(int32_t thread_id)
+{
+	if(thread_id < registered_thread_index) // The thread is valid thread
+	{
+		if(app_thread_handles[thread_id - 1 ].thread_handle != NULL)
+		{
+			vTaskResume(app_thread_handles[thread_id - 1 ].thread_handle);
+		}
+	}
+}
 
 
+/* *****************************************************
+ *
+ * OS delay
+ *
+ * *****************************************************/
+
+void	os_delay(uint32_t ms)
+{
+	vTaskDelay(pdMS_TO_TICKS(ms));
+}
 
 
 

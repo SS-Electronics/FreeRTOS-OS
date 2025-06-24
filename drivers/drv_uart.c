@@ -19,6 +19,7 @@
 
 /* Local driver handle reference*/
 static type_drv_hw_handle 		uart_handle_ref;
+static struct ringbuffer*		uart_device_rx_char_buffer_handles[NO_OF_UART];
 
 /* Operational Variables*/
 static uint8_t 					temp_rx_char_buff;
@@ -48,6 +49,9 @@ status_type	drv_serial_init(uint8_t dev_id)
 	/* Check if the handles are NULL or not */
 	if((uart_handle_ref.handle_hw_uart[dev_id] != NULL) && (dev_id < NO_OF_UART) )
 	{
+		/* Update the rx ringbuffer handles linked to RX interrupt  */
+		uart_device_rx_char_buffer_handles[dev_id] = (struct ringbuffer*)ipc_mqueue_get_handle(global_uart_rx_mqueue_list[dev_id]);
+
 		/*Start the communication */
 		drv_staus |= UART_Start_Receive_IT(uart_handle_ref.handle_hw_uart[dev_id], &temp_rx_char_buff, 1);
 	}
@@ -120,14 +124,40 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 #if (NO_OF_UART > 0)
 	if(huart == uart_handle_ref.handle_hw_uart[HW_ID_UART_1])
 	{
-		ringbuffer_putchar(&ipc_handle_uart_1_drv_rx_handle, temp_rx_char_buff);
+		if(uart_device_rx_char_buffer_handles[HW_ID_UART_1] != NULL)
+		{
+			ringbuffer_putchar(uart_device_rx_char_buffer_handles[HW_ID_UART_1], temp_rx_char_buff);
+		}
 	}
 #endif
 
 #if (NO_OF_UART > 1)
 	if(huart == uart_handle_ref.handle_hw_uart[HW_ID_UART_2])
 	{
-		ringbuffer_putchar(&ipc_handle_uart_2_drv_rx_handle, temp_rx_char_buff);
+		if(uart_device_rx_char_buffer_handles[HW_ID_UART_2] != NULL)
+		{
+			ringbuffer_putchar(uart_device_rx_char_buffer_handles[HW_ID_UART_2], temp_rx_char_buff);
+		}
+	}
+#endif
+
+#if (NO_OF_UART > 2)
+	if(huart == uart_handle_ref.handle_hw_uart[HW_ID_UART_3])
+	{
+		if(uart_device_rx_char_buffer_handles[HW_ID_UART_3] != NULL)
+		{
+			ringbuffer_putchar(uart_device_rx_char_buffer_handles[HW_ID_UART_3], temp_rx_char_buff);
+		}
+	}
+#endif
+
+#if (NO_OF_UART > 3)
+	if(huart == uart_handle_ref.handle_hw_uart[HW_ID_UART_4])
+	{
+		if(uart_device_rx_char_buffer_handles[HW_ID_UART_4] != NULL)
+		{
+			ringbuffer_putchar(uart_device_rx_char_buffer_handles[HW_ID_UART_4], temp_rx_char_buff);
+		}
 	}
 #endif
 

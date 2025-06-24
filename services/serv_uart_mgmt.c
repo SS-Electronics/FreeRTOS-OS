@@ -21,7 +21,8 @@
  *
  * *****************************************************/
 static char temp_char;
-char data[5] = "abcde";
+static char data[5] = "abcde";
+static struct ringbuffer*		uart_device_tx_char_buffer_handles[NO_OF_UART];
 /* *****************************************************
  *
  *
@@ -49,24 +50,14 @@ void thread_uart_mgmt(void * arg)
 
 	while(1)
 	{
-		/* Printk related prints */
-#if defined(COMM_PRINTK_HW_ID)
-		if( ringbuffer_getchar(&ipc_handle_printk_buffer, (uint8_t*)&temp_char) == FLAG_SET )
+		/* Based on the TX queues transmit info to the drivers */
+		for(int i = 0; i < NO_OF_UART; i++)
 		{
-			drv_serial_transmit(COMM_PRINTK_HW_ID, (uint8_t*)&temp_char, 1);
+			if( ringbuffer_getchar(uart_device_tx_char_buffer_handles[i], (uint8_t*)&temp_char) == FLAG_SET )
+			{
+				drv_serial_transmit(i, (uint8_t*)&temp_char, 1);
+			}
 		}
-#else
-#warning "Printk hardware not configured...! Define COMM_PRINTK_HW_ID"
-#endif
-
-#if( (NO_OF_UART > 1) &&  COMM_PRINTK_HW_ID != HW_ID_UART_2)
-		if( ringbuffer_getchar(&ipc_handle_uart_2_drv_tx_handle, (uint8_t*)&temp_char) == FLAG_SET )
-		{
-			drv_serial_transmit(HW_ID_UART_2, (uint8_t*)&temp_char, 1);
-		}
-#endif
-
-
 
 	}
 }
@@ -75,13 +66,70 @@ status_type thread_uart_mgmt_init(void)
 {
 	status_type status = ERROR_NONE;
 
+	/* Link the mqueue to corresponding hardware callbacks  */
+#if (NO_OF_UART > 0)
+	global_uart_rx_mqueue_list[HW_ID_UART_1] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_1, 1, CONF_IPC_UART_1_RX_SIZE);
+
+	if(global_uart_rx_mqueue_list[HW_ID_UART_1] != 0 )
+	{
+		status |= ERROR_OP;
+	}
+
+	global_uart_tx_mqueue_list[HW_ID_UART_1] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_1, 1, CONF_IPC_UART_1_TX_SIZE);
+
+	if(global_uart_tx_mqueue_list[HW_ID_UART_1] != 0 )
+	{
+		status |= ERROR_OP;
+	}
+
+	uart_device_tx_char_buffer_handles[HW_ID_UART_1] = (struct ringbuffer*)ipc_mqueue_get_handle(global_uart_tx_mqueue_list[HW_ID_UART_1]);
+#endif
+
+#if (NO_OF_UART > 1)
+	global_uart_rx_mqueue_list[HW_ID_UART_2] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_2, 1, CONF_IPC_UART_2_RX_SIZE);
+
+	if(global_uart_rx_mqueue_list[HW_ID_UART_2] != 0 )
+	{
+		status |= ERROR_OP;
+	}
+
+	global_uart_tx_mqueue_list[HW_ID_UART_2] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_2, 1, CONF_IPC_UART_2_TX_SIZE);
+
+	if(global_uart_tx_mqueue_list[HW_ID_UART_2] != 0 )
+	{
+		status |= ERROR_OP;
+	}
+
+	uart_device_tx_char_buffer_handles[HW_ID_UART_2] = (struct ringbuffer*)ipc_mqueue_get_handle(global_uart_tx_mqueue_list[HW_ID_UART_2]);
+#endif
+
+#if (NO_OF_UART > 2)
+	global_uart_rx_mqueue_list[HW_ID_UART_3] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_3, 1, CONF_IPC_UART_3_RX_SIZE);
+
+	if(global_uart_rx_mqueue_list[HW_ID_UART_3] != 0 )
+	{
+		status |= ERROR_OP;
+	}
+
+
+	global_uart_tx_mqueue_list[HW_ID_UART_3] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_3, 1, CONF_IPC_UART_3_TX_SIZE);
+
+	if(global_uart_tx_mqueue_list[HW_ID_UART_3] != 0 )
+	{
+		status |= ERROR_OP;
+	}
+
+	uart_device_tx_char_buffer_handles[HW_ID_UART_3] = (struct ringbuffer*)ipc_mqueue_get_handle(global_uart_tx_mqueue_list[HW_ID_UART_3]);
+#endif
+
+	/* Init printk to serial driver */
+	printk_init();
+
 	/* Initialize all the UART drivers */
 	for(int i = 0; i < NO_OF_UART; i++)
 	{
 		status |= drv_serial_init( i );
 	}
-
-
 
 
 	return status;

@@ -16,12 +16,15 @@
 #ifndef OS_IPC_GLOBAL_GLOBAL_VAR_H_
 #define OS_IPC_GLOBAL_GLOBAL_VAR_H_
 
-
+#include <def_std.h>
+#include <conf_os.h>
 
 /* External variables declaration */
-
-
-
+/* Driver mqueue ids */
+extern int32_t global_uart_tx_mqueue_list[NO_OF_UART];
+extern int32_t global_uart_rx_mqueue_list[NO_OF_UART];
+extern int32_t global_iic_tx_mqueue_list[NO_OF_IIC];
+extern int32_t global_iic_rx_mqueue_list[NO_OF_IIC];
 
 
 

@@ -40,10 +40,11 @@
 
 #include <lib/ringbuffer.h>
 
-
 #include <drivers/drv_time.h>
 
+#include <conf_board.h>
 
+#include <ipc/global_var.h>
 
 
 
@@ -51,7 +52,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
+void 					printk_init(void);
 int32_t					printk(char* ch);
 
 
