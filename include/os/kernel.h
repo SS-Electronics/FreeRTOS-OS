@@ -32,6 +32,9 @@
 #include "kernel_services.h"
 
 
+/* Driver level includes */
+#include <drivers/drv_uart.h>
+#include <drivers/drv_iic.h>
 
 
 typedef struct

@@ -21,7 +21,6 @@
  *
  * *****************************************************/
 static char temp_char;
-static char data[5] = "abcde";
 static struct ringbuffer*		uart_device_tx_char_buffer_handles[NO_OF_UART];
 /* *****************************************************
  *
@@ -32,6 +31,9 @@ static struct ringbuffer*		uart_device_tx_char_buffer_handles[NO_OF_UART];
 static status_type thread_uart_mgmt_init(void);
 
 
+
+
+
 /* *****************************************************
  *
  *
@@ -39,15 +41,23 @@ static status_type thread_uart_mgmt_init(void);
  * *****************************************************/
 void thread_uart_mgmt(void * arg)
 {
+	/* Startup offset delay */
+	vTaskDelay(pdMS_TO_TICKS(CONF_THREAD_UART_MGMT_STARTUP_OFFSET_MS));
+
+	/* Thread init */
 	if(thread_uart_mgmt_init() != ERROR_NONE)
 	{
 		printk("[ ERR ] UART Management suspended!\n\r");
 		vTaskSuspend(NULL);
 	}
+	else
 	{
 		printk("[ OK ] UART Management started!\n\r");
 	}
 
+
+
+	/* Thread loop */
 	while(1)
 	{
 		/* Based on the TX queues transmit info to the drivers */
@@ -62,6 +72,13 @@ void thread_uart_mgmt(void * arg)
 	}
 }
 
+
+
+/* *****************************************************
+ *
+ *
+ *
+ * *****************************************************/
 status_type thread_uart_mgmt_init(void)
 {
 	status_type status = ERROR_NONE;
@@ -70,14 +87,14 @@ status_type thread_uart_mgmt_init(void)
 #if (NO_OF_UART > 0)
 	global_uart_rx_mqueue_list[HW_ID_UART_1] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_1, 1, CONF_IPC_UART_1_RX_SIZE);
 
-	if(global_uart_rx_mqueue_list[HW_ID_UART_1] != 0 )
+	if(global_uart_rx_mqueue_list[HW_ID_UART_1] == 0 )
 	{
 		status |= ERROR_OP;
 	}
 
 	global_uart_tx_mqueue_list[HW_ID_UART_1] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_1, 1, CONF_IPC_UART_1_TX_SIZE);
 
-	if(global_uart_tx_mqueue_list[HW_ID_UART_1] != 0 )
+	if(global_uart_tx_mqueue_list[HW_ID_UART_1] == 0 )
 	{
 		status |= ERROR_OP;
 	}
@@ -88,14 +105,14 @@ status_type thread_uart_mgmt_init(void)
 #if (NO_OF_UART > 1)
 	global_uart_rx_mqueue_list[HW_ID_UART_2] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_2, 1, CONF_IPC_UART_2_RX_SIZE);
 
-	if(global_uart_rx_mqueue_list[HW_ID_UART_2] != 0 )
+	if(global_uart_rx_mqueue_list[HW_ID_UART_2] == 0 )
 	{
 		status |= ERROR_OP;
 	}
 
 	global_uart_tx_mqueue_list[HW_ID_UART_2] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_2, 1, CONF_IPC_UART_2_TX_SIZE);
 
-	if(global_uart_tx_mqueue_list[HW_ID_UART_2] != 0 )
+	if(global_uart_tx_mqueue_list[HW_ID_UART_2] == 0 )
 	{
 		status |= ERROR_OP;
 	}
@@ -106,7 +123,7 @@ status_type thread_uart_mgmt_init(void)
 #if (NO_OF_UART > 2)
 	global_uart_rx_mqueue_list[HW_ID_UART_3] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_3, 1, CONF_IPC_UART_3_RX_SIZE);
 
-	if(global_uart_rx_mqueue_list[HW_ID_UART_3] != 0 )
+	if(global_uart_rx_mqueue_list[HW_ID_UART_3] == 0 )
 	{
 		status |= ERROR_OP;
 	}
@@ -114,7 +131,7 @@ status_type thread_uart_mgmt_init(void)
 
 	global_uart_tx_mqueue_list[HW_ID_UART_3] =  ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, HW_ID_UART_3, 1, CONF_IPC_UART_3_TX_SIZE);
 
-	if(global_uart_tx_mqueue_list[HW_ID_UART_3] != 0 )
+	if(global_uart_tx_mqueue_list[HW_ID_UART_3] == 0 )
 	{
 		status |= ERROR_OP;
 	}

@@ -65,7 +65,7 @@ int32_t	ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id, int32_t
 {
 	int32_t mqueue_id = 0;
 
-	vTaskSuspendAll();
+	ATOMIC_ENTER_CRITICAL();
 
 	type_message_queue_descriptor* new_node = ( type_message_queue_descriptor* )kmaloc( sizeof(type_message_queue_descriptor) );
 
@@ -141,7 +141,7 @@ int32_t	ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id, int32_t
 		new_node->prev_node = temp;
 	}
 
-	xTaskResumeAll();
+	ATOMIC_EXIT_CRITICAL();
 
 	return mqueue_id;
 }
@@ -156,7 +156,7 @@ status_type	ipc_mqueue_unregister(int32_t mqueue_id)
 {
 	status_type status = ERROR_NONE;
 
-	vTaskSuspendAll();
+	ATOMIC_ENTER_CRITICAL();
 
 	if(mqueue_id < mqueue_id_couter)
 	{
@@ -220,7 +220,7 @@ status_type	ipc_mqueue_unregister(int32_t mqueue_id)
 		status |= ERROR_OP;
 	}
 
-	xTaskResumeAll();
+	ATOMIC_EXIT_CRITICAL();
 
 	return status;
 }
@@ -232,9 +232,10 @@ status_type	ipc_mqueue_unregister(int32_t mqueue_id)
  * *****************************************************/
 void*	ipc_mqueue_get_handle(int32_t mqueue_id)
 {
-	vTaskSuspendAll();
 
 	void * mqueu_ptr = NULL;
+
+	ATOMIC_ENTER_CRITICAL();
 
 	if(mqueue_id < mqueue_id_couter)
 	{
@@ -253,6 +254,8 @@ void*	ipc_mqueue_get_handle(int32_t mqueue_id)
 			mqueu_ptr = temp->mqueue.handle;
 		}
 	}
+
+	ATOMIC_EXIT_CRITICAL();
 
 	return mqueu_ptr;
 }

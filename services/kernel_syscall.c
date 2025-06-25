@@ -68,7 +68,11 @@ int32_t	printk(char* ch)
 	for (DataIdx = 0; DataIdx < len; DataIdx++)
 	{
 		temp_byte_buff = temp_time_buffer[DataIdx];
-		ringbuffer_putchar(printk_ringbuffer_handle, temp_byte_buff);
+
+		if(printk_ringbuffer_handle != NULL)
+		{
+			ringbuffer_putchar(printk_ringbuffer_handle, temp_byte_buff);
+		}
 	}
 
 	/*
@@ -79,7 +83,11 @@ int32_t	printk(char* ch)
 	for (DataIdx = 0; DataIdx < len; DataIdx++)
 	{
 		temp_byte_buff = ch[DataIdx];
-		ringbuffer_putchar(printk_ringbuffer_handle, temp_byte_buff);
+
+		if(printk_ringbuffer_handle != NULL)
+		{
+			ringbuffer_putchar(printk_ringbuffer_handle, temp_byte_buff);
+		}
 	}
 
 	ATOMIC_EXIT_CRITICAL();
