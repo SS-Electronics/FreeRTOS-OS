@@ -69,9 +69,11 @@ int32_t		os_create_thread(type_os_thread thread_func,
 
 void		os_delay(uint32_t ms);
 
-//void		os_resume_thread(thread_id);
-//
-//void		os_suspend_thread()
+void		os_suspend_this_thread(void);
+
+void		os_delay(uint32_t ms);
+
+void		os_resume_thread(int32_t thread_id);
 
 
 

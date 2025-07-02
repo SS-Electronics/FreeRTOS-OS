@@ -83,6 +83,17 @@ void	os_resume_thread(int32_t thread_id)
 	}
 }
 
+/* *****************************************************
+ *
+ * OS Suspend  calling thread
+ *
+ * *****************************************************/
+void	os_suspend_this_thread(void)
+{
+	vTaskSuspend(NULL);
+}
+
+
 
 /* *****************************************************
  *
