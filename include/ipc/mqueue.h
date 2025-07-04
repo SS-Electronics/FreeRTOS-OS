@@ -24,6 +24,8 @@
 #include <ipc/ringbuffer.h>
 #include <os/kernel_mem.h>
 
+#include <FreeRTOS.h>
+#include <queue.h>
 
 
 
@@ -46,10 +48,11 @@ typedef enum
 
 typedef struct
 {
-	uint32_t	queue_id;
-	int32_t		queue_type; 				// hardware / software
-	int32_t		linked_hw_peripheral_id;	// IIC
-	void *		handle;						// Implemented handle reference ringbuffer / mqueue etc
+	uint32_t			queue_id;
+	int32_t				queue_type; 				// hardware / software
+	int32_t				linked_hw_peripheral_id;	// IIC
+	void *				handle;						// Implemented handle reference ringbuffer / mqueue etc
+	QueueHandle_t		free_rtos_queue_handle;		// FreeRtos Queue handle
 }type_mqueue_descriptor_content;
 
 
@@ -80,6 +83,11 @@ status_type 		ipc_mqueue_init(void);
 int32_t				ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id, int32_t item_size, int32_t queue_size);
 status_type			ipc_mqueue_unregister(int32_t mqueue_id);
 void*				ipc_mqueue_get_handle(int32_t mqueue_id);
+status_type			ipc_mqueue_send_item(uint32_t queue_id, const void * item_ptr);
+status_type			ipc_mqueue_receive_item(uint32_t queue_id, void * item_ptr);
+
+
+
 
 type_message_queue_descriptor* ipc_get_mqueue_head(void);
 

@@ -17,6 +17,8 @@
 #define OS_KERNEL_KERNEL_H_
 
 
+#include <def_std.h>
+
 #include <FreeRTOS.h>
 #include <atomic.h>
 #include <queue.h>
@@ -30,6 +32,9 @@
 #include "kernel_mem.h"
 #include "kernel_syscall.h"
 #include "kernel_services.h"
+
+/* IPC include */
+#include <ipc/mqueue.h>
 
 
 /* Driver level includes */
