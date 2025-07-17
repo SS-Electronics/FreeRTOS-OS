@@ -44,7 +44,7 @@ int32_t		os_create_thread(type_os_thread thread_func,
 	{
 		BaseType_t returned = xTaskCreate(thread_func, thread_name, thread_stack_depth, thread_parameters, 1, &app_thread_handles[registered_thread_index].thread_handle);
 
-		if(returned != pdTRUE)
+		if(returned == pdTRUE)
 		{
 			int32_t current_thread_id = thread_counter++;
 			registered_thread_index++;
