@@ -1,0 +1,2 @@
+
+INCLUDES += -I$(CURDIR)/include

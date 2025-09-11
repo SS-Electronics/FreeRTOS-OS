@@ -1,7 +1,5 @@
 
 obj-y += arch/devices/STM/stm32_f401_system.o
-obj-y += arch/devices/STM/stm32_f401_irq.o
-obj-y += arch/devices/STM/stm32_f401_peripheral.o
 obj-y += arch/devices/STM/stm32_f401_startup.o
 
 

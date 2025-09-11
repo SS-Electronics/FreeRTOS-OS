@@ -16,44 +16,9 @@
 #ifndef FREERTOS_OS_INCLUDE_DEF_STD_H_
 #define FREERTOS_OS_INCLUDE_DEF_STD_H_
 
-#include <def_compiler.h>
 
 
 
-/* Standard function prototypes */
-typedef void (*type_os_thread)( void * );
-
-
-
-
-
-
-
-typedef int	status_type;
-
-enum
-{
- ERROR_NONE		=	0,
- ERROR_OP,
- ERROR_TIMEOUT,
- ERROR_NO_ACK
-};
-
-enum
-{
-	FLAG_RESET = 0,
-	FLAG_SET
-};
-
-typedef struct
-{
-	uint32_t err_code;
-	uint32_t timestamp;
-	uint32_t count;
-}type_diagnostic_data;
-
-
-typedef int type_kernel_status;
 
 
 

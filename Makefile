@@ -22,6 +22,21 @@
 # along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
 
 
+
+
+##############################################################
+# Path to Kconfig tools
+KCONFIG_MCONF 				?= kconfig-mconf   # from kconfig-frontends
+KCONFIG_CONF  				?= kconfig-conf    # from kconfig-frontends
+KCONFIG_FILE  				?= Kconfig
+KCONFIG_CONFIG 				?= .config
+AUTOCONF_MK     			:= autoconf.mk
+AUTOCONF_H      			:= autoconf.h
+##############################################################
+
+
+
+
 ##############################################################
 # conpiler setup and configuration
 CC 							:= arm-none-eabi-gcc
@@ -46,7 +61,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := init arch
+SUBDIRS := include init arch 
 
 INCLUDES :=
 
@@ -71,13 +86,51 @@ export LINKER_SCRIPT
 
 
 
+##############################################################
+# Kconfig integration
+menuconfig:
+	@if ! command -v $(KCONFIG_MCONF) >/dev/null 2>&1; then \
+		echo "Error: missing '$(KCONFIG_MCONF)' (install kconfig-frontends)"; \
+		exit 1; \
+	fi
+	$(KCONFIG_MCONF) $(KCONFIG_FILE)
+
+oldconfig:
+	$(KCONFIG_CONF) --oldconfig $(KCONFIG_FILE)
+
+config-outputs: $(AUTOCONF_MK) $(AUTOCONF_H)
+
+$(AUTOCONF_MK): $(KCONFIG_CONFIG)
+	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
+	@rm -f $@
+	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]\+\)=y/\1=1/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=n/\1=0/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\([0-9]\+\)/\1=\2/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/\1="\2"/p' \
+	       $(KCONFIG_CONFIG) | sort -u > $@
+
+$(AUTOCONF_H): $(KCONFIG_CONFIG)
+	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
+	@rm -f $@
+	@echo "/* Auto-generated config header */" > $@
+	@echo "#pragma once" >> $@
+	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]\+\)=y/#define \1 1/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
+	       $(KCONFIG_CONFIG) | sort -u >> $@
+
+# Include generated Makefile configs if they exist
+-include $(AUTOCONF_MK)
+##############################################################
+
 
 ##############################################################
 # build stages 
-all: $(BUILD)/kernel.elf
+all: config-outputs | clean  $(BUILD)/kernel.elf 
 
 # Link final kernel
-$(BUILD)/kernel.elf: $(OBJS) | $(BUILD)
+$(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo '##############################################'
 	@echo 'Linking together...'
 	@echo '##############################################'
@@ -91,7 +144,7 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD)
 	@echo '##############################################'
 
 # Rule for compiling into build dir
-$(BUILD)/%.o: %.c | $(BUILD)
+$(BUILD)/%.o: %.c | $(BUILD) $(AUTOCONF)
 	@echo '**********************************************'
 	@echo 'Building C Source $< ...'
 	@echo '***********************'
@@ -99,7 +152,7 @@ $(BUILD)/%.o: %.c | $(BUILD)
 	$(CC) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
 	@echo '**********************************************'
 
-$(BUILD)/%.o: %.s | $(BUILD)
+$(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
 	@echo '**********************************************'
 	@echo 'Building Assembly source: $< ...'
 	@echo '**********************************************'
@@ -123,7 +176,7 @@ $(BUILD):
 
 
 clean:
-	rm -rf $(BUILD)
+	rm -rf $(BUILD) $(AUTOCONF_MK) $(AUTOCONF_H)
 	@echo '##############################################'
 	@echo ' '
 	@echo 'Clean completed!'

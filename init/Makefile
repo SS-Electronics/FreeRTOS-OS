@@ -1,2 +1,5 @@
-# Objects from core
-obj-y += init/main.o
+
+# Objects from Init 
+
+
+obj-y += init/init.o
