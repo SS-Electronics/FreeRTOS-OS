@@ -139,12 +139,32 @@ $(AUTOCONF_H): $(AUTOCONF_MK)
 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
 	@rm -f $@
 	@echo "/* Auto-generated config header */" > $@
-	@echo "#pragma once" >> $@
+	@echo "#ifndef __STM32F4xx_HAL_CONF_H" >> $@
+	@echo "#define __STM32F4xx_HAL_CONF_H \n\n\n" >> $@
+	@echo "#define HAL_MODULE_ENABLED \n\n\n\n" >> $@
+
+
+
 	@sed -ne 's/^CONFIG_\([A-Za-z0-9_]\+\)=y/#define \1 1/p' \
 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
 	       $(KCONFIG_CONFIG) >> $@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	@echo "\n\n\n#endif" >> $@   
 
 
 ##############################################################

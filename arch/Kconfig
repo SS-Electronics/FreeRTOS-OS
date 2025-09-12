@@ -23,12 +23,256 @@
 config TARGET_MCU
     string "TARGET_MCU"
     default "<part from list>"
-    
+
 config CPU_ARCH
     string "CPU-ARCH"
     default "ARM-CM4"
 
-config FPU
-    bool "Enable Floating Point Unit"
+config HAL_CORTEX_MODULE_ENABLED
+    bool "Module: CORTEX"
     default y
 
+
+config HAL_PWR_MODULE_ENABLED
+    bool "Module: POWER"
+    default n
+
+config HAL_RCC_MODULE_ENABLED
+    bool "Module: RCC"
+    default n
+
+config HAL_GPIO_MODULE_ENABLED
+    bool "Module: GPIO"
+    default n
+
+config HAL_EXTI_MODULE_ENABLED
+    bool "Module: Ext Int"
+    default n
+
+config HAL_IWDG_MODULE_ENABLED
+    bool "Module: IWDG"
+    default n
+
+config HAL_WWDG_MODULE_ENABLED
+    bool "Module: WWDG"
+    default n
+
+
+
+menu "Oscillator and Clock Settings"
+
+config HSE_VALUE
+    string "H Ext Oscillator (Hz)"
+    default "8000000U"
+
+config HSE_STARTUP_TIMEOUT
+    string "H Ext Oscillator timeout (ms)"
+    default "100U"
+
+config HSI_VALUE
+    string "H Int Oscillator (Hz)"
+    default "16000000U"
+
+config LSI_VALUE
+    string "L Int Oscillator (Hz)"
+    default "32000U"
+
+config LSE_VALUE
+    string "L Ext Oscillator (Hz)"
+    default "32768U"
+
+config LSE_STARTUP_TIMEOUT
+    string "H Ext Oscillator timeout (ms)"
+    default "5000U"
+
+
+config EXTERNAL_CLOCK_VALUE
+    string "Ext audio clock (Hz)"
+    default "12288000U"
+
+endmenu
+
+
+menu "Communication Modules"
+
+config HAL_UART_MODULE_ENABLED
+    bool "Module: UART"
+    default n
+
+config HAL_USART_MODULE_ENABLED
+    bool "Module: USART"
+    default n
+
+config HAL_SPI_MODULE_ENABLED
+    bool "Module: SPI"
+    default n
+
+config HAL_QSPI_MODULE_ENABLED
+    bool "Module: QSPI"
+    default n
+
+config HAL_I2C_MODULE_ENABLED
+    bool "Module: I2C"
+    default n
+
+config HAL_FMPI2C_MODULE_ENABLED
+    bool "Module: FMPI2C"
+    default n
+
+config HAL_CAN_MODULE_ENABLED
+    bool "Module: CAN"
+    default n
+
+config HAL_CAN_LEGACY_MODULE_ENABLED
+    bool "Module: CAN - Legacy"
+    default n
+
+config HAL_ETH_MODULE_ENABLED
+    bool "Module: ETH"
+    default n
+
+config HAL_ETH_LEGACY_MODULE_ENABLED
+    bool "Module: ETH - Legacy"
+    default n
+
+config HAL_I2S_MODULE_ENABLED
+    bool "Module: I2S"
+    default n
+
+config HAL_SMBUS_MODULE_ENABLED
+    bool "Module: SMBUS"
+    default n
+
+config HAL_FMPSMBUS_MODULE_ENABLED
+    bool "Module: FMPSMBUS"
+    default n
+
+config HAL_DSI_MODULE_ENABLED
+    bool "Module: DSI"
+    default n
+
+endmenu
+
+
+
+config HAL_TIM_MODULE_ENABLED
+    bool "Module: TIM"
+    default n
+
+config HAL_LPTIM_MODULE_ENABLED
+    bool "Module: LPTIM"
+    default n
+
+config HAL_ADC_MODULE_ENABLED
+    bool "Module: ADC"
+    default n
+
+config HAL_DAC_MODULE_ENABLED
+    bool "Module: DAC"
+    default n
+
+
+
+menu "Memory Modules"
+
+config HAL_DMA_MODULE_ENABLED
+    bool "Module: DMA"
+    default n
+    
+config HAL_DMA2D_MODULE_ENABLED
+    bool "Module: DMA2D"
+    default n
+
+config HAL_RNG_MODULE_ENABLED
+    bool "Module: RNG"
+    default n
+
+config HAL_CRC_MODULE_ENABLED
+    bool "Module: CRC"
+    default n
+
+config HAL_HASH_MODULE_ENABLED
+    bool "Module: HASH"
+    default n
+
+config HAL_CRYP_MODULE_ENABLED
+    bool "Module: Crypto"
+    default n
+
+config HAL_DCMI_MODULE_ENABLED
+    bool "Module: DCMI"
+    default n
+
+config HAL_FLASH_MODULE_ENABLED
+    bool "Module: FLASH"
+    default n
+
+config HAL_NAND_MODULE_ENABLED
+    bool "Module: NAND"
+    default n
+
+config HAL_NOR_MODULE_ENABLED
+    bool "Module: NOR"
+    default n
+
+config HAL_PCCARD_MODULE_ENABLED
+    bool "Module: PCCARD"
+    default n
+
+config HAL_SRAM_MODULE_ENABLED
+    bool "Module: SRAM"
+    default n
+
+config HAL_SDRAM_MODULE_ENABLED
+    bool "Module: SDRAM"
+    default n
+
+config HAL_LTDC_MODULE_ENABLED
+    bool "Module: LTDC"
+    default n
+
+endmenu
+
+
+
+config HAL_RTC_MODULE_ENABLED
+    bool "Module: RTC"
+    default n
+
+config HAL_SAI_MODULE_ENABLED
+    bool "Module: SAI"
+    default n
+
+config HAL_SD_MODULE_ENABLED
+    bool "Module: SD"
+    default n
+
+config HAL_IRDA_MODULE_ENABLED
+    bool "Module: IRDA"
+    default n
+
+config HAL_SMARTCARD_MODULE_ENABLED
+    bool "Module: SMARTCARD"
+    default n
+
+config HAL_PCD_MODULE_ENABLED
+    bool "Module: PCD"
+    default n
+
+config HAL_HCD_MODULE_ENABLED
+    bool "Module: HCD"
+    default n
+
+config HAL_CEC_MODULE_ENABLED
+    bool "Module: CEC"
+    default n
+
+
+config HAL_SPDIFRX_MODULE_ENABLED
+    bool "Module: SPDIFRX"
+    default n
+
+
+config HAL_DFSDM_MODULE_ENABLED
+    bool "Module: DFSDM"
+    default n
