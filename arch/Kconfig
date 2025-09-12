@@ -20,7 +20,10 @@
 # along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
 
 
-
+config TARGET_MCU
+    string "TARGET_MCU"
+    default "<part from list>"
+    
 config CPU_ARCH
     string "CPU-ARCH"
     default "ARM-CM4"
@@ -29,6 +32,3 @@ config FPU
     bool "Enable Floating Point Unit"
     default y
 
-config MCU_FAMILY
-    string "MCU Family"
-    default "STM32F4xx"

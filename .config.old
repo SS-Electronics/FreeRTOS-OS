@@ -2,6 +2,6 @@
 # Automatically generated file; DO NOT EDIT.
 # Configuration
 #
-CONFIG_CPU-ARCH="ARM-CM-4"
-CONFIG_FPU=y
-CONFIG_MCU_FAMILY="STM32F411"
+CONFIG_TARGET_MCU="STM32F411"
+CONFIG_CPU_ARCH="ARM-CM4"
+# CONFIG_FPU is not set

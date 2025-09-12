@@ -31,7 +31,7 @@ KCONFIG_CONF  				?= kconfig-conf    # from kconfig-frontends
 KCONFIG_FILE  				?= Kconfig
 KCONFIG_CONFIG 				?= .config
 AUTOCONF_MK     			:= autoconf.mk
-AUTOCONF_H      			:= autoconf.h
+AUTOCONF_H      			:=
 ##############################################################
 
 
@@ -67,6 +67,8 @@ INCLUDES :=
 
 LINKER_SCRIPT :=
 
+SYMBOL_DEF :=
+
 ##############################################################
 
 
@@ -82,6 +84,16 @@ OBJS := $(addprefix $(BUILD)/, $(obj-y))
 export INCLUDES
 
 export LINKER_SCRIPT
+
+export SYMBOL_DEF
+
+# Include generated Makefile configs if they exist
+-include $(AUTOCONF_MK)
+
+# File generation based on the input targets 
+ifeq ($(CONFIG_TARGET_MCU),"STM32F411")
+	AUTOCONF_H += arch/devices/STM/stm32f4xx_hal_conf.h
+endif
 ##############################################################
 
 
@@ -96,7 +108,10 @@ menuconfig:
 	$(KCONFIG_MCONF) $(KCONFIG_FILE)
 
 oldconfig:
-	$(KCONFIG_CONF) --oldconfig $(KCONFIG_FILE)
+	$(KCONFIG_CONF) --olddefconfig $(KCONFIG_FILE)
+
+
+
 
 config-outputs: $(AUTOCONF_MK) $(AUTOCONF_H)
 
@@ -109,25 +124,35 @@ $(AUTOCONF_MK): $(KCONFIG_CONFIG)
 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/\1="\2"/p' \
 	       $(KCONFIG_CONFIG) | sort -u > $@
 
-$(AUTOCONF_H): $(KCONFIG_CONFIG)
+# $(AUTOCONF_H): $(KCONFIG_CONFIG)
+# 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
+# 	@rm -f $@
+# 	@echo "/* Auto-generated config header */" > $@
+# 	@echo "#pragma once" >> $@
+# 	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]\+\)=y/#define \1 1/p' \
+# 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
+# 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
+# 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
+# 	       $(KCONFIG_CONFIG) | sort -u >> $@
+
+$(AUTOCONF_H): $(AUTOCONF_MK)
 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
 	@rm -f $@
 	@echo "/* Auto-generated config header */" > $@
 	@echo "#pragma once" >> $@
-	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]\+\)=y/#define \1 1/p' \
-	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
-	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
-	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
-	       $(KCONFIG_CONFIG) | sort -u >> $@
+	@sed -ne 's/^CONFIG_\([A-Za-z0-9_]\+\)=y/#define \1 1/p' \
+	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
+	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
+	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
+	       $(KCONFIG_CONFIG) >> $@
 
-# Include generated Makefile configs if they exist
--include $(AUTOCONF_MK)
+
 ##############################################################
 
 
 ##############################################################
 # build stages 
-all: config-outputs | clean  $(BUILD)/kernel.elf 
+all: $(BUILD)/kernel.elf 
 
 # Link final kernel
 $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
