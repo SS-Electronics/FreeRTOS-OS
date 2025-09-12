@@ -14,13 +14,13 @@ A light weight OS on top of FreeRTOS kernel apis.
 #### Installing compiler
 
 ```http
-  $ sudo bash install-arm-gcc.sh
+sudo bash install-arm-gcc.sh
 ```
 
 #### Installing Kconfig tools
 
 ```http
-  $ sudo bash install_kconfig.sh
+sudo bash install_kconfig.sh
 ```
 
 ## Build
@@ -28,28 +28,28 @@ A light weight OS on top of FreeRTOS kernel apis.
 ### Config your OS
 * Try to run in a shell [ Not from VS Code terminal ]
 ```http
-  $ make menuconfig
+make menuconfig
 ```
 
 ### Generate necessary files
 ```http
-  $ make config-outputs
+make config-outputs
 ```
 
 ### build
 ```http
-  $ make all
+make all
 ```
 
 ### clean
 ```http
-  $ make clean
+make clean
 ```
 
 ### Run the gdb server before debug
 
 ```http
-  $ sudo bash run_gdb.sh
+sudo bash run_gdb.sh
 ```
 
 
