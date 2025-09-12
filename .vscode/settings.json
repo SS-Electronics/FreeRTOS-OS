@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "cmsis_gcc.h": "c"
+        "cmsis_gcc.h": "c",
+        "stm32f4xx_hal.h": "c"
     }
 }

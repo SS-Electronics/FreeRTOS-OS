@@ -39,7 +39,7 @@ ifeq ($(CONFIG_TARGET_MCU),"STM32F401")
 INCLUDES += -I$(CURDIR)/arch/devices/STM
 
 #---------- Symbol Definition to compiler -------------- 
-SYMBOL_DEF += 
+SYMBOL_DEF += SYMBOL_DEF += -DSTM32F401
 
 
 #---------- System files -------------- 
@@ -68,16 +68,18 @@ ifeq ($(CONFIG_TARGET_MCU),"STM32F411")
 
 #---------- Include paths -------------- 
 INCLUDES += -I$(CURDIR)/arch/devices/STM
+INCLUDES += -I$(CURDIR)/arch/devices/STM/stm32f4xx-hal-driver/Inc
+
 
 #---------- Symbol Definition to compiler -------------- 
-SYMBOL_DEF += 
+SYMBOL_DEF += -DSTM32F411
 
 #---------- System files -------------- 
 obj-y += arch/devices/STM/STM32F411/stm32_f411_system.o
 obj-y += arch/devices/STM/STM32F411/stm32_f411_startup.o
 
 #---------- Driver files -------------- 
-
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal.o
 
 
 

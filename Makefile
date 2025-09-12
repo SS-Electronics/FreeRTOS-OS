@@ -180,7 +180,7 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo 'Linking together...'
 	@echo '##############################################'
 
-	$(CPP) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)"  -o $@ $(OBJS)
+	$(CPP) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)"  -o $@ $(OBJS)
 
 	@echo '##############################################'
 	@echo ' '
@@ -194,7 +194,7 @@ $(BUILD)/%.o: %.c | $(BUILD) $(AUTOCONF)
 	@echo 'Building C Source $< ...'
 	@echo '***********************'
 	@mkdir -p $(dir $@)
-	$(CC) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
+	$(CC) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
 	@echo '**********************************************'
 
 $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
@@ -202,7 +202,7 @@ $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
 	@echo 'Building Assembly source: $< ...'
 	@echo '**********************************************'
 	@mkdir -p $(dir $@)
-	$(CC) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
+	$(CC) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
 
 
 
