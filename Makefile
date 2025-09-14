@@ -31,8 +31,10 @@ KCONFIG_CONF  				?= kconfig-conf    # from kconfig-frontends
 KCONFIG_FILE  				?= Kconfig
 KCONFIG_CONFIG 				?= .config
 AUTOCONF_MK     			:= autoconf.mk
-AUTOCONF_H      			:=
+AUTOCONF_H      			:= 
 ##############################################################
+
+
 
 
 
@@ -56,12 +58,14 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 
 
 
+
+
 ##############################################################
 # Directory setup
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := include init arch 
+SUBDIRS := arch  init  include
 
 INCLUDES :=
 
@@ -69,7 +73,11 @@ LINKER_SCRIPT :=
 
 SYMBOL_DEF :=
 
+TARGET_SYSMBOL_DEF +=
+
 ##############################################################
+
+
 
 
 
@@ -91,10 +99,17 @@ export SYMBOL_DEF
 -include $(AUTOCONF_MK)
 
 # File generation based on the input targets 
-ifeq ($(CONFIG_TARGET_MCU),"STM32F411")
+TARGET_SYSMBOL_DEF += -D$(patsubst "%",%,$(CONFIG_TARGET_MCU))
+
+ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
 	AUTOCONF_H += arch/devices/STM/stm32f4xx_hal_conf.h
 endif
+
 ##############################################################
+
+
+
+
 
 
 
@@ -113,7 +128,7 @@ oldconfig:
 
 
 
-config-outputs: $(AUTOCONF_MK) $(AUTOCONF_H)
+config-outputs: $(AUTOCONF_MK)
 
 $(AUTOCONF_MK): $(KCONFIG_CONFIG)
 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
@@ -135,25 +150,21 @@ $(AUTOCONF_MK): $(KCONFIG_CONFIG)
 # 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
 # 	       $(KCONFIG_CONFIG) | sort -u >> $@
 
-$(AUTOCONF_H): $(AUTOCONF_MK)
-	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
-	@rm -f $@
-	@echo "/* Auto-generated config header */" > $@
-	@echo "#ifndef __STM32F4xx_HAL_CONF_H" >> $@
-	@echo "#define __STM32F4xx_HAL_CONF_H \n\n\n" >> $@
-	@echo "#define HAL_MODULE_ENABLED \n\n\n\n" >> $@
+# $(AUTOCONF_H): $(AUTOCONF_MK)
+# 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
+# 	@rm -f $@
+# 	@echo "/* Auto-generated config header */" > $@
+# 	@echo "#ifndef __STM32F4xx_HAL_CONF_H" >> $@
+# 	@echo "#define __STM32F4xx_HAL_CONF_H \n\n\n" >> $@
+# 	@echo "#define HAL_MODULE_ENABLED \n\n\n\n" >> $@
 
 
 
-	@sed -ne 's/^CONFIG_\([A-Za-z0-9_]\+\)=y/#define \1 1/p' \
-	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
-	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
-	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
-	       $(KCONFIG_CONFIG) >> $@
-
-
-
-
+# 	@sed -ne 's/^CONFIG_\([A-Za-z0-9_]\+\)=y/#define \1 1/p' \
+# 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
+# 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
+# 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
+# 	       $(KCONFIG_CONFIG) >> $@
 
 
 
@@ -164,10 +175,20 @@ $(AUTOCONF_H): $(AUTOCONF_MK)
 
 
 
-	@echo "\n\n\n#endif" >> $@   
+
+
+
+
+# 	@echo "\n\n\n#endif" >> $@   
 
 
 ##############################################################
+
+
+
+
+
+
 
 
 ##############################################################
@@ -180,7 +201,7 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo 'Linking together...'
 	@echo '##############################################'
 
-	$(CPP) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)"  -o $@ $(OBJS)
+	$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)"  -o $@ $(OBJS)
 
 	@echo '##############################################'
 	@echo ' '
@@ -194,7 +215,7 @@ $(BUILD)/%.o: %.c | $(BUILD) $(AUTOCONF)
 	@echo 'Building C Source $< ...'
 	@echo '***********************'
 	@mkdir -p $(dir $@)
-	$(CC) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
+	$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
 	@echo '**********************************************'
 
 $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
@@ -202,9 +223,7 @@ $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
 	@echo 'Building Assembly source: $< ...'
 	@echo '**********************************************'
 	@mkdir -p $(dir $@)
-	$(CC) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
-
-
+	$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
 
 
 # Create build directory
@@ -214,16 +233,18 @@ $(BUILD):
 	@echo 'Bulding sources...'
 	@echo '##############################################'
 
-##############################################################
-
-
-
 
 
 clean:
-	rm -rf $(BUILD) $(AUTOCONF_MK) $(AUTOCONF_H)
+	rm -rf $(BUILD)
 	@echo '##############################################'
 	@echo ' '
 	@echo 'Clean completed!'
 	@echo ' '
 	@echo '##############################################'
+
+##############################################################
+
+
+
+

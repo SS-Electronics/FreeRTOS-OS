@@ -32,14 +32,16 @@ INCLUDES += -I$(CURDIR)/arch/arm/CMSIS_6
 
 
 
-################### Device STM32F401 ############################
-ifeq ($(CONFIG_TARGET_MCU),"STM32F401")
+#####################################################################
+#                     Device STM32F401xE 
+#####################################################################
+ifeq ($(CONFIG_TARGET_MCU),"STM32F401xE")
 
 #---------- Include paths -------------- 
 INCLUDES += -I$(CURDIR)/arch/devices/STM
 
 #---------- Symbol Definition to compiler -------------- 
-SYMBOL_DEF += -DSTM32F401
+SYMBOL_DEF += -DUSE_HAL_DRIVER
 
 
 #---------- System files -------------- 
@@ -57,14 +59,15 @@ LINKER_SCRIPT += $(CURDIR)/arch/devices/STM/STM32F401/stm32_f401_D_FLASH.ld
 
 endif
 
-#################################################################
+#------------------------------------------------------------------
 
 
 
 
-
-################### Device STM32F411 ############################
-ifeq ($(CONFIG_TARGET_MCU),"STM32F411")
+#####################################################################
+#                     Device STM32F411xE 
+#####################################################################
+ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
 
 #---------- Include paths -------------- 
 INCLUDES += -I$(CURDIR)/arch/devices/STM
@@ -72,16 +75,30 @@ INCLUDES += -I$(CURDIR)/arch/devices/STM/stm32f4xx-hal-driver/Inc
 
 
 #---------- Symbol Definition to compiler -------------- 
-SYMBOL_DEF += -DSTM32F411xE
+SYMBOL_DEF += -DUSE_HAL_DRIVER
 
 #---------- System files -------------- 
-obj-y += arch/devices/STM/STM32F411/stm32_f411_system.o
-obj-y += arch/devices/STM/STM32F411/stm32_f411_startup.o
+obj-y += arch/devices/STM/STM32F411/startup_stm32f411vetx.o
+obj-y += arch/devices/STM/STM32F411/system_stm32f4xx.o
+obj-y += arch/devices/STM/STM32F411/sysmem.o
+obj-y += arch/devices/STM/STM32F411/syscalls.o
+obj-y += arch/devices/STM/STM32F411/stm32f4xx_it.o
+obj-y += arch/devices/STM/STM32F411/stm32f4xx_hal_timebase_tim.o
+obj-y += arch/devices/STM/STM32F411/stm32f4xx_hal_msp.o
+
 
 #---------- Driver files -------------- 
 obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal.o
-
-
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_rcc.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_gpio.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_cortex.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_flash.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_pwr.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_dma.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim_ex.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart.o
+# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart_ex.o
 
 
 #---------- Associate Linker script for target MCU -------------- 
@@ -89,4 +106,4 @@ LINKER_SCRIPT += $(CURDIR)/arch/devices/STM/STM32F411/stm32_f411_FLASH.ld
 
 endif
 
-#################################################################
+#------------------------------------------------------------------

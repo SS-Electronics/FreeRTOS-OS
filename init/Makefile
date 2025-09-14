@@ -2,4 +2,4 @@
 # Objects from Init 
 
 
-obj-y += init/init.o
+obj-y += init/main.o
