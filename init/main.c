@@ -13,14 +13,7 @@
 # GNU General Public License for more details.
 */
 
-// #include <init/init.h>
-
-#include <STM32F411/system_stm32f4xx.h>
-#include <stm32f4xx_hal.h>
-
-//  UART_HandleTypeDef huart1;
-//  UART_HandleTypeDef huart2;
-//  TIM_HandleTypeDef htim1;
+#include <device.h>
 
 /* *****************************************************
  *

@@ -3,6 +3,9 @@
         "cmsis_gcc.h": "c",
         "stm32f4xx_hal.h": "c",
         "stm32f4xx_hal_conf.h": "c",
-        "system_stm32f4xx.h": "c"
+        "system_stm32f4xx.h": "c",
+        "device.h": "c",
+        "stm32_f411xe.h": "c",
+        "stm32f4xx_it.h": "c"
     }
 }

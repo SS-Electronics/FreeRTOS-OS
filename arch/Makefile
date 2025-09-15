@@ -70,7 +70,7 @@ endif
 ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
 
 #---------- Include paths -------------- 
-INCLUDES += -I$(CURDIR)/arch/devices/STM
+INCLUDES += -I$(CURDIR)/arch/devices/STM/STM32F4xx
 INCLUDES += -I$(CURDIR)/arch/devices/STM/stm32f4xx-hal-driver/Inc
 
 
@@ -78,13 +78,13 @@ INCLUDES += -I$(CURDIR)/arch/devices/STM/stm32f4xx-hal-driver/Inc
 SYMBOL_DEF += -DUSE_HAL_DRIVER
 
 #---------- System files -------------- 
-obj-y += arch/devices/STM/STM32F411/startup_stm32f411vetx.o
-obj-y += arch/devices/STM/STM32F411/system_stm32f4xx.o
-obj-y += arch/devices/STM/STM32F411/sysmem.o
-obj-y += arch/devices/STM/STM32F411/syscalls.o
-obj-y += arch/devices/STM/STM32F411/stm32f4xx_it.o
-obj-y += arch/devices/STM/STM32F411/stm32f4xx_hal_timebase_tim.o
-obj-y += arch/devices/STM/STM32F411/stm32f4xx_hal_msp.o
+obj-y += arch/devices/STM/STM32F4xx/STM32F411/startup_stm32f411vetx.o
+obj-y += arch/devices/STM/STM32F4xx/system_stm32f4xx.o
+obj-y += arch/devices/STM/STM32F4xx/sysmem.o
+obj-y += arch/devices/STM/STM32F4xx/syscalls.o
+obj-y += arch/devices/STM/STM32F4xx/stm32f4xx_it.o
+obj-y += arch/devices/STM/STM32F4xx/stm32f4xx_hal_timebase_tim.o
+obj-y += arch/devices/STM/STM32F4xx/stm32f4xx_hal_msp.o
 
 
 #---------- Driver files -------------- 
@@ -102,7 +102,7 @@ obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart.o
 
 
 #---------- Associate Linker script for target MCU -------------- 
-LINKER_SCRIPT += $(CURDIR)/arch/devices/STM/STM32F411/stm32_f411_FLASH.ld
+LINKER_SCRIPT += $(CURDIR)/arch/devices/STM/STM32F4xx/STM32F411/stm32_f411_FLASH.ld
 
 endif
 
