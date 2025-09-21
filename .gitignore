@@ -46,6 +46,19 @@
 *.mod*
 *.cmd
 .tmp_versions/
+
+
+# Ignore build output
+/build/
+
+# VS Code settings
+.vscode/
+
+.config
+.config.old
+
+autoconf.mk
+
 modules.order
 Module.symvers
 Mkfile.old

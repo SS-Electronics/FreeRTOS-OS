@@ -1,8 +1,8 @@
-# File:        Makefile
+# File:        KConfig
 # Author:      Subhajit Roy  
 #              subhajitroy005@gmail.com 
 #
-# Moudle:      Configuration of Kernel and Application
+# Moudle:      Kconfig of the FreeRTOS kernel and OS
 #
 # This file is part of FreeRTOS-OS Project.
 # 
@@ -20,5 +20,11 @@
 # along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
 
 
-source "arch/Kconfig"
-source "kernel/Kconfig"
+menu "OS Configuration"
+
+config OS_HEAP_SIZE
+    int "OS_HEAP_SIZE"
+    default 800000
+
+endmenu
+

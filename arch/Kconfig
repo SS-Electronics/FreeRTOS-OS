@@ -24,6 +24,9 @@ config TARGET_MCU
     string "TARGET_MCU"
     default "<part from list>"
 
+
+menu "MCU: Essential"
+
 config CPU_ARCH
     string "CPU-ARCH"
     default "ARM-CM4"
@@ -31,7 +34,6 @@ config CPU_ARCH
 config HAL_CORTEX_MODULE_ENABLED
     bool "Module: CORTEX"
     default y
-
 
 config HAL_PWR_MODULE_ENABLED
     bool "Module: POWER"
@@ -57,9 +59,10 @@ config HAL_WWDG_MODULE_ENABLED
     bool "Module: WWDG"
     default n
 
+endmenu
 
 
-menu "Oscillator and Clock Settings"
+menu "MCU: Clock"
 
 config HSE_VALUE
     string "H Ext Oscillator (Hz)"
@@ -85,7 +88,6 @@ config LSE_STARTUP_TIMEOUT
     string "H Ext Oscillator timeout (ms)"
     default "5000U"
 
-
 config EXTERNAL_CLOCK_VALUE
     string "Ext audio clock (Hz)"
     default "12288000U"
@@ -93,7 +95,10 @@ config EXTERNAL_CLOCK_VALUE
 endmenu
 
 
-menu "Communication Modules"
+
+
+
+menu "MCU: Communication"
 
 config HAL_UART_MODULE_ENABLED
     bool "Module: UART"
@@ -155,6 +160,13 @@ endmenu
 
 
 
+
+
+
+
+
+menu "MCU: Timer"
+
 config HAL_TIM_MODULE_ENABLED
     bool "Module: TIM"
     default n
@@ -162,6 +174,13 @@ config HAL_TIM_MODULE_ENABLED
 config HAL_LPTIM_MODULE_ENABLED
     bool "Module: LPTIM"
     default n
+
+endmenu
+
+
+
+
+menu "MCU: Analog"
 
 config HAL_ADC_MODULE_ENABLED
     bool "Module: ADC"
@@ -171,9 +190,12 @@ config HAL_DAC_MODULE_ENABLED
     bool "Module: DAC"
     default n
 
+endmenu
 
 
-menu "Memory Modules"
+
+
+menu "MCU: Memory"
 
 config HAL_DMA_MODULE_ENABLED
     bool "Module: DMA"
@@ -235,9 +257,8 @@ endmenu
 
 
 
-config HAL_RTC_MODULE_ENABLED
-    bool "Module: RTC"
-    default n
+
+menu "MCU: Miscellaneous"
 
 config HAL_SAI_MODULE_ENABLED
     bool "Module: SAI"
@@ -267,12 +288,16 @@ config HAL_CEC_MODULE_ENABLED
     bool "Module: CEC"
     default n
 
-
 config HAL_SPDIFRX_MODULE_ENABLED
     bool "Module: SPDIFRX"
     default n
 
-
 config HAL_DFSDM_MODULE_ENABLED
     bool "Module: DFSDM"
+    default n
+
+endmenu
+
+config HAL_RTC_MODULE_ENABLED
+    bool "Module: RTC"
     default n

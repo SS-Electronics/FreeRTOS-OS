@@ -21,6 +21,34 @@
 # You should have received a copy of the GNU General Public License 
 # along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
 
+include autoconf.mk
 
-INCLUDES += -I$(CURDIR)/include
-INCLUDES += -I$(CURDIR)/include/config
+
+INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/include
+
+
+
+obj-y += kernel/FreeRTOS-Kernel/croutine.o
+obj-y += kernel/FreeRTOS-Kernel/event_groups.o
+obj-y += kernel/FreeRTOS-Kernel/list.o
+obj-y += kernel/FreeRTOS-Kernel/queue.o
+obj-y += kernel/FreeRTOS-Kernel/stream_buffer.o
+obj-y += kernel/FreeRTOS-Kernel/tasks.o
+obj-y += kernel/FreeRTOS-Kernel/timers.o
+obj-y += kernel/FreeRTOS-Kernel/event_groups.o
+obj-y += kernel/kernel_thread.o
+
+
+
+
+#####################################################################
+#                     Device STM32F401xE 
+#####################################################################
+ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
+# Portable part 
+
+INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F
+
+obj-y += kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F/port.c
+
+endif
