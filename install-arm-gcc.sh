@@ -19,16 +19,23 @@ elif [ -f /etc/arch-release ]; then
 
 else
     echo "[!] Unknown distro, installing manually from ARM releases..."
-    VERSION=13.2.rel1
-    TARBALL=gcc-arm-none-eabi-$VERSION-x86_64-arm-none-eabi.tar.bz2
-    URL=https://developer.arm.com/-/media/Files/downloads/gnu/$VERSION/binrel/$TARBALL
 
-    wget -O $TARBALL $URL
-    tar -xjf $TARBALL
+    VERSION=13.2.rel1
+    TARBALL=gcc-arm-none-eabi-$VERSION-x86_64-arm-none-eabi.tar.xz
+    URL="https://developer.arm.com/-/media/Files/downloads/gnu/$VERSION/binrel/$TARBALL"
+
+    echo "[*] Downloading $TARBALL from ARM..."
+    wget -O $TARBALL $URL || { echo "[!] Download failed. Check the URL."; exit 1; }
+
+    echo "[*] Extracting..."
+    tar -xf $TARBALL
+
+    echo "[*] Moving to /opt/"
     sudo mv gcc-arm-none-eabi-$VERSION /opt/
-    echo "export PATH=/opt/gcc-arm-none-eabi-$VERSION/bin:\$PATH" >> ~/.bashrc
-    source ~/.bashrc
+
+    echo "[*] Adding to PATH. You need to reload your shell or run:"
+    echo "    export PATH=/opt/gcc-arm-none-eabi-$VERSION/bin:\$PATH"
 fi
 
 echo "=== Installation complete ==="
-arm-none-eabi-gcc --version
+echo "[*] Verify with: arm-none-eabi-gcc --version"

@@ -197,11 +197,11 @@ all: $(BUILD)/kernel.elf
 
 # Link final kernel
 $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
-	@echo '##############################################'
+	@echo '**********************************************'
 	@echo 'Linking together...'
-	@echo '##############################################'
+	@echo '**********************************************'
 
-	$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)"  -o $@ $(OBJS)
+	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)"  -o $@ $(OBJS)
 
 	@echo '##############################################'
 	@echo ' '
@@ -211,24 +211,24 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 
 # Rule for compiling into build dir
 $(BUILD)/%.o: %.c | $(BUILD) $(AUTOCONF)
-	@echo '**********************************************'
+	@echo '----------------------------------------------'
 	@echo 'Building C Source $< ...'
-	@echo '***********************'
+	@echo '----------------------'
 	@mkdir -p $(dir $@)
-	$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
+	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
 	@echo '**********************************************'
 
 $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
-	@echo '**********************************************'
+	@echo '----------------------------------------------'
 	@echo 'Building Assembly source: $< ...'
-	@echo '**********************************************'
+	@echo '----------------------'
 	@mkdir -p $(dir $@)
-	$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
-
+	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
+	@echo '**********************************************'
 
 # Create build directory
 $(BUILD):
-	mkdir -p $(BUILD)
+	@mkdir -p $(BUILD)
 	@echo '##############################################'
 	@echo 'Bulding sources...'
 	@echo '##############################################'
@@ -236,7 +236,7 @@ $(BUILD):
 
 
 clean:
-	rm -rf $(BUILD)
+	@rm -rf $(BUILD)
 	@echo '##############################################'
 	@echo ' '
 	@echo 'Clean completed!'
