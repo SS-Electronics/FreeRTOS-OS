@@ -75,6 +75,9 @@ SYMBOL_DEF :=
 
 TARGET_SYSMBOL_DEF +=
 
+OPENOCD_INTERFACE :=
+
+OPENOCD_TARGET:= 
 ##############################################################
 
 
@@ -95,6 +98,7 @@ export LINKER_SCRIPT
 
 export SYMBOL_DEF
 
+
 # Include generated Makefile configs if they exist
 -include $(AUTOCONF_MK)
 
@@ -103,7 +107,15 @@ TARGET_SYSMBOL_DEF += -D$(patsubst "%",%,$(CONFIG_TARGET_MCU))
 
 ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
 	AUTOCONF_H += arch/devices/STM/stm32f4xx_hal_conf.h
+	OPENOCD_TARGET += arch/debug_cfg/stm32_f411xx_debug.cfg
+	OPENOCD_INTERFACE += interface/stlink.cfg 
+
 endif
+
+export OPENOCD_INTERFACE
+
+export OPENOCD_TARGET
+
 
 ##############################################################
 
@@ -205,9 +217,15 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 
 	@echo '##############################################'
 	@echo ' '
-	@echo 'Build completed!'
+	@echo 'Build completed!:   $@'
 	@echo ' '
-		arm-none-eabi-size -A $@
+	@arm-none-eabi-size -Ax $@
+	@arm-none-eabi-size $@
+	@echo ' '
+	@echo '##############################################'
+	@echo ' '
+	@echo 'Generating HEX'
+	@arm-none-eabi-objcopy -O ihex $@ $@.hex
 	@echo ' '
 	@echo '##############################################'
 
@@ -248,5 +266,13 @@ clean:
 ##############################################################
 
 
+##############################################################
+.PHONY: print-interface print-target
 
+print-interface:
+	@echo $(OPENOCD_INTERFACE)
 
+print-target:
+	@echo $(OPENOCD_TARGET)
+
+##############################################################

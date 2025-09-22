@@ -62,7 +62,7 @@ void DebugMon_Handler(void)
 void TIM1_UP_TIM10_IRQHandler(void)
 {
 
-  HAL_TIM_IRQHandler(&htim1);
+  // HAL_TIM_IRQHandler(&htim1);
 
 }
 
@@ -70,7 +70,7 @@ void TIM1_UP_TIM10_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
 
-  HAL_UART_IRQHandler(&huart1);
+  // HAL_UART_IRQHandler(&huart1);
 
 }
 
@@ -78,7 +78,7 @@ void USART1_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
 
-  HAL_UART_IRQHandler(&huart2);
+  // HAL_UART_IRQHandler(&huart2);
 
 }
 

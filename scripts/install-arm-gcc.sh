@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "=== Installing ARM GCC Toolchain (arm-none-eabi-gcc) ==="
+echo "=== Installing ARM GCC Toolchain (arm-none-eabi-gcc) and GDB ==="
 
 # Detect distro
 if [ -f /etc/debian_version ]; then
     echo "[*] Detected Debian/Ubuntu"
     sudo apt update
-    sudo apt install -y gcc-arm-none-eabi binutils-arm-none-eabi gdb-multiarch
+    sudo sudo apt install -y gcc-arm-none-eabi binutils-arm-none-eabi gdb-multiarch
 
 elif [ -f /etc/fedora-release ]; then
     echo "[*] Detected Fedora"
@@ -33,9 +33,10 @@ else
     echo "[*] Moving to /opt/"
     sudo mv gcc-arm-none-eabi-$VERSION /opt/
 
-    echo "[*] Adding to PATH. You need to reload your shell or run:"
+    echo "[*] Adding GCC and GDB to PATH. You need to reload your shell or run:"
     echo "    export PATH=/opt/gcc-arm-none-eabi-$VERSION/bin:\$PATH"
 fi
 
 echo "=== Installation complete ==="
-echo "[*] Verify with: arm-none-eabi-gcc --version"
+echo "[*] Verify GCC: arm-none-eabi-gcc --version"
+echo "[*] Verify GDB: arm-none-eabi-gdb --version"

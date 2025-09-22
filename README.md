@@ -9,7 +9,7 @@ A light weight OS on top of FreeRTOS kernel apis.
 * Build the OS seperately for minimal operation
 * Or build the entire project by  adding this repo as submodule
 
-## Prerequisite
+## Prerequisite [ All the scripts are in ./scripts ]
 
 #### Installing compiler
 
@@ -22,6 +22,14 @@ sudo bash install-arm-gcc.sh
 ```http
 sudo bash install_kconfig.sh
 ```
+
+#### Installing openOCD [ On Chip Debugger ]
+
+```http
+sudo bash install_openocd.sh
+```
+
+
 
 ## Build
 
@@ -36,7 +44,7 @@ make menuconfig
 make config-outputs
 ```
 
-### build
+### build OS + Application
 ```http
 make all
 ```

@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug STM32F411 (OpenOCD + gdb-multiarch)",
+            "type": "cppdbg",
+            "request": "launch",
+
+            "program": "${workspaceFolder}/build/kernel.elf",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "miDebuggerServerAddress": "localhost:3333",
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+            "MIMode": "gdb",
+
+            "miDebuggerArgs": "-ex 'monitor reset init' -ex 'break Reset_Handler' -ex 'load'",
+
+            "stopAtEntry": true
+        }
+    ]
+}
