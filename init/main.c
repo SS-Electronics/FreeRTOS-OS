@@ -35,7 +35,6 @@ void main(void)
 {
 
 
-
 	/* Program shouldn't go after that  */
 	while(1)
 	{

@@ -18,6 +18,7 @@
 #define FREERTOS_OS_INCLUDE_OS_KERNEL_MEM_H_
 
 #include <def_std.h>
+#include <def_attributes.h>
 
 #include <FreeRTOS.h>
 #include <atomic.h>
@@ -32,25 +33,17 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
+/**************  API Export *****************/
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
 void*  		kmaloc(size_t size);
+
 int32_t 	kfree(void *p);
 
-
+uint32_t    os_get_free_mem(void);
 
 
 
@@ -58,6 +51,10 @@ int32_t 	kfree(void *p);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+/**************  END API Export *****************/
+
+
+
 
 
 #endif /* FREERTOS_OS_INCLUDE_OS_KERNEL_MEM_H_ */

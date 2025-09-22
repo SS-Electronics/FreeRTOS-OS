@@ -1,12 +1,11 @@
 /*
-File:        stm32f4xx_it.c
+File:        def_attributes.h
 Author:      Subhajit Roy  
              subhajitroy005@gmail.com 
 
-Moudle:       kernel
-Info:         all interrrupt handlers descriptions              
-Dependency:   CMSIS + HAL Driver repos + Device specific files
-              Dvice varinat need to be defined in compiele time
+Moudle:       include
+Info:         all attributes definitions              
+Dependency:   none
 
 This file is part of FreeRTOS-OS Project.
 
@@ -22,41 +21,11 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License 
 along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
-#ifndef FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_
-#define FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_
+
+/* Bootloader placed section */
+#define __SECTION_BOOT __attribute__((section(".os_boot")))
 
 
-#include <def_std.h>
+/* All OS and kernel related functions need to be placed in this section */
+#define __SECTION_OS __attribute__((section(".os_functions")))
 
-
-
-// #include <lib/ringbuffer.h>
-
-// #include <drivers/drv_time.h>
-
-// #include <conf_board.h>
-
-// #include <ipc/global_var.h>
-
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-void 					printk_init(void);
-int32_t					printk(char* ch);
-
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-
-
-
-
-
-
-
-#endif /* FREERTOS_OS_INCLUDE_OS_KERNEL_SYSCALL_H_ */

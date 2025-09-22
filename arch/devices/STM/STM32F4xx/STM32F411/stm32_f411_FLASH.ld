@@ -76,6 +76,17 @@ SECTIONS
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
 
+  .os_boot : 
+  { 
+    *(.os_boot) 
+  } > FLASH
+ 
+  .os_functions : 
+  { 
+    *(.os_functions) 
+  } > FLASH
+
+
   /* Constant data into "FLASH" Rom type memory */
   .rodata :
   {

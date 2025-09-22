@@ -65,7 +65,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := arch kernel init  include
+SUBDIRS := arch kernel mm init  include
 
 INCLUDES :=
 
@@ -206,6 +206,8 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo '##############################################'
 	@echo ' '
 	@echo 'Build completed!'
+	@echo ' '
+		arm-none-eabi-size -A $@
 	@echo ' '
 	@echo '##############################################'
 

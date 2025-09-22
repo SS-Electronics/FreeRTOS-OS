@@ -16,13 +16,27 @@
 #ifndef FREERTOS_OS_INCLUDE_DEF_STD_H_
 #define FREERTOS_OS_INCLUDE_DEF_STD_H_
 
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <signal.h>
+#include <time.h>
 
 
 
+typedef int32_t status_t;    
 
 
+/**************************************
+ * 
+ *  Error definitions
+ * 
+ *************************************/
 
-
+#define OS_ERR_NONE         0
+#define OS_ERR_OP           -1
+#define OS_ERR_MEM_OF       -2
+#define OS_ERR_MEM_OP       -3
 
 
 

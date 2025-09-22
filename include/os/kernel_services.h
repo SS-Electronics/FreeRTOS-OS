@@ -18,12 +18,10 @@
 
 #include <def_std.h>
 
-#include <os/kernel.h>
-#include <ipc/mqueue.h>
-
 /* Driver related includes*/
-#include <conf_board.h>
-#include <drivers/drv_uart.h>
+
+
+
 
 
 /**************  API Export *****************/
@@ -33,6 +31,10 @@ extern "C" {
 
 
 status_type os_kernel_thread_register(void);
+
+
+
+
 
 
 void thread_uart_mgmt(void * arg);
