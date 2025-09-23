@@ -2,20 +2,42 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug STM32F411 (OpenOCD + gdb-multiarch)",
+            "name": "Debug STM32 (OpenOCD running separately)",
             "type": "cppdbg",
             "request": "launch",
-
-            "program": "${workspaceFolder}/build/kernel.elf",
-            "miDebuggerPath": "/usr/bin/gdb-multiarch",
-            "miDebuggerServerAddress": "localhost:3333",
+            "program": "${workspaceFolder}/build/kernel.elf", 
+            "miDebuggerPath": "gdb-multiarch",
+            "miDebuggerServerAddress": "localhost:3333", 
             "cwd": "${workspaceFolder}",
-            "externalConsole": false,
-            "MIMode": "gdb",
-
-            "miDebuggerArgs": "-ex 'monitor reset init' -ex 'break Reset_Handler' -ex 'load'",
-
-            "stopAtEntry": true
+            "stopAtEntry": false,
+            "setupCommands": [
+                {
+                    "description": "Load file",
+                    "text": "file ./build/kernel.elf",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Load to chip",
+                    "text": "load",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Reset ",
+                    "text": "monitor reset halt",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Break at main",
+                    "text": "break main",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Continue",
+                    "text": "c",
+                    "ignoreFailures": true
+                }
+            ],
+            "logging": { "engineLogging": true }
         }
     ]
 }

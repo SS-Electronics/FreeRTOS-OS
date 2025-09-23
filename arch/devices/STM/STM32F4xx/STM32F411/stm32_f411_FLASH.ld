@@ -43,8 +43,7 @@ ENTRY(Reset_Handler)
 
 MINIMUM_MEMORY_MODEL = 1;
 
-/* Highest address of the user mode stack */
-_estack = ORIGIN(RAM) + LENGTH(RAM); /* end of "RAM" Ram type memory */
+
 
 /* tune these sizes to your needs */
 _Min_Heap_Size  = 0x200;   /* 512 bytes - adjust */
@@ -59,6 +58,9 @@ MEMORY
   FLASH_APP     (rx)  : ORIGIN = 0x08040000, LENGTH = 256K   /* application (sectors 6..7) */
 }
 
+/* Highest address of the user mode stack */
+_estack = ORIGIN(RAM) + LENGTH(RAM); /* end of "RAM" Ram type memory */
+
 /* -------------------------
    Output sections mapping
    ------------------------- */
@@ -68,7 +70,7 @@ SECTIONS
   /* BOOT area in FLASH_BOOT (vectors + boot code + boot data LMA)      */
   /* ------------------------------------------------------------------ */
 
-  .isr_vector_boot ORIGIN(FLASH_BOOT) :
+  .isr_vector ORIGIN(FLASH_BOOT) :
   {
     . = ALIGN(4);
     KEEP(*(.isr_vector))              /* typical startup vector for boot image */
@@ -77,12 +79,12 @@ SECTIONS
   } > FLASH_BOOT
 
   /* Bootloader code: functions explicitly placed in .boot */
-  .boot (NOLOAD) :
+  .boot :
   {
     . = ALIGN(4);
     __boot_text_start = .;
-    *(.boot)        /* code placed with __attribute__((section(".boot"))) */
-    *(.boot*)       /* wildcard catch */
+    KEEP(*(.boot))        /* code placed with __attribute__((section(".boot"))) */
+    KEEP(*(.boot*))       /* wildcard catch */
     __boot_text_end = .;
     . = ALIGN(4);
   } > FLASH_BOOT
@@ -91,12 +93,12 @@ SECTIONS
   /* OS  area in FLASH_OS                                               */
   /* ------------------------------------------------------------------ */
 
-  .os (NOLOAD) :
+  .os :
   {
     . = ALIGN(4);
     __os_text_start = .;
-    *(.os)          /* code placed with __attribute__((section(".os"))) */
-    *(.os*)
+    KEEP(*(.os))          /* code placed with __attribute__((section(".os"))) */
+    KEEP(*(.os*))
     __os_text_end = .;
     . = ALIGN(4);
   } > FLASH_OS
@@ -109,11 +111,11 @@ SECTIONS
   {
     . = ALIGN(4);
     __text_start = .;
-    *(.text)        /* all normal .text ends up here if not explicitly sectioned */
-    *(.text*)
-    *(.glue_7)
-    *(.glue_7t)
-    *(.eh_frame)
+    KEEP(*(.text))        /* all normal .text ends up here if not explicitly sectioned */
+    KEEP(*(.text*))
+    KEEP(*(.glue_7))
+    KEEP(*(.glue_7t))
+    KEEP(*(.eh_frame))
     KEEP(*(.init))
     KEEP(*(.fini))
     . = ALIGN(4);
@@ -123,29 +125,56 @@ SECTIONS
   .rodata :
   {
     . = ALIGN(4);
-    *(.rodata)
-    *(.rodata*)
+    KEEP(*(.rodata))
+    KEEP(*(.rodata*))
     . = ALIGN(4);
   } > FLASH_OS
 
   /* Exception tables (if any) */
-  .ARM.extab :
+  .ARM.extab (READONLY) :
   {
     . = ALIGN(4);
-    *(.ARM.extab* .gnu.linkonce.armextab.*)
+    KEEP(*(.ARM.extab* .gnu.linkonce.armextab.*))
     . = ALIGN(4);
   } > FLASH_OS
 
-  .ARM :
+  .ARM (READONLY) :
   {
     . = ALIGN(4);
     __exidx_start = .;
-    *(.ARM.exidx*)
+    KEEP(*(.ARM.exidx*))
     __exidx_end = .;
     . = ALIGN(4);
   } > FLASH_OS
 
+.preinit_array (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
+  {
+    . = ALIGN(4);
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP (*(.preinit_array*))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+    . = ALIGN(4);
+  } > FLASH_OS
 
+  .init_array (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
+  {
+    . = ALIGN(4);
+    PROVIDE_HIDDEN (__init_array_start = .);
+    KEEP (*(SORT(.init_array.*)))
+    KEEP (*(.init_array*))
+    PROVIDE_HIDDEN (__init_array_end = .);
+    . = ALIGN(4);
+  } > FLASH_OS
+
+  .fini_array (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
+  {
+    . = ALIGN(4);
+    PROVIDE_HIDDEN (__fini_array_start = .);
+    KEEP (*(SORT(.fini_array.*)))
+    KEEP (*(.fini_array*))
+    PROVIDE_HIDDEN (__fini_array_end = .);
+    . = ALIGN(4);
+  } > FLASH_OS
 
   /* ------------------------------------------------------------------ */
   /* APP area in FLASH_APP                                               */
@@ -155,8 +184,8 @@ SECTIONS
   {
     . = ALIGN(4);
     __app_text_start = .;
-    *(.app)         /* code placed with __attribute__((section(".app"))) */
-    *(.app*)
+    KEEP(*(.app))         /* code placed with __attribute__((section(".app"))) */
+    KEEP(*(.app*))
     __app_text_end = .;
     . = ALIGN(4);
   } > FLASH_APP
@@ -170,7 +199,6 @@ SECTIONS
   /* ------------------------------------------------------------------   */
 
   /* Bootloader RAM section */
-_sdata_boot = .;
 .data_boot (NOLOAD) :
 {
   . = ALIGN(4);
@@ -197,7 +225,6 @@ _sdata_boot = .;
   /* ------------------------------------------------------------------   */
 
   /* OS RAM section */
-_sdata_os = .;
 .data_os (NOLOAD) :
 {
   . = ALIGN(4);
@@ -224,7 +251,6 @@ _sdata_os = .;
   /* ------------------------------------------------------------------   */
 
 /* App RAM section */
-_sdata_app = .;
 .data_app (NOLOAD) :
 {
   . = ALIGN(4);
@@ -250,8 +276,8 @@ _sidata = LOADADDR(.data_generic);
 {
   . = ALIGN(4);
   _sdata = .;
-  *(.data)
-  *(.data*)
+  KEEP(*(.data))
+  KEEP(*(.data*))
   . = ALIGN(4);
   _edata = .;
 } > RAM AT > FLASH_OS
@@ -264,9 +290,9 @@ _sidata = LOADADDR(.data_generic);
   {
     . = ALIGN(4);
     __bss_start__ = .;
-    *(.bss)
-    *(.bss*)
-    *(COMMON)
+    KEEP(*(.bss))
+    KEEP(*(.bss*))
+    KEEP(*(COMMON))
     . = ALIGN(4);
     __bss_end__ = .;
   } > RAM

@@ -83,21 +83,22 @@ obj-y += arch/devices/STM/STM32F4xx/system_stm32f4xx.o
 obj-y += arch/devices/STM/STM32F4xx/sysmem.o
 obj-y += arch/devices/STM/STM32F4xx/syscalls.o
 obj-y += arch/devices/STM/STM32F4xx/stm32f4xx_it.o
-# obj-y += arch/devices/STM/STM32F4xx/stm32f4xx_hal_timebase_tim.o
+obj-y += arch/devices/STM/STM32F4xx/stm32f4xx_hal_timebase_tim.o
 obj-y += arch/devices/STM/STM32F4xx/stm32f4xx_hal_msp.o
 
 
 #---------- Driver files -------------- 
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_rcc.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_gpio.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_cortex.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_flash.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_pwr.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_dma.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim_ex.o
-# obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_rcc.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_gpio.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_cortex.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_flash.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_flash_ex.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_pwr.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_dma.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim_ex.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart.o
 # obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart_ex.o
 
 

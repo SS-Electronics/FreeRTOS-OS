@@ -4,36 +4,36 @@
 
 
 /* Symbols from linker script */
-__SECTION_BOOT_DATA extern uint32_t _estack;  /* Stack pointer end */
+extern uint32_t _estack;  /* Stack pointer end */
 
-__SECTION_BOOT_DATA extern uint32_t _sdata_boot;            /* start of boot .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t _edata_boot;            /* end of boot .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t __boot_data_lma;        /* start of boot .data in FLASH */
-__SECTION_BOOT_DATA extern uint32_t __boot_data_lma_end;    /* end of boot .data in FLASH */
+extern uint32_t _sdata_boot;            /* start of boot .data in RAM */
+extern uint32_t _edata_boot;            /* end of boot .data in RAM */
+extern uint32_t __boot_data_lma;        /* start of boot .data in FLASH */
+extern uint32_t __boot_data_lma_end;    /* end of boot .data in FLASH */
 
-__SECTION_BOOT_DATA extern uint32_t _sdata_os;              /* start of os .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t _edata_os;              /* end of os .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t __os_data_lma;          /* start of os .data in FLASH */
-__SECTION_BOOT_DATA extern uint32_t __os_data_lma_end;      /* end of os .data in FLASH */
+extern uint32_t _sdata_os;              /* start of os .data in RAM */
+extern uint32_t _edata_os;              /* end of os .data in RAM */
+extern uint32_t __os_data_lma;          /* start of os .data in FLASH */
+extern uint32_t __os_data_lma_end;      /* end of os .data in FLASH */
 
-__SECTION_BOOT_DATA extern uint32_t _sdata_app;             /* start of app .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t _edata_app;             /* end of app .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t __app_data_lma;         /* start app os .data in FLASH */
-__SECTION_BOOT_DATA extern uint32_t __app_data_lma_end;     /* end of app .data in FLASH */
+extern uint32_t _sdata_app;             /* start of app .data in RAM */
+extern uint32_t _edata_app;             /* end of app .data in RAM */
+extern uint32_t __app_data_lma;         /* start app os .data in FLASH */
+extern uint32_t __app_data_lma_end;     /* end of app .data in FLASH */
 
 
-__SECTION_BOOT_DATA extern uint32_t _sidata;  /* start of init values for .data (LMA in flash) */
-__SECTION_BOOT_DATA extern uint32_t _sdata;   /* start of .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t _edata;   /* end of .data in RAM */
-__SECTION_BOOT_DATA extern uint32_t _sbss;    /* start of .bss in RAM */
-__SECTION_BOOT_DATA extern uint32_t _ebss;    /* end of .bss in RAM */
+extern uint32_t _sidata;  /* start of init values for .data (LMA in flash) */
+extern uint32_t _sdata;   /* start of .data in RAM */
+extern uint32_t _edata;   /* end of .data in RAM */
+extern uint32_t _sbss;    /* start of .bss in RAM */
+extern uint32_t _ebss;    /* end of .bss in RAM */
 
 extern int main(void);
 
-// __SECTION_BOOT void __libc_init_array(void);
+__SECTION_BOOT void __libc_init_array(void);
 
 /* Default handler */
-__SECTION_BOOT void Default_Handler(void) 
+__SECTION_BOOT __attribute__((used)) void Default_Handler(void) 
 {
     while (1) 
     {
@@ -43,86 +43,86 @@ __SECTION_BOOT void Default_Handler(void)
 
 /* Cortex-M exception handlers (weak aliases to Default_Handler) */
 void Reset_Handler(void);
-void NMI_Handler(void)              __attribute__((weak, alias("Default_Handler")));
-void HardFault_Handler(void)        __attribute__((weak, alias("Default_Handler")));
-void MemManage_Handler(void)        __attribute__((weak, alias("Default_Handler")));
-void BusFault_Handler(void)         __attribute__((weak, alias("Default_Handler")));
-void UsageFault_Handler(void)       __attribute__((weak, alias("Default_Handler")));
-void SVC_Handler(void)              __attribute__((weak, alias("Default_Handler")));
-void DebugMon_Handler(void)         __attribute__((weak, alias("Default_Handler")));
-void PendSV_Handler(void)           __attribute__((weak, alias("Default_Handler")));
-void SysTick_Handler(void)          __attribute__((weak, alias("Default_Handler")));
+void NMI_Handler(void)              __attribute__((weak, alias("Default_Handler"),used));
+void HardFault_Handler(void)        __attribute__((weak, alias("Default_Handler"),used));
+void MemManage_Handler(void)        __attribute__((weak, alias("Default_Handler"),used));
+void BusFault_Handler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void UsageFault_Handler(void)       __attribute__((weak, alias("Default_Handler"),used));
+void SVC_Handler(void)              __attribute__((weak, alias("Default_Handler"),used));
+void DebugMon_Handler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void PendSV_Handler(void)           __attribute__((weak, alias("Default_Handler"),used));
+void SysTick_Handler(void)          __attribute__((weak, alias("Default_Handler"),used));
 
 /* Peripheral IRQ handlers (add more as needed) */
-void WWDG_IRQHandler(void)          __attribute__((weak, alias("Default_Handler")));
-void PVD_IRQHandler(void)           __attribute__((weak, alias("Default_Handler")));
-void TAMP_STAMP_IRQHandler(void)    __attribute__((weak, alias("Default_Handler")));
-void RTC_WKUP_IRQHandler(void)      __attribute__((weak, alias("Default_Handler")));
-void FLASH_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void RCC_IRQHandler(void)           __attribute__((weak, alias("Default_Handler")));
-void EXTI0_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void EXTI1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void EXTI2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void EXTI3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void EXTI4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
+void WWDG_IRQHandler(void)          __attribute__((weak, alias("Default_Handler"),used));
+void PVD_IRQHandler(void)           __attribute__((weak, alias("Default_Handler"),used));
+void TAMP_STAMP_IRQHandler(void)    __attribute__((weak, alias("Default_Handler"),used));
+void RTC_WKUP_IRQHandler(void)      __attribute__((weak, alias("Default_Handler"),used));
+void FLASH_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void RCC_IRQHandler(void)           __attribute__((weak, alias("Default_Handler"),used));
+void EXTI0_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void EXTI1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void EXTI2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void EXTI3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void EXTI4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
 
-void DMA1_Stream0_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA1_Stream1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA1_Stream2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA1_Stream3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA1_Stream4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA1_Stream5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA1_Stream6_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void ADC_IRQHandler(void)                   __attribute__((weak, alias("Default_Handler")));
-void EXTI9_5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM1_BRK_TIM9_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM1_UP_TIM10_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM1_TRG_COM_TIM11_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM1_CC_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void I2C1_EV_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void I2C1_ER_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void I2C2_EV_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void I2C2_ER_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void SPI1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void SPI2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void USART1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void USART2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void EXTI15_10_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void RTC_Alarm_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void OTG_FS_WKUP_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA1_Stream7_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void SDIO_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void TIM5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void SPI3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream0_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void OTG_FS_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream6_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void DMA2_Stream7_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void USART6_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void I2C3_EV_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void I2C3_ER_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void FPU_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void SPI4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-void SPI5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler")));
-
-
+void DMA1_Stream0_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA1_Stream1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA1_Stream2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA1_Stream3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA1_Stream4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA1_Stream5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA1_Stream6_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void ADC_IRQHandler(void)                   __attribute__((weak, alias("Default_Handler"),used));
+void EXTI9_5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM1_BRK_TIM9_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM1_UP_TIM10_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM1_TRG_COM_TIM11_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM1_CC_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void I2C1_EV_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void I2C1_ER_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void I2C2_EV_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void I2C2_ER_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void SPI1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void SPI2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void USART1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void USART2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void EXTI15_10_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void RTC_Alarm_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void OTG_FS_WKUP_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA1_Stream7_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void SDIO_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void TIM5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void SPI3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream0_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream1_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream2_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream3_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void OTG_FS_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream6_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void DMA2_Stream7_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void USART6_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void I2C3_EV_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void I2C3_ER_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void FPU_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void SPI4_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
+void SPI5_IRQHandler(void)         __attribute__((weak, alias("Default_Handler"),used));
 
 
+
+// (void (*)(void))&_estack,       /* Initial stack pointer */
 
 
 /* Vector table (goes into .isr_vector section at FLASH_BOOT origin) */
 __attribute__((section(".isr_vector")))
-const void * g_pfnVectors[] = 
+const void* const g_pfnVectors[]  = 
 {
-    (void *)&_estack,       /* Initial stack pointer */
+    &_estack,
     Reset_Handler,          /* Reset Handler */
     NMI_Handler,            /* NMI Handler */
     HardFault_Handler,      /* Hard Fault Handler */
@@ -228,20 +228,21 @@ const void * g_pfnVectors[] =
 };
 
 /* Reset Handler implementation */
-__SECTION_BOOT void Reset_Handler(void) 
+__SECTION_BOOT __attribute__((noreturn)) void Reset_Handler(void)  
 {
     uint32_t *src, *dst;
 
     /* Stack pointer init  */
-    __asm volatile (
-    "ldr sp, =_estack"
+__asm volatile (
+    "ldr r0, =g_pfnVectors\n\t"
+    "ldr sp, [r0]"
     );
 
     /* System init (clocks, etc.) */
     SystemInit();
 
-    SystemCoreClockUpdate();
-    
+    // SystemCoreClockUpdate();
+
     /* copy boot sec data LMA to VMA */
     for (dst = &_sdata_boot, src = &__boot_data_lma; dst < &_edata_boot; )
     {

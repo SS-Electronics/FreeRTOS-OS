@@ -49,7 +49,7 @@ CC_OPTIMIZATION				:= -O0 -g3 -c
 CC_EXTRA_FLAGS				:= --specs=nano.specs
 CC_INPUT_STD				:= -std=gnu99
 CC_WARNINGS					:= -Wall
-CC_TARGET_PROP				:= -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard 
+CC_TARGET_PROP				:= 
 CC_LINKER_INPUT				:= -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 CC_ASSEMBLER_FLAGS			:= -x assembler-with-cpp
 CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
@@ -109,7 +109,7 @@ ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
 	AUTOCONF_H += arch/devices/STM/stm32f4xx_hal_conf.h
 	OPENOCD_TARGET += arch/debug_cfg/stm32_f411xx_debug.cfg
 	OPENOCD_INTERFACE += interface/stlink.cfg 
-
+	CC_TARGET_PROP	+= -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard 
 endif
 
 export OPENOCD_INTERFACE
@@ -232,7 +232,7 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo 'Generating Assembly'
 	@arm-none-eabi-objcopy -O ihex $@ $@.hex
 	@echo ' '
-	@arm-none-eabi-objdump -S $@ > $@.asm
+	@arm-none-eabi-objdump -D $@ > $@.asm
 	@echo '##############################################'
 
 # Rule for compiling into build dir

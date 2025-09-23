@@ -2,15 +2,22 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Start OpenOCD",
+            "label": "Make All",
             "type": "shell",
-            "command": "bash",
-            "args": [
-                "-c",
-                "openocd -f $(make -s print-target)"
-            ],
+            "command": "make all",
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Make Clean",
+            "type": "shell",
+            "command": "make clean",
+            "group": "build",
             "problemMatcher": [],
-            "isBackground": true,
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"
