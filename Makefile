@@ -228,6 +228,12 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@arm-none-eabi-objcopy -O ihex $@ $@.hex
 	@echo ' '
 	@echo '##############################################'
+	@echo ' '
+	@echo 'Generating Assembly'
+	@arm-none-eabi-objcopy -O ihex $@ $@.hex
+	@echo ' '
+	@arm-none-eabi-objdump -S $@ > $@.asm
+	@echo '##############################################'
 
 # Rule for compiling into build dir
 $(BUILD)/%.o: %.c | $(BUILD) $(AUTOCONF)

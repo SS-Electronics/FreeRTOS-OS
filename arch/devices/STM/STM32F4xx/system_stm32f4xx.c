@@ -109,11 +109,11 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
   ***********************************************************/
 
 
-UART_HandleTypeDef       huart1;
-UART_HandleTypeDef       huart2;
-TIM_HandleTypeDef        htim1; 
+__SECTION_BOOT_DATA UART_HandleTypeDef       huart1;
+__SECTION_BOOT_DATA UART_HandleTypeDef       huart2;
+__SECTION_BOOT_DATA TIM_HandleTypeDef        htim1; 
 
-uint32_t                SystemCoreClock = 100000000;
+__SECTION_BOOT_DATA uint32_t                SystemCoreClock = 100000000;
 const uint8_t           AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
 const uint8_t           APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 
@@ -126,12 +126,8 @@ const uint8_t           APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
   *                      the "startup_stm32f4xx.s" file.
  * 
  ***********************************************************/
-void SystemInit(void)
+__SECTION_BOOT void SystemInit(void)
 {
-
-  int a= 30;
-
-  a = a + 12;
 /* FPU settings ------------------------------------------------------------*/
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
@@ -158,7 +154,7 @@ void SystemInit(void)
                           execution.
  * 
  ***********************************************************/
-void SystemCoreClockUpdate(void)
+__SECTION_BOOT void SystemCoreClockUpdate(void)
 {
   uint32_t tmp = 0, pllvco = 0, pllp = 2, pllsource = 0, pllm = 2;
   
@@ -220,7 +216,7 @@ Setup the external memory controller.
   *         This SRAM/SDRAM will be used as program data 
   *         memory (including heap and stack).
  ***********************************************************/
-void SystemInit_ExtMemCtl(void)
+__SECTION_BOOT void SystemInit_ExtMemCtl(void)
 {
   __IO uint32_t tmp = 0x00;
 

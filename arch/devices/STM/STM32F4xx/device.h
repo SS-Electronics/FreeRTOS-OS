@@ -42,6 +42,8 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 
 #if defined(STM32F411xE) 
 
+#include "def_attributes.h"
+
 /* Generic device specifc include  */
 #include "stm32f4xx.h"
 #include "STM32F411/stm32_f411xe.h"
