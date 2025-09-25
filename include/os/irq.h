@@ -1,60 +1,115 @@
 /*
- * File:        irq.h
- * Author:      Subhajit Roy  
- *              subhajitroy005@gmail.com 
- *
- * Moudle:      Modeule Kernel [ Local Build ] 
- * Info:        Interrupt registration and constrols from user and kernel space. 
- *                            
- * Dependency:  None
- *
- * This file is part of FreeRTOS-KERNEL Project.
- *
- * FreeRTOS-KERNEL is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU General Public License 
- * as published by the Free Software Foundation, either version 
- * 3 of the License, or (at your option) any later version.
- *
- * FreeRTOS-KERNEL is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License 
- *along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
- */
+File:        irq.h
+Author:      Subhajit Roy  
+             subhajitroy005@gmail.com 
+
+Moudle:       include/os
+Info:         generic interrupt controler description and api              
+Dependency:   none
+
+This file is part of FreeRTOS-OS Project.
+
+FreeRTOS-OS is free software: you can redistribute it and/or 
+modify it under the terms of the GNU General Public License 
+as published by the Free Software Foundation, either version 
+3 of the License, or (at your option) any later version.
+
+FreeRTOS-OS is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License 
+along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
+
 #ifndef __IRQ_H__
 #define __IRQ_H__
 
 /* Stabdard include */
-#include "../include/std/std_types.h"
+#include "def_std.h"
 
 /* Device interrupt include */
-#include "../devices/device_irq.h"
 
 /*
  * FreeRTOS kernel Includes
  */
-#include "./FreeRTOS-Kernel/include/FreeRTOS.h"
+
 /*
  * END: FreeRTOS kernel Includes
  */
 
 
 
-enum __kernel_interrupts_list
-{
-	KERN_IRQ_SYS_HARDFAULT = 0,
-	KERN_IRQ_SYS_BUSFAULT,
-	KERN_IRQ_SYS_USAGEFAULT,
-	IRQ_COMM_1,
-	IRQ_COMM_2,
-	IRQ_COMM_3,
-	MAX_IRQ_SERV
+/**
+ * struct irq_data - per irq chip data passed down to chip functions
+ * @mask:		precomputed bitmask for accessing the chip registers
+ * @irq:		interrupt number
+ * @hwirq:		hardware interrupt number, local to the interrupt domain
+ * @common:		point to data shared by all irqchips
+ * @chip:		low level interrupt hardware access
+ * @domain:		Interrupt translation domain; responsible for mapping
+ *			between hwirq number and linux irq number.
+ * @parent_data:	pointer to parent struct irq_data to support hierarchy
+ *			irq_domain
+ * @chip_data:		platform-specific per-chip private data for the chip
+ *			methods, to allow shared chip implementations
+ */
+struct irq_data {
+	uint32_t			mask;
+	uint32_t			irq;
+	irq_hw_id_t			hwirq_id;
+	struct irq_chip		*chip;
+	struct irq_domain	*domain;
+#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
+	struct irq_data		*parent_data;
+#endif
+	void			*chip_data;
 };
 
 
 
+/**
+ * struct irq_chip - hardware interrupt chip descriptor
+ * @irq_enable:		enable the interrupt (defaults to chip->unmask if NULL)
+ * @irq_disable:	disable the interrupt
+ * @irq_ack:		start of a new interrupt
+ * @irq_mask:		mask an interrupt source
+ * @irq_mask_ack:	ack and mask an interrupt source
+ * @irq_unmask:		unmask an interrupt source
+ * @irq_eoi:		end of interrupt
+ * @irq_retrigger:	resend an IRQ to the CPU
+ * @irq_set_type:	set the flow type (IRQ_TYPE_LEVEL/etc.) of an IRQ
+ * @irq_set_wake:	enable/disable power-management wake-on of an IRQ
+ * @irq_suspend:	function called from core code on suspend once per
+ *			chip, when one or more interrupts are installed
+ * @irq_resume:		function called from core code on resume once per chip,
+ *			when one ore more interrupts are installed
+ * @irq_pm_shutdown:	function called from core code on shutdown once per chip
+ * @irq_get_irqchip_state:	return the internal state of an interrupt
+ * @irq_set_irqchip_state:	set the internal state of a interrupt
+ * @flags:		chip specific flags
+ */
+struct irq_chip 
+{
+	const char		*name;
+	void			(*irq_enable)(struct irq_data *data);
+	void			(*irq_disable)(struct irq_data *data);
+	void			(*irq_ack)(struct irq_data *data);
+	void			(*irq_mask)(struct irq_data *data);
+	void			(*irq_mask_ack)(struct irq_data *data);
+	void			(*irq_unmask)(struct irq_data *data);
+	void			(*irq_eoi)(struct irq_data *data);
+	int				(*irq_retrigger)(struct irq_data *data);
+	int				(*irq_set_type)(struct irq_data *data, unsigned int flow_type);
+	int				(*irq_set_wake)(struct irq_data *data, unsigned int on);
+	void			(*irq_suspend)(struct irq_data *data);
+	void			(*irq_resume)(struct irq_data *data);
+	void			(*irq_pm_shutdown)(struct irq_data *data);
+	int				(*irq_get_irqchip_state)(struct irq_data *data, enum irqchip_irq_state which, bool *state);
+	int				(*irq_set_irqchip_state)(struct irq_data *data, enum irqchip_irq_state which, bool state);
+
+	unsigned long	flags;
+};
 
 
 

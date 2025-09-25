@@ -51,20 +51,12 @@ typedef void (*thread_func_t)(void* parm);
 
 typedef struct thread_handle
 {
+	struct list_node	list;
 	uint32_t			thread_id;
 	TaskHandle_t  		thread_handle;
 	void*				init_parameter;
-	struct thread_handle*		next_handle;
 }thread_handle_t;
 
-
-
-
-typedef struct 
-{
-	uint32_t			no_of_threads;
-	thread_handle_t*	thred_list_head;
-}thread_list_t;
 
 
 

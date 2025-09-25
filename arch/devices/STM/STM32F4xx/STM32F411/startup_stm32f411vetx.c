@@ -28,7 +28,7 @@ extern uint32_t _edata;   /* end of .data in RAM */
 extern uint32_t _sbss;    /* start of .bss in RAM */
 extern uint32_t _ebss;    /* end of .bss in RAM */
 
-extern int main(void);
+extern void main(void);
 
 __SECTION_BOOT void __libc_init_array(void);
 
@@ -228,7 +228,7 @@ const void* const g_pfnVectors[]  =
 };
 
 /* Reset Handler implementation */
-__SECTION_BOOT __attribute__((noreturn)) void Reset_Handler(void)  
+__SECTION_BOOT __USED __attribute__((noreturn)) void Reset_Handler(void)  
 {
     uint32_t *src, *dst;
 

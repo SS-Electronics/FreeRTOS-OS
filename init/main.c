@@ -31,7 +31,7 @@ __attribute__((weak)) int app_main(void)
  * OS entry function give control to kernel and start OS
  *
  */
-__SECTION_BOOT void main(void)
+__SECTION_BOOT __USED void main(void)
 {
 
 

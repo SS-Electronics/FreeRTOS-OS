@@ -33,3 +33,11 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 /* Application section  */
 #define __SECTION_APP            __attribute__((section(".app")))
 #define __SECTION_APP_DATA       __attribute__((section(".app_data")))
+
+#ifndef __USED
+#define __USED                   __attribute__((used))
+#endif
+
+#ifndef __KEEP
+#define __KEEP                   __attribute__((keep))
+#endif
