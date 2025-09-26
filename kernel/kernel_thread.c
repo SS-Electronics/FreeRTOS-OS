@@ -1,50 +1,61 @@
-/*
-File:        kernel_thread.h
-Author:      Subhajit Roy  
-             subhajitroy005@gmail.com 
-
-Moudle:       kernel
-Info:         thread related function definitions           
-Dependency:   
-
-This file is part of FreeRTOS-OS Project.
-
-FreeRTOS-OS is free software: you can redistribute it and/or 
-modify it under the terms of the GNU General Public License 
-as published by the Free Software Foundation, either version 
-3 of the License, or (at your option) any later version.
-
-FreeRTOS-OS is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of 
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License 
-along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
-
-#include <os/kernel.h>
-
-
-/* *****************************************************
+/**
+ * @file   	kernel_thread.c
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @brief   All kernel thread operation api definition
+ * @details Thread create delete resume pause delay
+ * @date    2025-09-26
  *
- * Priate variables
+ * @note This file is part of FreeRTOS-OS Project.
  *
- * *****************************************************/
+ * FreeRTOS-OS is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
+ */
 
+#include "os/kernel.h"
+
+
+/**
+ * @section Static variables declaration
+ * @brief   This section contains all the static varibles
+ * 			used in this file
+ */
+
+ /**
+  * @brief Global List head of all the thread handles
+  */
 __SECTION_OS_DATA	__KEEP 
-	static	struct list_node thread_hanldes;
+	LIST_NODE_HEAD(thread_list);
 
+ /**
+  * @brief This counter keeps incrementing on
+  * 	   each successful thread register to schedular
+  */
 __SECTION_OS_DATA __KEEP
 	static int32_t	thread_counter = 0;
 
 
 
 
-/* *****************************************************
- *
- * OS Thread Create
- *
- * *****************************************************/
+/**
+ * @brief A generic thread create api.
+ * @note  This creates a dynamic FreeRTOS thread
+ *        and insert the new thread handle in the thread list  
+ * @param thread_func Thread function pointer.
+ * @param thread_name Name of the thread for debugging purpose
+ * @param thread_stack_depth Stack size in words
+ * @param thread_parameter a container pointer that will be passed 
+ * 						to the thread when schedular starts it 
+ */
 int32_t	__SECTION_OS os_thread_create(thread_func_t thread_func,
 		                    const char * const thread_name,
 							uint32_t thread_stack_depth,
@@ -60,7 +71,6 @@ int32_t	__SECTION_OS os_thread_create(thread_func_t thread_func,
 		if(handle != NULL)
 		{
 			handle->init_parameter = thread_parameter;
-			handle->next_handle	= NULL;
 			
 			BaseType_t returned = xTaskCreate(thread_func, 
 											thread_name, 

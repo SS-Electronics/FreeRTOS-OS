@@ -26,3 +26,4 @@ include autoconf.mk
 
 
 obj-y += mm/kernel_mem.o
+obj-y += mm/list.o

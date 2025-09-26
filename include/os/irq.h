@@ -38,6 +38,15 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
  * END: FreeRTOS kernel Includes
  */
 
+/**************************************
+ * 
+ *  Interrupt definitions
+ * 
+ *************************************/
+typedef int32_t irq_hw_id_t;
+
+
+
 
 
 /**

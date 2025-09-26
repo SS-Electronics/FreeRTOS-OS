@@ -282,3 +282,37 @@ print-target:
 	@echo $(OPENOCD_TARGET)
 
 ##############################################################
+
+
+
+##############################################################
+
+#               Doc Generator 
+
+# Path to Doxygen executable
+DOXYGEN ?= doxygen
+
+# Doxygen configuration file
+DOXYFILE ?= Doxyfile
+
+# Documentation output directory (must match Doxyfile OUTPUT_DIRECTORY)
+DOC_DIR ?= docs/generated
+
+.PHONY: docs clean-docs
+
+
+
+# Generate documentation
+docs:
+	@echo "Generating documentation..."
+	$(DOXYGEN) $(DOXYFILE)
+	@echo "Documentation generated in $(DOC_DIR)/html"
+
+# Clean generated documentation
+clean-docs:
+	@echo "Cleaning documentation..."
+	@rm -rf $(DOC_DIR)/html
+	@echo "Documentation cleaned."
+
+
+##############################################################

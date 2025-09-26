@@ -28,33 +28,46 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include <def_attributes.h>
 #include <def_std.h>
 
+#include "mm/list.h"
+
 #include "kernel_mem.h"
 // #include "kernel_syscall.h"
 // #include "kernel_services.h"
 
 
-/**************************************
- * 
- *  Function prototypes
- * 
- *************************************/
+
+
+
+/**
+ * @section Data type definitions
+ * @brief   This section contains all data structure 
+ *          definitions used in link list.
+ */
+
+/**
+ * @typedef thread_func_t
+ * @brief Function pointer type for generic threads.
+ * @param parm a container pointer that will be passed 
+ * 			   to the thread when schedular starts it
+ *
+ * This type is used to define the body of a thread.
+ * The function must match the signature: void function(void* parm)
+ * @warning The function should never return
+ */
 typedef void (*thread_func_t)(void* parm);
 
 
-
-
-/**************************************
- * 
- *  Types definition
- * 
- *************************************/
-
-typedef struct thread_handle
+/**
+ * @struct thread_handle_t
+ * @brief  Holds handles , id and parameter data of a thread
+ * @note This is abstruction over TaskHandle_t of FreeRTOS
+ */
+typedef struct
 {
-	struct list_node	list;
-	uint32_t			thread_id;
-	TaskHandle_t  		thread_handle;
-	void*				init_parameter;
+	struct list_node	list;		/**> List block */
+	uint32_t			thread_id;	/**> Thread Id: All thread are controlled over this id  */
+	TaskHandle_t  		thread_handle; /**> FreeRTOS task Handle */
+	void*				init_parameter; /**> Init container pointer */
 }thread_handle_t;
 
 
@@ -67,10 +80,16 @@ typedef struct thread_handle
 
 
 
-/**************  API Export *****************/
+/**
+ * @defgroup Thread apis
+ * @brief Functions to operate on threads.
+ * @{
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 /*  Register a new thread and after add it 
 will be in ready state  */
@@ -109,7 +128,8 @@ void		 os_resume_thread(int32_t thread_id);
 #ifdef __cplusplus
 }
 #endif
-/**************  END API Export *****************/
+/** @} */ // end of list_api
+
 
 
 
