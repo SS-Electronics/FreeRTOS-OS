@@ -96,12 +96,72 @@ struct list_head
  * @param type Type of the container struct
  * @param member Name of the member within the struct 
  *               that ptr points to
+ * @note  (type *)0
+ *         Creates a null pointer of the container struct type.
+ *        We use it to calculate the offset of the member within 
+ *         the struct without accessing memory.
+ *
+ *         ((type *)0)->member
+ *         Refers to the member field in the struct at address 0.
+ *         Its type is used in typeof to declare __mptr.
+ *
+ *        __mptr = ptr
+ *        Stores the pointer to the member we actually have.
+ *
+ *        offsetof(type, member)
+ *        Computes the byte offset of member inside type.
+ *        (char *)__mptr - offsetof(type, member)
+ *
+ *        Subtract the offset from the member pointer to get the base address of the struct.
+ *        Cast to (type *)
+ *        Converts the address back to a pointer of the container struct. 
  */
 #define container_of(ptr, type, member) \
     ({ \
     const typeof( ( (type *)0 )->member ) *__mptr = (ptr); \ 
     (type *)((char *)__mptr - offsetof(type, member)); \
     }) 
+
+
+/**
+ * @brief find the list entry
+ * @param ptr Pointer to a struct member inside some struct
+ * @param type Type of the container struct
+ * @param member Name of the member within the struct 
+ *               that ptr points to
+ */   
+#define list_entry(ptr, type, member) \
+    container_of(ptr, type, member)
+
+
+/**
+ * @brief Find the first entry in the list
+ * @param ptr Pointer to a struct member inside some struct
+ * @param type Type of the container struct
+ * @param member Name of the member within the struct 
+ *               that ptr points to
+ * 
+ * @note Head-> next is the first entry in the list  
+ */    
+#define list_first_entry(ptr, type, member) \
+    list_entry((ptr)->next, type, member)
+
+
+ /**
+ * @brief  Iteration through the complete list
+ * @param pos Pointer to the container structure
+ * @param member Name of the struct list_head 
+ *              field inside the container struct
+ */       
+#define list_next_entry(pos, member) \
+    list_entry((pos)->member.next, typeof(*(pos)), member)
+
+ /**
+ * @brief  check the list is empty or not
+ * @param head list head
+ * @note If the list next is the head itself then there 
+ */  
+#define list_empty(head) ((head)->next == (head))
 
 
 /**

@@ -34,12 +34,6 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 
 void NMI_Handler(void)
 {
-
-  
-  while (1)
-  {
-  }
-
   
 }
 
