@@ -18,6 +18,7 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
   - [IPC Subsystem](#ipc-subsystem)
   - [Services Layer](#services-layer)
   - [Drivers](#drivers)
+  - [Driver Implementation Example](#driver-implementation-example)
   - [Communication Stacks](#communication-stacks)
 - [Driver Architecture](DRIVERS.md)
 - [Thread API — Linux-Style Design](#thread-api--linux-style-design)
@@ -256,6 +257,114 @@ Task →  xQueue (IPC_MQUEUE_TYPE_PROC_TXN)     →  consumer task
 ```
 
 For full driver subsystem documentation — handle structs, HAL ops vtables, vendor backends (STM32 / Infineon), management service thread lifecycles, Kconfig flags, and porting guides — see **[DRIVERS.md](DRIVERS.md)**.
+
+### Driver Implementation Example
+
+The three steps to bring up any peripheral: **configure** the vendor hardware context, **register** the generic handle, **use** it through the management service.
+
+#### Step 1 — UART on USART2 @ 115200 baud
+
+```c
+#include <drivers/drv_handle.h>
+#include <drivers/com/hal/stm32/hal_uart_stm32.h>
+#include <services/uart_mgmt.h>
+
+void uart_mgmt_init_devices(void)
+{
+    drv_uart_handle_t *h = drv_uart_get_handle(UART_1);
+
+    /* 1a. Bind the STM32 HAL ops table to the handle */
+    drv_uart_register(UART_1,
+                      hal_uart_stm32_get_ops(),
+                      115200,   /* baud rate           */
+                      10);      /* default timeout ms  */
+
+    /* 1b. Set the vendor-specific peripheral instance and framing */
+    hal_uart_stm32_set_config(h,
+                              USART2,
+                              UART_WORDLENGTH_8B,
+                              UART_STOPBITS_1,
+                              UART_PARITY_NONE,
+                              UART_MODE_TX_RX);
+    /* hw_init is called internally by drv_uart_register() — USART2 is live */
+}
+```
+
+#### Step 2 — Async transmit via management thread
+
+The management thread owns the bus; callers never touch the handle directly.
+
+```c
+#include <services/uart_mgmt.h>
+
+void my_task(void *arg)
+{
+    static const uint8_t hello[] = "Hello FreeRTOS-OS\r\n";
+
+    for (;;) {
+        /* Non-blocking — posts to the management queue and returns immediately */
+        uart_mgmt_async_transmit(UART_1, hello, sizeof(hello) - 1);
+
+        os_thread_delay(1000);
+    }
+}
+```
+
+#### Step 3 — I2C sensor read (synchronous, task-notify pattern)
+
+```c
+#include <drivers/drv_handle.h>
+#include <drivers/com/hal/stm32/hal_iic_stm32.h>
+#include <services/iic_mgmt.h>
+
+#define INA230_ADDR   0x40   /* 7-bit address */
+#define INA230_REG_V  0x02   /* Bus-voltage register */
+
+void sensor_task(void *arg)
+{
+    uint8_t  buf[2];
+    int32_t  ret;
+
+    /* Register I2C bus 0 on I2C1 @ 400 kHz */
+    drv_iic_handle_t *h = drv_iic_get_handle(IIC_1);
+    drv_iic_register(IIC_1, hal_iic_stm32_get_ops(), 400000, 10);
+    hal_iic_stm32_set_config(h, I2C1,
+                             I2C_ADDRESSINGMODE_7BIT,
+                             I2C_DUALADDRESS_DISABLE);
+
+    for (;;) {
+        /* Blocking read — suspends this task until iic_mgmt completes */
+        ret = iic_mgmt_sync_receive(IIC_1,
+                                    INA230_ADDR,
+                                    INA230_REG_V,
+                                    1,        /* use_reg = yes */
+                                    buf, 2,
+                                    10);
+
+        if (ret == OS_ERR_NONE) {
+            uint16_t raw = ((uint16_t)buf[0] << 8) | buf[1];
+            /* process raw voltage reading */
+        }
+
+        os_thread_delay(100);
+    }
+}
+```
+
+#### Data flow summary
+
+```
+sensor_task
+    │  iic_mgmt_sync_receive()       ← posts iic_mgmt_msg_t to queue
+    │  ulTaskNotifyTake()            ← task suspends here
+    ▼
+iic_mgmt thread
+    │  drv_iic_receive()            ← calls ops->receive()
+    │  HAL_I2C_Mem_Read()           ← STM32 HAL
+    │  xTaskNotifyGive(caller)      ← wakes sensor_task
+    ▼
+sensor_task resumes with result in buf[]
+```
 
 ### Communication Stacks
 
