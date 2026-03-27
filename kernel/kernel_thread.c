@@ -31,88 +31,72 @@
  */
 
  /**
-  * @brief Global List head of all the thread handles
+  * @brief Sentinel list node for the doubly-circular thread list.
+  * @note  Follows the Linux kernel intrusive list pattern:
+  *        thread_handle_t embeds a struct list_node so no separate
+  *        pointer bookkeeping is needed.  An empty list has
+  *        thread_list.next == thread_list.prev == &thread_list.
   */
-__SECTION_OS_DATA	__KEEP 
+__SECTION_OS_DATA	__KEEP
 	LIST_NODE_HEAD(thread_list);
 
  /**
-  * @brief This counter keeps incrementing on
-  * 	   each successful thread register to schedular
+  * @brief Monotonically increasing counter used as thread IDs.
+  * @note  Starts at 0; first created thread receives ID 1.
   */
 __SECTION_OS_DATA __KEEP
 	static int32_t	thread_counter = 0;
 
 
-
-
 /**
  * @brief A generic thread create api.
- * @note  This creates a dynamic FreeRTOS thread
- *        and insert the new thread handle in the thread list  
- * @param thread_func Thread function pointer.
- * @param thread_name Name of the thread for debugging purpose
- * @param thread_stack_depth Stack size in words
- * @param thread_parameter a container pointer that will be passed 
- * 						to the thread when schedular starts it 
+ * @note  Creates a dynamic FreeRTOS task and inserts the new
+ *        thread_handle_t into the intrusive doubly-circular thread_list
+ *        using list_add_tail(), mirroring the Linux kernel task list.
+ * @param thread_func        Thread entry function pointer.
+ * @param thread_name        Name string for debugging.
+ * @param thread_stack_depth Stack size in words.
+ * @param priority           Scheduling priority (0 = idle).
+ * @param thread_parameter   Opaque pointer forwarded to the thread.
+ * @return Positive thread_id on success, negative OS_ERR_* on failure.
  */
 int32_t	__SECTION_OS os_thread_create(thread_func_t thread_func,
 		                    const char * const thread_name,
 							uint32_t thread_stack_depth,
+							uint32_t priority,
 							void * thread_parameter)
 {
-	if( (thread_func != NULL) && \
-		(thread_stack_depth != 0)
-	  )
+	if( (thread_func != NULL) && (thread_stack_depth != 0) )
 	{
-		/* createh the thread handle */
 		thread_handle_t* handle = (thread_handle_t *) kmaloc(sizeof(thread_handle_t));
-		
+
 		if(handle != NULL)
 		{
-			handle->init_parameter = thread_parameter;
-			
-			BaseType_t returned = xTaskCreate(thread_func, 
-											thread_name, 
-											thread_stack_depth, 
-											thread_parameter, 
-											1, 
+			handle->init_parameter	= thread_parameter;
+			handle->priority		= priority;
+
+			BaseType_t returned = xTaskCreate(thread_func,
+											thread_name,
+											thread_stack_depth,
+											thread_parameter,
+											(UBaseType_t)priority,
 											&handle->thread_handle);
-			
-			if(returned == pdTRUE) /* Task created successfully */
+
+			if(returned == pdTRUE)
 			{
-				thread_counter++; // increment the task_id
-				handle->thread_id	= thread_counter;
+				thread_counter++;
+				handle->thread_id = thread_counter;
 			}
 			else
 			{
-				/* Free the pointer */
 				kfree(handle);
-
 				return OS_ERR_OP;
 			}
 
-			/* Push into the thread list */
-			if(thread_list.thred_list_head == NULL) // If the head is empty assign to head
-			{
-				thread_list.thred_list_head = handle;
-			}
-			else // insert in the node
-			{
-				thread_handle_t * temp = thread_list.thred_list_head;
+			/* Append to the tail of the thread list (Linux task_list style) */
+			list_add_tail(&handle->list, &thread_list);
 
-				while(temp->next_handle != NULL)
-				{
-					temp = temp->next_handle;
-				}
-
-				/* Once last node found insert into the last node */
-				temp->next_handle = handle;
-			}
-
-			/* Thread created successfully and return the thread ID */
 			return handle->thread_id;
-
 		}
 		else
 		{
@@ -126,109 +110,98 @@ int32_t	__SECTION_OS os_thread_create(thread_func_t thread_func,
 }
 
 
-/* *****************************************************
- *
- * OS Thread delete
- *
- * *****************************************************/
-int32_t		__SECTION_OS  os_thread_delete(uint32_t thread_id)
+/**
+ * @brief Delete a thread by ID and free its resources.
+ * @note  Walks the intrusive list with list_for_each_entry(),
+ *        calls vTaskDelete(), unlinks via list_delete(), then frees.
+ * @param thread_id ID returned by os_thread_create().
+ * @return OS_ERR_NONE on success, OS_ERR_OP if the ID is not found.
+ */
+int32_t	__SECTION_OS os_thread_delete(uint32_t thread_id)
 {
-	if(thread_id != 0)
-	{
-		thread_handle_t* temp = thread_list.thred_list_head;
-		thread_handle_t* previous_node;
-
-		/* If the thread_id is in head */
-		if( (temp != NULL) && (temp->thread_id == thread_id) )
-		{
-			/*  delete the task with the handle */
-			vTaskDelete(temp->thread_handle);
-			
-			/* Change the head to the next node */
-			thread_list.thred_list_head = temp->next_handle;
-
-			/* free  the memory */
-			kfree(temp);
-
-			return OS_ERR_NONE;
-		}
-		
-		/* Find the thread ID in the list  */
-		while( (temp != NULL) && (temp->thread_id != thread_id) )
-		{
-			previous_node = temp;
-
-			temp = temp->next_handle;
-		}
-
-		if(temp == NULL) // No thread ID found so return with err
-		{
-			return OS_ERR_OP;
-		}
-		else
-		{
-			/*  delete the task with the handle */
-			vTaskDelete(temp->thread_handle);
-
-			/* link prev node->next to curr node -> next */
-			previous_node->next_handle = temp->next_handle;
-
-			/* free  the memory */
-			kfree(temp);
-
-			return OS_ERR_NONE;
-		}
-	}
-	else
-	{
+	if(thread_id == 0)
 		return OS_ERR_OP;
+
+	thread_handle_t *pos;
+
+	list_for_each_entry(pos, &thread_list, list)
+	{
+		if(pos->thread_id == thread_id)
+		{
+			vTaskDelete(pos->thread_handle);
+			list_delete(&pos->list);
+			kfree(pos);
+			return OS_ERR_NONE;
+		}
 	}
+
+	return OS_ERR_OP;
 }
 
-/* *****************************************************
- *
- * OS delay by calling thread
- *
- * *****************************************************/
+
+/**
+ * @brief Block the calling thread for @p ms milliseconds.
+ */
 void __SECTION_OS os_thread_delay(uint32_t ms)
 {
 	vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-/* *****************************************************
- *
- * OS Suspend by calling thread
- *
- * *****************************************************/
+
+/**
+ * @brief Suspend the calling thread indefinitely.
+ * @note  Equivalent to vTaskSuspend(NULL) — the thread must be
+ *        resumed externally via os_resume_thread().
+ */
 void __SECTION_OS os_suspend_this_thread(void)
 {
 	vTaskSuspend(NULL);
 }
 
-/* *****************************************************
- *
- * OS suspend the thread by thread ID
- *
- * *****************************************************/
-void	__SECTION_OS	 os_suspend_thread(uint32_t thread_id)
-{
 
+/**
+ * @brief Suspend an arbitrary thread by its ID.
+ * @note  Walks the intrusive thread list to locate the handle then
+ *        calls vTaskSuspend(), mirroring how the Linux kernel
+ *        iterates task_struct via the tasks list.
+ * @param thread_id ID returned by os_thread_create().
+ */
+void __SECTION_OS os_suspend_thread(uint32_t thread_id)
+{
+	if(thread_id == 0)
+		return;
+
+	thread_handle_t *pos;
+
+	list_for_each_entry(pos, &thread_list, list)
+	{
+		if(pos->thread_id == thread_id)
+		{
+			vTaskSuspend(pos->thread_handle);
+			return;
+		}
+	}
 }
 
-/* *****************************************************
- *
- * OS reusme thread by the thread ID
- *
- * *****************************************************/
-void	__SECTION_OS	 os_resume_thread(int32_t thread_id)
+
+/**
+ * @brief Resume a previously suspended thread by its ID.
+ * @note  Walks the intrusive thread list and calls vTaskResume().
+ * @param thread_id ID returned by os_thread_create().
+ */
+void __SECTION_OS os_resume_thread(uint32_t thread_id)
 {
+	if(thread_id == 0)
+		return;
 
+	thread_handle_t *pos;
+
+	list_for_each_entry(pos, &thread_list, list)
+	{
+		if(pos->thread_id == thread_id)
+		{
+			vTaskResume(pos->thread_handle);
+			return;
+		}
+	}
 }
-
-
-
-
-
-
-
-

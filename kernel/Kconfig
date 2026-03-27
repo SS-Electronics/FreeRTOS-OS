@@ -1,30 +1,208 @@
-# File:        KConfig
-# Author:      Subhajit Roy  
-#              subhajitroy005@gmail.com 
-#
-# Moudle:      Kconfig of the FreeRTOS kernel and OS
+# File:        kernel/Kconfig
+# Author:      Subhajit Roy (subhajitroy005@gmail.com)
+# Module:      FreeRTOS kernel and OS-layer configuration
 #
 # This file is part of FreeRTOS-OS Project.
-# 
-# FreeRTOS-OS is free software: you can redistribute it and/or 
-# modify it under the terms of the GNU General Public License 
-# as published by the Free Software Foundation, either version 
-# 3 of the License, or (at your option) any later version.
+# FreeRTOS-OS is free software; see <https://www.gnu.org/licenses/>.
 #
-# FreeRTOS-OS is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License 
-# along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
+# Values here feed FreeRTOSConfig.h via the generated autoconf.h.
+# Pre-filled for STM32F411VET6 @ 100 MHz.
 
 
-menu "OS Configuration"
+# ─────────────────────────────────────────────────────────────────────────────
+# FreeRTOS Kernel Tuning  (maps 1:1 to FreeRTOSConfig.h macros)
+# ─────────────────────────────────────────────────────────────────────────────
 
-config OS_HEAP_SIZE
-    int "OS_HEAP_SIZE"
-    default 800000
+menu "FreeRTOS Kernel Configuration"
+
+config RTOS_TICK_RATE_HZ
+    int "Tick rate (Hz)"
+    default 1000
+    help
+      Number of OS ticks per second.
+      1000 Hz → 1 ms tick resolution (recommended for most embedded apps).
+      Higher values increase precision but raise interrupt load.
+
+config RTOS_TOTAL_HEAP_SIZE
+    int "Total FreeRTOS heap size (bytes)"
+    default 80000
+    help
+      Heap used by pvPortMalloc().  Must fit in the MCU SRAM.
+      STM32F411VET6 has 128 KB RAM; leave room for stack and globals.
+
+config RTOS_MAX_PRIORITIES
+    int "Maximum task priority levels"
+    default 56
+    help
+      FreeRTOS configMAX_PRIORITIES.  56 matches the STM32 NVIC bits.
+
+config RTOS_MINIMAL_STACK_SIZE
+    int "Minimum task stack (words)"
+    default 512
+    help
+      configMINIMAL_STACK_SIZE in 32-bit words.
+      The idle task uses this size.
+
+config RTOS_MAX_TASK_NAME_LEN
+    int "Maximum task name string length"
+    default 16
+
+config RTOS_USE_PREEMPTION
+    bool "Preemptive scheduling"
+    default y
+
+config RTOS_USE_TIME_SLICING
+    bool "Round-robin time slicing"
+    default y
+
+config RTOS_USE_MUTEXES
+    bool "Mutex support"
+    default y
+
+config RTOS_USE_RECURSIVE_MUTEXES
+    bool "Recursive mutex support"
+    default y
+
+config RTOS_USE_COUNTING_SEMAPHORES
+    bool "Counting semaphore support"
+    default y
+
+config RTOS_QUEUE_REGISTRY_SIZE
+    int "Queue registry size (for debugger visibility)"
+    default 8
+
+config RTOS_USE_TIMERS
+    bool "Software timer support"
+    default y
+
+config RTOS_TIMER_TASK_PRIORITY
+    int "Software timer task priority"
+    depends on RTOS_USE_TIMERS
+    default 2
+
+config RTOS_TIMER_QUEUE_LENGTH
+    int "Software timer command queue length"
+    depends on RTOS_USE_TIMERS
+    default 10
+
+config RTOS_TIMER_TASK_STACK_DEPTH
+    int "Software timer task stack depth (words)"
+    depends on RTOS_USE_TIMERS
+    default 256
+
+config RTOS_LIBRARY_LOWEST_IRQ_PRIORITY
+    int "Lowest usable interrupt priority (NVIC number)"
+    default 15
+    help
+      configLIBRARY_LOWEST_INTERRUPT_PRIORITY.
+      For 4-bit priority field (Cortex-M4), the range is 0..15.
+
+config RTOS_LIBRARY_MAX_SYSCALL_IRQ_PRIORITY
+    int "Highest IRQ priority allowed to call FreeRTOS API"
+    default 5
+    help
+      configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY.
+      Any ISR that calls a FreeRTOS *FromISR() function must have
+      a numeric priority >= this value (lower urgency than this).
+      Must be > 0.  Common choice: 5.
 
 endmenu
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OS Service Layer
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "OS Service Layer"
+
+config NO_OF_UART
+    int "Number of UART peripherals to manage"
+    default 1
+    range 0 6
+    help
+      Sets array sizes for global UART queue lists.
+      STM32F411VET6 has 3 USART instances (USART1, USART2, USART6).
+
+config NO_OF_IIC
+    int "Number of I2C peripherals to manage"
+    default 0
+    range 0 3
+    help
+      STM32F411VET6 has I2C1, I2C2, I2C3.
+
+config INC_SERVICE_UART_MGMT
+    bool "Enable UART management service thread"
+    default y
+
+config INC_SERVICE_IIC_MGMT
+    bool "Enable I2C management service thread"
+    default n
+
+config INC_SERVICE_CAN_MGMT
+    bool "Enable CAN management service thread"
+    default n
+    help
+      STM32F411 does not have a CAN peripheral.
+      Only enable if porting to F405/F407.
+
+config INC_SERVICE_ETH_MGMT
+    bool "Enable Ethernet management service thread"
+    default n
+    help
+      STM32F411 does not have an Ethernet MAC.
+
+config INC_SERVICE_OS_SHELL_MGMT
+    bool "Enable OS shell service thread"
+    default y
+
+config INC_SERVICE_DIAGNOSTIC_MGMT
+    bool "Enable diagnostics service thread"
+    default n
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OS IPC Buffer Sizes
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "IPC Buffer Sizes"
+
+config PIPE_UART_1_DRV_RX_SIZE
+    int "UART1 driver RX ring-buffer size (bytes)"
+    default 512
+
+config PIPE_UART_1_DRV_TX_SIZE
+    int "UART1 driver TX queue size (bytes)"
+    default 512
+
+config ITM_PRINT_BUFF_LENGTH
+    int "ITM debug print buffer length"
+    default 64
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Debug Options
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "Debug Options"
+
+config DRV_DEBUG_EN
+    bool "Driver error debug output"
+    default y
+
+config DRV_DETAIL_DEBUG_EN
+    bool "Driver verbose transaction debug output"
+    default n
+
+config DEFAULT_DEBUG_EN
+    bool "Application-level default debug output"
+    default y
+
+config ITM_DEBUG_EN
+    bool "ITM/SWO debug output"
+    default n
+
+endmenu

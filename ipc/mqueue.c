@@ -18,142 +18,124 @@
 
 
 
-/* *****************************************************
- *
- *
- *
- * *****************************************************/
+/* Sentinel node for the doubly-circular message queue list */
+static LIST_NODE_HEAD(mqueue_list_head);
 
-static type_message_queue_descriptor   			*mqueue_list_head;
-static int32_t									mqueue_id_couter = 1;
-static BaseType_t 								temp_flag;
+static int32_t mqueue_id_counter = 1;
+
 
 /* *****************************************************
  *
- *
+ * Return the list sentinel so callers can iterate with
+ * list_for_each_entry(pos, ipc_get_mqueue_head(), list).
  *
  * *****************************************************/
-type_message_queue_descriptor* ipc_get_mqueue_head(void)
+struct list_node* ipc_get_mqueue_head(void)
 {
-	return mqueue_list_head;
-}
-
-/* *****************************************************
- *
- *
- *
- * *****************************************************/
-status_type 	ipc_mqueue_init(void)
-{
-	type_kernel_status status = ERROR_NONE;
-
-	/* Make all the pointer to NULL */
-	mqueue_list_head 	= NULL;
-	mqueue_id_couter	= 1;
-
-	return status;
+	return &mqueue_list_head;
 }
 
 
 /* *****************************************************
  *
- *
+ * Reset the queue list to an empty sentinel state.
  *
  * *****************************************************/
-int32_t	ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id, int32_t item_size, int32_t queue_size)
+status_type ipc_mqueue_init(void)
+{
+	list_init(&mqueue_list_head);
+	mqueue_id_counter = 1;
+	return ERROR_NONE;
+}
+
+
+/* *****************************************************
+ *
+ * Allocate and register a new message queue.
+ * Returns a positive queue_id on success, 0 on failure.
+ *
+ * *****************************************************/
+int32_t ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id,
+                             int32_t item_size, int32_t queue_size)
 {
 	int32_t mqueue_id = 0;
 
 	ATOMIC_ENTER_CRITICAL();
 
-	type_message_queue_descriptor* new_node = ( type_message_queue_descriptor* )kmaloc( sizeof(type_message_queue_descriptor) );
+	type_message_queue_descriptor *new_node =
+		(type_message_queue_descriptor *)kmaloc(sizeof(type_message_queue_descriptor));
 
-	/*
-	 * update mqueue descriptor field and handles
-	 * */
 	if(new_node != NULL)
 	{
-		/* initialize to NULL */
-		new_node->next_node = NULL;
-		new_node->prev_node = NULL;
-
 		switch(queue_type)
 		{
-			/*
-			 * Queues between two thread data txn
-			 *  */
 			case IPC_MQUEUE_TYPE_PROC_TXN:
-				/* create the queue ptr and assign the handle value */
-				QueueHandle_t temp_queue_handle = xQueueCreate( queue_size, item_size );
+			{
+				QueueHandle_t temp_queue_handle = xQueueCreate(queue_size, item_size);
 
 				if(temp_queue_handle != NULL)
 				{
-					new_node->mqueue.queue_id 					= mqueue_id_couter++;
-					mqueue_id									= new_node->mqueue.queue_id;
-					new_node->mqueue.queue_type 				= IPC_MQUEUE_TYPE_PROC_TXN;
-					new_node->mqueue.linked_hw_peripheral_id	= -1;
-					new_node->mqueue.free_rtos_queue_handle		= temp_queue_handle;
+					new_node->mqueue.queue_id                   = mqueue_id_counter++;
+					mqueue_id                                   = new_node->mqueue.queue_id;
+					new_node->mqueue.queue_type                 = IPC_MQUEUE_TYPE_PROC_TXN;
+					new_node->mqueue.linked_hw_peripheral_id    = -1;
+					new_node->mqueue.free_rtos_queue_handle     = temp_queue_handle;
+					new_node->mqueue.handle                     = NULL;
 				}
-			break;
+				else
+				{
+					kfree(new_node);
+					new_node = NULL;
+				}
+				break;
+			}
 
-			/*
-			 * Byte stream butter from hardware
-			 * */
 			case IPC_MQUEUE_TYPE_UART_HW:
-				/* create a mqueue descriptor node in the list */
-				/* for UART its character ringbuffer */
-				struct ringbuffer* temp_buffer_handle = ( struct ringbuffer* )kmaloc( sizeof(struct ringbuffer) );
+			{
+				struct ringbuffer *temp_buffer_handle =
+					(struct ringbuffer *)kmaloc(sizeof(struct ringbuffer));
 
 				if(temp_buffer_handle != NULL)
 				{
-					/* create the ring buffer storage */
-					uint8_t* rb_storage_ptr =  ( uint8_t* )kmaloc( queue_size );
+					uint8_t *rb_storage_ptr = (uint8_t *)kmaloc(queue_size);
 
 					if(rb_storage_ptr != NULL)
 					{
 						ringbuffer_init(temp_buffer_handle, rb_storage_ptr, queue_size);
 
-						/* Update the mqueue descriptor */
-						new_node->mqueue.queue_id 					= mqueue_id_couter++;
-						mqueue_id									= new_node->mqueue.queue_id;
-						new_node->mqueue.queue_type 				= IPC_MQUEUE_TYPE_UART_HW;
-						new_node->mqueue.linked_hw_peripheral_id	= hardware_id;
-						new_node->mqueue.handle						= (void*)temp_buffer_handle;
-
+						new_node->mqueue.queue_id                   = mqueue_id_counter++;
+						mqueue_id                                   = new_node->mqueue.queue_id;
+						new_node->mqueue.queue_type                 = IPC_MQUEUE_TYPE_UART_HW;
+						new_node->mqueue.linked_hw_peripheral_id    = hardware_id;
+						new_node->mqueue.handle                     = (void *)temp_buffer_handle;
+						new_node->mqueue.free_rtos_queue_handle     = NULL;
 					}
 					else
 					{
-						/* Free all the memory */
 						kfree(temp_buffer_handle);
+						kfree(new_node);
+						new_node = NULL;
 					}
 				}
-			break;
+				else
+				{
+					kfree(new_node);
+					new_node = NULL;
+				}
+				break;
+			}
 
-
-
+			default:
+				kfree(new_node);
+				new_node = NULL;
+				break;
 		}
 
-		/* Get the first node descriptor */
-		type_message_queue_descriptor* temp = mqueue_list_head;
-
-		// if the first node is null
-		if(mqueue_list_head == NULL)
+		if(new_node != NULL)
 		{
-			mqueue_list_head = new_node;
+			/* Add at tail — O(1) with circular sentinel */
+			list_add_tail(&new_node->list, &mqueue_list_head);
 		}
-		else
-		{
-			/* Traverse to the last */
-			 while (temp->next_node != NULL)
-			 {
-					temp = temp->next_node;
-			 }
-		}
-
-		//append the newly created node to the last item next
-		temp->next_node = new_node;
-		// current temp node is the previous of new node item
-		new_node->prev_node = temp;
 	}
 
 	ATOMIC_EXIT_CRITICAL();
@@ -164,235 +146,153 @@ int32_t	ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id, int32_t
 
 /* *****************************************************
  *
- *
+ * Unregister a queue by ID: free its backend resources
+ * and remove the descriptor from the list.
  *
  * *****************************************************/
-status_type	ipc_mqueue_unregister(int32_t mqueue_id)
+status_type ipc_mqueue_unregister(int32_t mqueue_id)
 {
 	status_type status = ERROR_NONE;
 
 	ATOMIC_ENTER_CRITICAL();
 
-	if(mqueue_id < mqueue_id_couter)
+	type_message_queue_descriptor *pos;
+
+	list_for_each_entry(pos, &mqueue_list_head, list)
 	{
-		/* Get the first node descriptor */
-		type_message_queue_descriptor* temp = mqueue_list_head;
-
-		/* Find the value until reach last node*/
-	    while( (temp != NULL) && (temp->mqueue.queue_id != mqueue_id) )
-	    {
-	        temp = temp->next_node;
-	    }
-
-	    /* if not null, Current temp holds the node which have id = mqueue_id*/
-	    if(temp != NULL)
-	    {
-	    	/* Free the associate handle and related buffers */
-	    	switch(temp->mqueue.queue_type)
+		if(pos->mqueue.queue_id == (uint32_t)mqueue_id)
+		{
+			switch(pos->mqueue.queue_type)
 			{
 				case IPC_MQUEUE_TYPE_PROC_TXN:
-
-				break;
+					vQueueDelete(pos->mqueue.free_rtos_queue_handle);
+					break;
 
 				case IPC_MQUEUE_TYPE_UART_HW:
-
-					struct ringbuffer* ptr = (struct ringbuffer*)temp->mqueue.handle;
-
-					/* Buffer memory pool free*/
+				{
+					struct ringbuffer *ptr = (struct ringbuffer *)pos->mqueue.handle;
 					kfree(ptr->buffer_ptr);
-					/* handle memory free */
 					kfree(ptr);
-				break;
+					break;
+				}
 
-
-
+				default:
+					break;
 			}
 
-	    	/* Link the next nodes  */
-	        if (temp->prev_node != NULL)
-	        {
-	        	/* Update the previous nodes next as current nodes next */
-	        	 temp->prev_node->next_node = temp->next_node;
-	        }
-	        else // there is no previous node means this is first node so update the head
-	        {
-	        	mqueue_list_head = temp->next_node;
-	        }
+			list_delete(&pos->list);
+			kfree(pos);
 
-	        /* Link the previous nodes  */
-
-	        if (temp->next_node != NULL)
-	            temp->next_node->prev_node = temp->prev_node;
-
-	    }
-	    else
-	    {
-	    	status |= ERROR_OP;
-	    }
+			ATOMIC_EXIT_CRITICAL();
+			return ERROR_NONE;
+		}
 	}
-	else
-	{
-		status |= ERROR_OP;
-	}
+
+	status = ERROR_OP;
 
 	ATOMIC_EXIT_CRITICAL();
 
 	return status;
 }
 
+
 /* *****************************************************
  *
- *
+ * Return the opaque handle associated with a queue ID.
  *
  * *****************************************************/
-void*	ipc_mqueue_get_handle(int32_t mqueue_id)
+void* ipc_mqueue_get_handle(int32_t mqueue_id)
 {
-
-	void * mqueu_ptr = NULL;
+	void *mqueue_ptr = NULL;
 
 	ATOMIC_ENTER_CRITICAL();
 
-	if(mqueue_id < mqueue_id_couter)
+	type_message_queue_descriptor *pos;
+
+	list_for_each_entry(pos, &mqueue_list_head, list)
 	{
-		/* Get the first node descriptor */
-		type_message_queue_descriptor* temp = mqueue_list_head;
-
-		/* Find the value until reach last node*/
-		while( (temp != NULL) && (temp->mqueue.queue_id != mqueue_id) )
+		if(pos->mqueue.queue_id == (uint32_t)mqueue_id)
 		{
-			temp = temp->next_node;
-		}
-
-		/* if not null, Current temp holds the node which have id = mqueue_id*/
-		if(temp != NULL)
-		{
-			mqueu_ptr = temp->mqueue.handle;
+			mqueue_ptr = pos->mqueue.handle;
+			break;
 		}
 	}
 
 	ATOMIC_EXIT_CRITICAL();
 
-	return mqueu_ptr;
+	return mqueue_ptr;
 }
 
 
 /* *****************************************************
  *
- *
+ * Send an item to a PROC_TXN queue from task context.
  *
  * *****************************************************/
-status_type	ipc_mqueue_send_item(uint32_t queue_id, const void * item_ptr)
+status_type ipc_mqueue_send_item(uint32_t queue_id, const void *item_ptr)
 {
-	status_type status = ERROR_NONE;
+	status_type status = ERROR_OP;
 
 	ATOMIC_ENTER_CRITICAL();
 
-	/* check for valid queue id */
-	if(queue_id < mqueue_id_couter)
+	type_message_queue_descriptor *pos;
+
+	list_for_each_entry(pos, &mqueue_list_head, list)
 	{
-		/* Get the first node descriptor */
-		type_message_queue_descriptor* temp = mqueue_list_head;
-
-		/* Find the value until reach last node*/
-		while( (temp != NULL) && (temp->mqueue.queue_id != queue_id) )
+		if(pos->mqueue.queue_id == queue_id)
 		{
-			temp = temp->next_node;
-		}
-
-		/* if not null, Current temp holds the node which have id = mqueue_id*/
-		if( (temp != NULL) && (temp->mqueue.queue_type == IPC_MQUEUE_TYPE_PROC_TXN) )
-		{
-			/* send the item from queue */
-			BaseType_t queue_send_status;
-
-			queue_send_status =  xQueueSendFromISR ( temp->mqueue.free_rtos_queue_handle,
-													 item_ptr,
-													 &temp_flag );
-
-			if(queue_send_status |= pdTRUE)
+			if(pos->mqueue.queue_type == IPC_MQUEUE_TYPE_PROC_TXN)
 			{
-				status |= ERROR_OP;
+				ATOMIC_EXIT_CRITICAL();
+
+				/* Use task-context send; 0 timeout (non-blocking) */
+				BaseType_t ret = xQueueSend(pos->mqueue.free_rtos_queue_handle,
+				                            item_ptr, (TickType_t)0);
+				status = (ret == pdTRUE) ? ERROR_NONE : ERROR_OP;
+				return status;
 			}
+			break;
 		}
-		else
-		{
-			status |= ERROR_OP;
-		}
-	}
-	else
-	{
-		status |= ERROR_OP;
 	}
 
 	ATOMIC_EXIT_CRITICAL();
 
 	return status;
 }
+
 
 /* *****************************************************
  *
- *
+ * Receive an item from a PROC_TXN queue from task context.
  *
  * *****************************************************/
-status_type	ipc_mqueue_receive_item(uint32_t queue_id, void * item_ptr)
+status_type ipc_mqueue_receive_item(uint32_t queue_id, void *item_ptr)
 {
-	status_type status = ERROR_NONE;
+	status_type status = ERROR_OP;
 
 	ATOMIC_ENTER_CRITICAL();
 
-	/* check for valid queue id */
-	if(queue_id < mqueue_id_couter)
+	type_message_queue_descriptor *pos;
+
+	list_for_each_entry(pos, &mqueue_list_head, list)
 	{
-		/* Get the first node descriptor */
-		type_message_queue_descriptor* temp = mqueue_list_head;
-
-		/* Find the value until reach last node*/
-		while( (temp != NULL) && (temp->mqueue.queue_id != queue_id) )
+		if(pos->mqueue.queue_id == queue_id)
 		{
-			temp = temp->next_node;
-		}
-
-		/* if not null, Current temp holds the node which have id = mqueue_id*/
-		if( (temp != NULL) && (temp->mqueue.queue_type == IPC_MQUEUE_TYPE_PROC_TXN) )
-		{
-			/* send the item from queue */
-			BaseType_t queue_send_status;
-
-			queue_send_status =  xQueueReceiveFromISR ( temp->mqueue.free_rtos_queue_handle,
-													 	item_ptr,
-														&temp_flag );
-
-			if(queue_send_status |= pdTRUE)
+			if(pos->mqueue.queue_type == IPC_MQUEUE_TYPE_PROC_TXN)
 			{
-				status |= ERROR_OP;
+				ATOMIC_EXIT_CRITICAL();
+
+				/* Use task-context receive; 0 timeout (non-blocking) */
+				BaseType_t ret = xQueueReceive(pos->mqueue.free_rtos_queue_handle,
+				                               item_ptr, (TickType_t)0);
+				status = (ret == pdTRUE) ? ERROR_NONE : ERROR_OP;
+				return status;
 			}
+			break;
 		}
-		else
-		{
-			status |= ERROR_OP;
-		}
-	}
-	else
-	{
-		status |= ERROR_OP;
 	}
 
 	ATOMIC_EXIT_CRITICAL();
 
 	return status;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

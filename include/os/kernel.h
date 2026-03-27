@@ -27,6 +27,7 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 
 #include <def_attributes.h>
 #include <def_std.h>
+#include <def_err.h>
 
 #include "mm/list.h"
 
@@ -59,15 +60,18 @@ typedef void (*thread_func_t)(void* parm);
 
 /**
  * @struct thread_handle_t
- * @brief  Holds handles , id and parameter data of a thread
- * @note This is abstruction over TaskHandle_t of FreeRTOS
+ * @brief  Holds handles, id, priority and parameter data of a thread.
+ * @note   Intrusive list node (list) follows the Linux kernel pattern:
+ *         embed struct list_node inside the object so the generic list
+ *         primitives work without extra allocation.
  */
 typedef struct
 {
-	struct list_node	list;		/**> List block */
-	uint32_t			thread_id;	/**> Thread Id: All thread are controlled over this id  */
-	TaskHandle_t  		thread_handle; /**> FreeRTOS task Handle */
-	void*				init_parameter; /**> Init container pointer */
+	struct list_node	list;			/**> Intrusive doubly-circular list node */
+	uint32_t			thread_id;		/**> Unique thread ID assigned at creation */
+	uint32_t			priority;		/**> Scheduling priority (higher = more urgent) */
+	TaskHandle_t  		thread_handle;	/**> Underlying FreeRTOS task handle */
+	void*				init_parameter;	/**> Opaque parameter passed to the thread entry */
 }thread_handle_t;
 
 
@@ -91,37 +95,31 @@ extern "C" {
 #endif
 
 
-/*  Register a new thread and after add it 
-will be in ready state  */
+/**
+ * Register a new thread; it enters the READY state immediately.
+ * @param priority  Scheduling priority (0 = idle, higher = more urgent).
+ * @return          Positive thread_id on success, negative OS_ERR_* on failure.
+ */
 int32_t		 os_thread_create(thread_func_t thread_func,
 		                    const char * const thread_name,
 							uint32_t thread_stack_depth,
+							uint32_t priority,
 							void * const thread_parameter);
 
-/* 
- Destry the thread and its associtae memories
-*/
+/** Destroy a thread and release its resources. */
 int32_t		 os_thread_delete(uint32_t thread_id);
 
-/* 
- Block the thread at the point this func called
-*/
+/** Block the calling thread for @p ms milliseconds. */
 void		 os_thread_delay(uint32_t ms);
 
-/* 
- Suspend the current thred
-*/
+/** Suspend the calling thread indefinitely. */
 void		 os_suspend_this_thread(void);
 
-/* 
- Suspend the thred by thread id
-*/
+/** Suspend an arbitrary thread by its ID. */
 void		 os_suspend_thread(uint32_t thread_id);
 
-/* 
- resume a thread bt the ID
-*/
-void		 os_resume_thread(int32_t thread_id);
+/** Resume a previously suspended thread by its ID. */
+void		 os_resume_thread(uint32_t thread_id);
 
 
 

@@ -1,303 +1,301 @@
-# File:        Makefile
-# Author:      Subhajit Roy  
-#              subhajitroy005@gmail.com 
-#
-# Moudle:      Kconfig of the architectue of CPU and device 
+# File:        arch/Kconfig
+# Author:      Subhajit Roy (subhajitroy005@gmail.com)
+# Module:      Architecture / MCU configuration
 #
 # This file is part of FreeRTOS-OS Project.
-# 
-# FreeRTOS-OS is free software: you can redistribute it and/or 
-# modify it under the terms of the GNU General Public License 
-# as published by the Free Software Foundation, either version 
-# 3 of the License, or (at your option) any later version.
+# FreeRTOS-OS is free software; see <https://www.gnu.org/licenses/>.
 #
-# FreeRTOS-OS is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-# GNU General Public License for more details.
+# Structure mirrors STM32CubeMX:
+#   1. MCU / Core selection
+#   2. Clock tree configuration
+#   3. Peripheral module enable/disable
+#   4. System tuning (VDD, cache, tick priority)
 #
-# You should have received a copy of the GNU General Public License 
-# along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
+# Pre-filled defaults target STM32F411VET6:
+#   - ARM Cortex-M4F @ up to 100 MHz
+#   - 512 KB Flash / 128 KB RAM
+#   - 25 MHz HSE (common on VET6 breakout boards)
+#   - No CAN, No DAC, No FMC, No ETH, No SAI, No DMA2D on this die.
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MCU Selection
+# ─────────────────────────────────────────────────────────────────────────────
 
 config TARGET_MCU
-    string "TARGET_MCU"
-    default "<part from list>"
-
-
-menu "MCU: Essential"
+    string "Target MCU part number"
+    default "STM32F411xE"
+    help
+      The HAL symbol passed to the STM32 HAL layer.
+      Examples: STM32F411xE, STM32F405xx, STM32F429xx.
+      This must match the CMSIS device header guard symbol.
 
 config CPU_ARCH
-    string "CPU-ARCH"
-    default "ARM-CM4"
+    string "CPU architecture"
+    default "ARM-CM4F"
+    help
+      Used to select the correct FreeRTOS portable layer.
+      STM32F4xx → ARM-CM4F (hard-float ABI).
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Clock Tree  (mirrors CubeMX RCC page)
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "Clock Configuration"
+
+config HSE_VALUE
+    int "External high-speed oscillator — HSE (Hz)"
+    default 25000000
+    help
+      Frequency of the crystal/oscillator connected to OSC_IN/OSC_OUT.
+      Nucleo-F411RE = 8 000 000 Hz.
+      Most standalone STM32F411VET6 breakout boards = 25 000 000 Hz.
+
+config HSE_STARTUP_TIMEOUT
+    int "HSE startup timeout (ms)"
+    default 100
+
+config HSI_VALUE
+    int "Internal high-speed oscillator — HSI (Hz)"
+    default 16000000
+    help
+      Fixed silicon oscillator; do not change unless you have a
+      trimmed part with a different calibration.
+
+config LSI_VALUE
+    int "Internal low-speed oscillator — LSI (Hz)"
+    default 32000
+
+config LSE_VALUE
+    int "External low-speed oscillator — LSE (Hz)"
+    default 32768
+    help
+      32.768 kHz watch crystal for RTC / IWDG.
+
+config LSE_STARTUP_TIMEOUT
+    int "LSE startup timeout (ms)"
+    default 5000
+
+config EXTERNAL_CLOCK_VALUE
+    int "External audio clock — I2S CKIN (Hz)"
+    default 12288000
+    help
+      Only relevant when I2S is clocked from an external source
+      (I2S_CKIN pin). Unused on most boards.
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Core / Essential Modules  (always enabled on STM32F411)
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "Core Modules"
 
 config HAL_CORTEX_MODULE_ENABLED
-    bool "Module: CORTEX"
+    bool "Cortex-M core module (SysTick, MPU, FPU)"
     default y
 
 config HAL_PWR_MODULE_ENABLED
-    bool "Module: POWER"
-    default n
+    bool "Power controller (PWR)"
+    default y
 
 config HAL_RCC_MODULE_ENABLED
-    bool "Module: RCC"
-    default n
+    bool "Reset and clock control (RCC)"
+    default y
 
 config HAL_GPIO_MODULE_ENABLED
-    bool "Module: GPIO"
-    default n
+    bool "GPIO driver"
+    default y
 
 config HAL_EXTI_MODULE_ENABLED
-    bool "Module: Ext Int"
-    default n
+    bool "External interrupt / event controller (EXTI)"
+    default y
+
+config HAL_FLASH_MODULE_ENABLED
+    bool "Flash memory interface"
+    default y
+
+config HAL_DMA_MODULE_ENABLED
+    bool "DMA controller (DMA1 / DMA2)"
+    default y
 
 config HAL_IWDG_MODULE_ENABLED
-    bool "Module: IWDG"
+    bool "Independent watchdog (IWDG)"
     default n
 
 config HAL_WWDG_MODULE_ENABLED
-    bool "Module: WWDG"
-    default n
-
-endmenu
-
-
-menu "MCU: Clock"
-
-config HSE_VALUE
-    string "H Ext Oscillator (Hz)"
-    default "8000000U"
-
-config HSE_STARTUP_TIMEOUT
-    string "H Ext Oscillator timeout (ms)"
-    default "100U"
-
-config HSI_VALUE
-    string "H Int Oscillator (Hz)"
-    default "16000000U"
-
-config LSI_VALUE
-    string "L Int Oscillator (Hz)"
-    default "32000U"
-
-config LSE_VALUE
-    string "L Ext Oscillator (Hz)"
-    default "32768U"
-
-config LSE_STARTUP_TIMEOUT
-    string "H Ext Oscillator timeout (ms)"
-    default "5000U"
-
-config EXTERNAL_CLOCK_VALUE
-    string "Ext audio clock (Hz)"
-    default "12288000U"
-
-endmenu
-
-
-
-
-
-menu "MCU: Communication"
-
-config HAL_UART_MODULE_ENABLED
-    bool "Module: UART"
-    default n
-
-config HAL_USART_MODULE_ENABLED
-    bool "Module: USART"
-    default n
-
-config HAL_SPI_MODULE_ENABLED
-    bool "Module: SPI"
-    default n
-
-config HAL_QSPI_MODULE_ENABLED
-    bool "Module: QSPI"
-    default n
-
-config HAL_I2C_MODULE_ENABLED
-    bool "Module: I2C"
-    default n
-
-config HAL_FMPI2C_MODULE_ENABLED
-    bool "Module: FMPI2C"
-    default n
-
-config HAL_CAN_MODULE_ENABLED
-    bool "Module: CAN"
-    default n
-
-config HAL_CAN_LEGACY_MODULE_ENABLED
-    bool "Module: CAN - Legacy"
-    default n
-
-config HAL_ETH_MODULE_ENABLED
-    bool "Module: ETH"
-    default n
-
-config HAL_ETH_LEGACY_MODULE_ENABLED
-    bool "Module: ETH - Legacy"
-    default n
-
-config HAL_I2S_MODULE_ENABLED
-    bool "Module: I2S"
-    default n
-
-config HAL_SMBUS_MODULE_ENABLED
-    bool "Module: SMBUS"
-    default n
-
-config HAL_FMPSMBUS_MODULE_ENABLED
-    bool "Module: FMPSMBUS"
-    default n
-
-config HAL_DSI_MODULE_ENABLED
-    bool "Module: DSI"
-    default n
-
-endmenu
-
-
-
-
-
-
-
-
-menu "MCU: Timer"
-
-config HAL_TIM_MODULE_ENABLED
-    bool "Module: TIM"
-    default n
-
-config HAL_LPTIM_MODULE_ENABLED
-    bool "Module: LPTIM"
-    default n
-
-endmenu
-
-
-
-
-menu "MCU: Analog"
-
-config HAL_ADC_MODULE_ENABLED
-    bool "Module: ADC"
-    default n
-
-config HAL_DAC_MODULE_ENABLED
-    bool "Module: DAC"
-    default n
-
-endmenu
-
-
-
-
-menu "MCU: Memory"
-
-config HAL_DMA_MODULE_ENABLED
-    bool "Module: DMA"
-    default n
-    
-config HAL_DMA2D_MODULE_ENABLED
-    bool "Module: DMA2D"
-    default n
-
-config HAL_RNG_MODULE_ENABLED
-    bool "Module: RNG"
+    bool "Window watchdog (WWDG)"
     default n
 
 config HAL_CRC_MODULE_ENABLED
-    bool "Module: CRC"
-    default n
-
-config HAL_HASH_MODULE_ENABLED
-    bool "Module: HASH"
-    default n
-
-config HAL_CRYP_MODULE_ENABLED
-    bool "Module: Crypto"
-    default n
-
-config HAL_DCMI_MODULE_ENABLED
-    bool "Module: DCMI"
-    default n
-
-config HAL_FLASH_MODULE_ENABLED
-    bool "Module: FLASH"
-    default n
-
-config HAL_NAND_MODULE_ENABLED
-    bool "Module: NAND"
-    default n
-
-config HAL_NOR_MODULE_ENABLED
-    bool "Module: NOR"
-    default n
-
-config HAL_PCCARD_MODULE_ENABLED
-    bool "Module: PCCARD"
-    default n
-
-config HAL_SRAM_MODULE_ENABLED
-    bool "Module: SRAM"
-    default n
-
-config HAL_SDRAM_MODULE_ENABLED
-    bool "Module: SDRAM"
-    default n
-
-config HAL_LTDC_MODULE_ENABLED
-    bool "Module: LTDC"
+    bool "CRC calculation unit"
     default n
 
 endmenu
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Communication Peripherals
+# Note: CAN, ETH, FMPI2C, FMPSMBUS are NOT present on STM32F411.
+# ─────────────────────────────────────────────────────────────────────────────
 
+menu "Communication Peripherals"
 
-menu "MCU: Miscellaneous"
+config HAL_UART_MODULE_ENABLED
+    bool "UART (asynchronous mode)"
+    default y
+    help
+      STM32F411VET6 has USART1, USART2, USART6.
 
-config HAL_SAI_MODULE_ENABLED
-    bool "Module: SAI"
+config HAL_USART_MODULE_ENABLED
+    bool "USART (synchronous mode)"
     default n
 
-config HAL_SD_MODULE_ENABLED
-    bool "Module: SD"
+config HAL_SPI_MODULE_ENABLED
+    bool "SPI (SPI1..SPI5)"
+    default n
+    help
+      STM32F411VET6 has up to 5 SPI/I2S peripherals.
+
+config HAL_I2C_MODULE_ENABLED
+    bool "I2C (I2C1..I2C3)"
+    default n
+
+config HAL_I2S_MODULE_ENABLED
+    bool "I2S audio interface"
     default n
 
 config HAL_IRDA_MODULE_ENABLED
-    bool "Module: IRDA"
+    bool "IrDA (via USART)"
     default n
 
 config HAL_SMARTCARD_MODULE_ENABLED
-    bool "Module: SMARTCARD"
+    bool "Smart Card (via USART)"
     default n
 
-config HAL_PCD_MODULE_ENABLED
-    bool "Module: PCD"
-    default n
-
-config HAL_HCD_MODULE_ENABLED
-    bool "Module: HCD"
-    default n
-
-config HAL_CEC_MODULE_ENABLED
-    bool "Module: CEC"
-    default n
-
-config HAL_SPDIFRX_MODULE_ENABLED
-    bool "Module: SPDIFRX"
-    default n
-
-config HAL_DFSDM_MODULE_ENABLED
-    bool "Module: DFSDM"
+config HAL_SMBUS_MODULE_ENABLED
+    bool "SMBus (via I2C)"
     default n
 
 endmenu
 
-config HAL_RTC_MODULE_ENABLED
-    bool "Module: RTC"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Timer Peripherals
+# STM32F411: TIM1 (adv), TIM2..TIM5 (GP), TIM9..TIM11 (GP/basic)
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "Timer Peripherals"
+
+config HAL_TIM_MODULE_ENABLED
+    bool "Timer module (TIM1..TIM11)"
+    default y
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Analog Peripherals
+# Note: STM32F411 has ADC1 but NO DAC.
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "Analog Peripherals"
+
+config HAL_ADC_MODULE_ENABLED
+    bool "ADC (ADC1)"
     default n
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USB  (USB OTG FS on STM32F411 can be device or host)
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "USB"
+
+config HAL_PCD_MODULE_ENABLED
+    bool "USB device (PCD — Peripheral Controller Driver)"
+    default n
+
+config HAL_HCD_MODULE_ENABLED
+    bool "USB host (HCD — Host Controller Driver)"
+    default n
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Storage
+# Note: STM32F411 has SDIO but NO FMC (no SDRAM / NOR / NAND / PCCARD).
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "Storage"
+
+config HAL_SD_MODULE_ENABLED
+    bool "SDIO / SD card"
+    default n
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RTC and Security
+# Note: STM32F411 has no HASH/CRYP hardware.
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "RTC and Security"
+
+config HAL_RTC_MODULE_ENABLED
+    bool "Real-time clock (RTC)"
+    default n
+
+config HAL_RNG_MODULE_ENABLED
+    bool "Random number generator (RNG)"
+    default n
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# System Configuration  (mirrors CubeMX -> System Core -> SYS page)
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "System Configuration"
+
+config VDD_VALUE
+    int "VDD supply voltage (mV)"
+    default 3300
+    help
+      Board supply voltage in millivolts. Most dev boards = 3300.
+      Used by HAL for internal calculations.
+
+config TICK_INT_PRIORITY
+    int "SysTick / HAL tick interrupt priority"
+    default 1
+    help
+      Must be >= configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY so that
+      HAL_Delay() works correctly inside FreeRTOS tasks.
+
+config PREFETCH_ENABLE
+    bool "Enable Flash prefetch buffer"
+    default y
+
+config INSTRUCTION_CACHE_ENABLE
+    bool "Enable instruction cache (ART accelerator)"
+    default y
+
+config DATA_CACHE_ENABLE
+    bool "Enable data cache (ART accelerator)"
+    default y
+
+config USE_FULL_ASSERT
+    bool "Enable HAL assert_param() parameter checks"
+    default n
+    help
+      When enabled, every HAL function validates its parameters.
+      Useful during development; disable for production to save code size.
+
+endmenu

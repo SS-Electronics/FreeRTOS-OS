@@ -30,8 +30,10 @@ KCONFIG_MCONF 				?= kconfig-mconf   # from kconfig-frontends
 KCONFIG_CONF  				?= kconfig-conf    # from kconfig-frontends
 KCONFIG_FILE  				?= Kconfig
 KCONFIG_CONFIG 				?= .config
+# autoconf.mk  — included by sub-Makefiles for conditional compilation
 AUTOCONF_MK     			:= autoconf.mk
-AUTOCONF_H      			:= 
+# autoconf.h   — included by C source / headers for CONFIG_* symbols
+AUTOCONF_H      			:= include/config/autoconf.h
 ##############################################################
 
 
@@ -140,60 +142,35 @@ oldconfig:
 
 
 
-config-outputs: $(AUTOCONF_MK)
+config-outputs: $(AUTOCONF_MK) $(AUTOCONF_H)
 
+# ── autoconf.mk ──────────────────────────────────────────────────────────────
+# Makefile-syntax fragment consumed by sub-directory Makefiles.
 $(AUTOCONF_MK): $(KCONFIG_CONFIG)
 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
 	@rm -f $@
-	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]\+\)=y/\1=1/p' \
-	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=n/\1=0/p' \
-	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\([0-9]\+\)/\1=\2/p' \
-	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/\1="\2"/p' \
+	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]*\)=y/\1=1/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]*\)=n/\1=0/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]*\)=\([0-9][0-9]*\)/\1=\2/p' \
+	       -e 's/^\(CONFIG_[A-Za-z0-9_]*\)="\(.*\)"/\1="\2"/p' \
 	       $(KCONFIG_CONFIG) | sort -u > $@
+	@echo "### $@ done"
 
-# $(AUTOCONF_H): $(KCONFIG_CONFIG)
-# 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
-# 	@rm -f $@
-# 	@echo "/* Auto-generated config header */" > $@
-# 	@echo "#pragma once" >> $@
-# 	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]\+\)=y/#define \1 1/p' \
-# 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
-# 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
-# 	       -e 's/^\(CONFIG_[A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
-# 	       $(KCONFIG_CONFIG) | sort -u >> $@
-
-# $(AUTOCONF_H): $(AUTOCONF_MK)
-# 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
-# 	@rm -f $@
-# 	@echo "/* Auto-generated config header */" > $@
-# 	@echo "#ifndef __STM32F4xx_HAL_CONF_H" >> $@
-# 	@echo "#define __STM32F4xx_HAL_CONF_H \n\n\n" >> $@
-# 	@echo "#define HAL_MODULE_ENABLED \n\n\n\n" >> $@
-
-
-
-# 	@sed -ne 's/^CONFIG_\([A-Za-z0-9_]\+\)=y/#define \1 1/p' \
-# 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=n/\/\* #undef \1 \*\//p' \
-# 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\([0-9]\+\)/#define \1 \2/p' \
-# 	       -e 's/^CONFIG_\([A-Za-z0-9_]\+\)=\"\(.*\)\"/#define \1 "\2"/p' \
-# 	       $(KCONFIG_CONFIG) >> $@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 	@echo "\n\n\n#endif" >> $@   
-
-
+# ── autoconf.h ───────────────────────────────────────────────────────────────
+# C header included by stm32f4xx_hal_conf.h, FreeRTOSConfig.h, mcu_config.h.
+# Mapping:  =y -> #define X 1  |  =n -> omitted (undefined = not set)  |  =N -> #define X N
+$(AUTOCONF_H): $(KCONFIG_CONFIG)
+	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
+	@mkdir -p $(dir $@)
+	@rm -f $@
+	@printf '/* AUTO-GENERATED - do not edit. Re-run: make config-outputs */\n' > $@
+	@printf '#ifndef __AUTOCONF_H__\n#define __AUTOCONF_H__\n\n'              >> $@
+	@sed -ne 's/^\(CONFIG_[A-Za-z0-9_]*\)=y/#define \1 1/p' \
+	        -e 's/^\(CONFIG_[A-Za-z0-9_]*\)=\([0-9][0-9]*\)/#define \1 \2/p' \
+	        -e 's/^\(CONFIG_[A-Za-z0-9_]*\)="\(.*\)"/#define \1 "\2"/p' \
+	        $(KCONFIG_CONFIG) | sort -u                                         >> $@
+	@printf '\n#endif /* __AUTOCONF_H__ */\n'                                  >> $@
+	@echo "### $@ done"
 ##############################################################
 
 

@@ -71,11 +71,13 @@ struct list_head
 
 
 /**
- * @brief  declare and initialize the list instance
- * @param name name of the list instance
+ * @brief  declare and initialize the list sentinel node
+ * @param name name of the list sentinel node
+ * @note   The sentinel is itself a struct list_node pointing to itself,
+ *         matching the Linux kernel list_head pattern.
  */
 #define LIST_NODE_HEAD(name) \
-    struct list_head name = LIST_NODE_INIT(name)
+    struct list_node name = LIST_NODE_INIT(name)
 
 
 /**

@@ -18,6 +18,7 @@
 
 #include <def_std.h>
 #include <def_compiler.h>
+#include <mm/list.h>
 #include <def_env_macros.h>
 #include <def_hw.h>
 #include <conf_os.h>
@@ -60,8 +61,7 @@ typedef struct
 
 typedef struct message_queue_descriptor
 {
-	struct message_queue_descriptor		*prev_node;
-	struct message_queue_descriptor		*next_node;
+	struct list_node				list;	/**> Intrusive doubly-circular list node */
 
 	type_mqueue_descriptor_content 		mqueue;
 
@@ -89,7 +89,8 @@ status_type			ipc_mqueue_receive_item(uint32_t queue_id, void * item_ptr);
 
 
 
-type_message_queue_descriptor* ipc_get_mqueue_head(void);
+/** Returns the list sentinel; iterate with list_for_each_entry(..., list). */
+struct list_node* ipc_get_mqueue_head(void);
 
 
 
