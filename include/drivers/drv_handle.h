@@ -68,13 +68,25 @@ typedef struct {
     UART_HandleTypeDef  huart;
 } drv_hw_uart_ctx_t;
 
+#ifdef HAL_I2C_MODULE_ENABLED
 typedef struct {
     I2C_HandleTypeDef   hi2c;
 } drv_hw_iic_ctx_t;
+#else
+typedef struct {
+    uint32_t            _reserved;
+} drv_hw_iic_ctx_t;
+#endif
 
+#ifdef HAL_SPI_MODULE_ENABLED
 typedef struct {
     SPI_HandleTypeDef   hspi;
 } drv_hw_spi_ctx_t;
+#else
+typedef struct {
+    uint32_t            _reserved;
+} drv_hw_spi_ctx_t;
+#endif
 
 typedef struct {
     GPIO_TypeDef       *port;

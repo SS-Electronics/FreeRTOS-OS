@@ -17,7 +17,7 @@
 #define OS_IPC_GLOBAL_GLOBAL_VAR_H_
 
 #include <def_std.h>
-#include <conf_os.h>
+#include <config/os_config.h>
 
 /* External variables declaration */
 /* Driver mqueue ids */
