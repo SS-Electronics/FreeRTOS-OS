@@ -149,6 +149,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
   }
 
 }
+#endif /* HAL_I2C_MODULE_ENABLED */
 
 /**
   * @brief SPI MSP Initialization
@@ -156,6 +157,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
   * @param hspi: SPI handle pointer
   * @retval None
   */
+#ifdef HAL_SPI_MODULE_ENABLED
 void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -217,6 +219,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
   }
 
 }
+#endif /* HAL_SPI_MODULE_ENABLED */
 
 /**
   * @brief UART MSP Initialization
@@ -224,6 +227,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
   * @param huart: UART handle pointer
   * @retval None
   */
+#ifdef HAL_UART_MODULE_ENABLED
 void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -334,6 +338,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
   }
 
 }
+#endif /* HAL_UART_MODULE_ENABLED */
 
 /* USER CODE BEGIN 1 */
 

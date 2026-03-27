@@ -18,6 +18,7 @@
 #define FREERTOS_OS_INCLUDE_OS_KERNEL_MEM_H_
 
 #include <def_std.h>
+#include <def_err.h>
 #include <def_attributes.h>
 
 #include <FreeRTOS.h>
