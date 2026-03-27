@@ -19,6 +19,7 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
   - [Services Layer](#services-layer)
   - [Drivers](#drivers)
   - [Communication Stacks](#communication-stacks)
+- [Driver Architecture](DRIVERS.md)
 - [Thread API — Linux-Style Design](#thread-api--linux-style-design)
 - [Linked List — Intrusive Design](#linked-list--intrusive-design)
 - [Message Queue (IPC)](#message-queue-ipc)
@@ -247,12 +248,14 @@ Additional service threads (OS Shell, Diagnostics, CAN, ETH) are conditionally c
 
 ### Drivers
 
-Hardware drivers in `drivers/` sit between the HAL and the OS service threads, using the IPC mqueue layer for data exchange:
+Hardware drivers implement a **3-layer architecture**: management service threads → generic driver layer → vendor HAL backend. Generic handles abstract all vendor-specific types; backends are swapped at compile time via `CONFIG_DEVICE_VARIANT`.
 
 ```
 ISR  →  ringbuffer (IPC_MQUEUE_TYPE_UART_HW)  →  serv_uart_mgmt thread
 Task →  xQueue (IPC_MQUEUE_TYPE_PROC_TXN)     →  consumer task
 ```
+
+For full driver subsystem documentation — handle structs, HAL ops vtables, vendor backends (STM32 / Infineon), management service thread lifecycles, Kconfig flags, and porting guides — see **[DRIVERS.md](DRIVERS.md)**.
 
 ### Communication Stacks
 

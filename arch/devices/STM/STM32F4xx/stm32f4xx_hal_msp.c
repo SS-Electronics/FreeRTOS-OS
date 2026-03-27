@@ -87,6 +87,7 @@ void HAL_MspInit(void)
   * @param hi2c: I2C handle pointer
   * @retval None
   */
+#ifdef HAL_I2C_MODULE_ENABLED
 void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};

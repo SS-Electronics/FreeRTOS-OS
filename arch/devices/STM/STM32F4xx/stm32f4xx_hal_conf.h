@@ -179,7 +179,7 @@ extern "C" {
 
 #define  VDD_VALUE                    ((uint32_t)CONFIG_VDD_VALUE)
 #define  TICK_INT_PRIORITY            ((uint32_t)CONFIG_TICK_INT_PRIORITY)
-#define  USE_RTOS                     1U   /* FreeRTOS-OS always uses an RTOS */
+#define  USE_RTOS                     0U   /* Must stay 0 — STM32 HAL rejects 1 (stm32f4xx_hal_def.h:91) */
 
 #ifdef CONFIG_PREFETCH_ENABLE
   #define PREFETCH_ENABLE             1U

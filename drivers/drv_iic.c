@@ -1,150 +1,110 @@
 /*
-# Copyright (C) 2024 Subhajit Roy
-# This file is part of RTOS OS project
-#
-# RTOS OS project is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# RTOS OS project is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-*/
+ * drv_iic.c — Generic I2C driver
+ *
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * Vendor-agnostic I2C driver.  All bus operations are performed through the
+ * drv_iic_hal_ops_t table bound at registration time by iic_mgmt.c.
+ */
 
-#include <drivers/drv_iic.h>
+#include <drivers/drv_handle.h>
+#include <config/mcu_config.h>
+#include <config/os_config.h>
+#include <def_err.h>
 
 #if (NO_OF_IIC > 0)
 
-/* Local driver handle reference*/
-static type_drv_hw_handle 		iic_handle_ref;
+/* ── Handle storage ───────────────────────────────────────────────────── */
 
-/* Operational Variables*/
-static uint8_t 					temp_rx_char_buff;
+static drv_iic_handle_t _iic_handles[NO_OF_IIC];
 
-/* *****************************************************
- *
- *
- *
- * *****************************************************/
-void	drv_iic_update_handle(__TYPE_HW_UART_HANDLE_TYPE * handle, uint8_t dev_id)
+/* ── Registration API ─────────────────────────────────────────────────── */
+
+int32_t drv_iic_register(uint8_t dev_id,
+                          const drv_iic_hal_ops_t *ops,
+                          uint32_t clock_hz,
+                          uint32_t timeout_ms)
 {
-	if( (handle != NULL) && (dev_id < NO_OF_UART) )
-	{
-		iic_handle_ref.handle_hw_iic[dev_id] = handle;
-	}
+    if (dev_id >= NO_OF_IIC || ops == NULL)
+        return OS_ERR_OP;
+
+    drv_iic_handle_t *h = &_iic_handles[dev_id];
+
+    h->dev_id      = dev_id;
+    h->ops         = ops;
+    h->clock_hz    = clock_hz;
+    h->timeout_ms  = timeout_ms;
+    h->initialized = 0;
+    h->last_err    = OS_ERR_NONE;
+
+    return h->ops->hw_init(h);
 }
 
-/* *****************************************************
- *
- *
- *
- * *****************************************************/
-status_type	drv_iic_init(uint8_t dev_id)
+/* ── Handle accessor ──────────────────────────────────────────────────── */
+
+drv_iic_handle_t *drv_iic_get_handle(uint8_t dev_id)
 {
-	status_type drv_staus = ERROR_NONE;
-
-	/* Check if the handles are NULL or not */
-	if((iic_handle_ref.handle_hw_iic[dev_id] != NULL) && (dev_id < NO_OF_IIC) )
-	{
-		/*Start the communication */
-//		drv_staus |= UART_Start_Receive_IT(uart_handle_ref.handle_hw_uart[dev_id], &temp_rx_char_buff, 1);
-	}
-	else
-	{
-		drv_staus |= ERROR_OP;
-	}
-
-	return drv_staus;
+    if (dev_id >= NO_OF_IIC)
+        return NULL;
+    return &_iic_handles[dev_id];
 }
 
-/* *****************************************************
+/* ── Public driver API ────────────────────────────────────────────────── */
+
+/**
+ * @brief  Write @p len bytes to a device register.
  *
- *
- *
- * *****************************************************/
-status_type	drv_iic_transmit(uint8_t dev_id, uint16_t device_address , uint8_t* data, uint16_t len)
+ * @param  dev_id     I2C bus index.
+ * @param  dev_addr   7-bit device address (not shifted).
+ * @param  reg_addr   Register address.
+ * @param  data       TX data buffer.
+ * @param  len        Number of bytes.
+ */
+int32_t drv_iic_transmit(uint8_t dev_id, uint16_t dev_addr,
+                          uint8_t reg_addr, const uint8_t *data, uint16_t len)
 {
-	status_type status = ERROR_NONE;
+    if (dev_id >= NO_OF_IIC || data == NULL)
+        return OS_ERR_OP;
 
-	/* Send one by one character if the handle is not null */
-	if((iic_handle_ref.handle_hw_iic[dev_id] != NULL) && (dev_id < NO_OF_IIC) )
-	{
-		/* Timeout 10mS*/
-		for (int i = 0; i<len; i++)
-		{
-//			status |= HAL_UART_Transmit(uart_handle_ref.handle_hw_uart[dev_id]
-//										,data
-//										,1
-//										,CONF_UART_TXN_TIMEOUT_MS
-//										);
-		}
-	}
-	else
-	{
-		status |= ERROR_OP;
+    drv_iic_handle_t *h = &_iic_handles[dev_id];
 
-	}
+    if (!h->initialized || h->ops == NULL)
+        return OS_ERR_OP;
 
-	return status;
+    return h->ops->transmit(h, dev_addr, reg_addr, 1, data, len, h->timeout_ms);
 }
 
-
-/* *****************************************************
- *
- *
- *
- * *****************************************************/
-status_type	drv_iic_receive(uint8_t dev_id, uint16_t device_address, uint8_t* data, uint16_t len)
+/**
+ * @brief  Read @p len bytes from a device register.
+ */
+int32_t drv_iic_receive(uint8_t dev_id, uint16_t dev_addr,
+                         uint8_t reg_addr, uint8_t *data, uint16_t len)
 {
-	status_type status = ERROR_NONE;
+    if (dev_id >= NO_OF_IIC || data == NULL)
+        return OS_ERR_OP;
 
-	/* Send one by one character if the handle is not null */
-	if((iic_handle_ref.handle_hw_iic[dev_id] != NULL) && (dev_id < NO_OF_IIC) )
-	{
-		/* Timeout 10mS*/
-		for (int i = 0; i<len; i++)
-		{
-//			status |= HAL_UART_Transmit(uart_handle_ref.handle_hw_uart[dev_id]
-//										,data
-//										,1
-//										,CONF_UART_TXN_TIMEOUT_MS
-//										);
-		}
-	}
-	else
-	{
-		status |= ERROR_OP;
+    drv_iic_handle_t *h = &_iic_handles[dev_id];
 
-	}
+    if (!h->initialized || h->ops == NULL)
+        return OS_ERR_OP;
 
-	return status;
+    return h->ops->receive(h, dev_addr, reg_addr, 1, data, len, h->timeout_ms);
 }
 
+/**
+ * @brief  Probe a device — returns OS_ERR_NONE if it ACKs.
+ */
+int32_t drv_iic_device_ready(uint8_t dev_id, uint16_t dev_addr)
+{
+    if (dev_id >= NO_OF_IIC)
+        return OS_ERR_OP;
 
+    drv_iic_handle_t *h = &_iic_handles[dev_id];
 
+    if (!h->initialized || h->ops == NULL)
+        return OS_ERR_OP;
 
-/* *****************************************************
- *
- *	Call Backs DEVICE_VARINAT 1
- *
- * *****************************************************/
+    return h->ops->is_device_ready(h, dev_addr, h->timeout_ms);
+}
 
-#if (DEVICE_VARINAT == 1)
-
-
-
-#endif // (DEVICE_VARINAT == 1)
-
-
-
-/* *****************************************************
- *
- *	Call Backs DEVICE_VARINAT 1
- *
- * *****************************************************/
-
-
-
-#endif
+#endif /* NO_OF_IIC > 0 */

@@ -1,0 +1,151 @@
+/*
+ * spi_mgmt.c — SPI management service thread
+ *
+ * This file is part of FreeRTOS-OS Project.
+ */
+
+#include <services/spi_mgmt.h>
+
+#include <os/kernel.h>
+#include <drivers/drv_handle.h>
+
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+#  include <drivers/com/hal/stm32/hal_spi_stm32.h>
+#endif
+
+#if (CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0)
+
+static QueueHandle_t _mgmt_queue = NULL;
+
+static void spi_mgmt_thread(void *arg)
+{
+    (void)arg;
+
+    os_thread_delay(TIME_OFFSET_SPI_MANAGEMENT);
+
+    /* Register all SPI buses */
+    {
+        const drv_spi_hal_ops_t *ops =
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+            hal_spi_stm32_get_ops();
+#else
+            NULL;
+#endif
+        if (ops != NULL)
+        {
+            for (uint8_t id = 0; id < CONFIG_MCU_NO_OF_SPI_PERIPHERAL; id++)
+                drv_spi_register(id, ops, 1000000U, 10);
+        }
+    }
+
+    spi_mgmt_msg_t msg;
+
+    for (;;)
+    {
+        if (xQueueReceive(_mgmt_queue, &msg, portMAX_DELAY) != pdTRUE)
+            continue;
+
+        drv_spi_handle_t *h = drv_spi_get_handle(msg.bus_id);
+        if (h == NULL || h->ops == NULL)
+            goto notify;
+
+        int32_t result = OS_ERR_OP;
+
+        switch (msg.cmd)
+        {
+            case SPI_MGMT_CMD_TRANSMIT:
+                result = h->ops->transmit(h, msg.tx_data, msg.len, h->timeout_ms);
+                break;
+
+            case SPI_MGMT_CMD_RECEIVE:
+                result = h->ops->receive(h, msg.rx_data, msg.len, h->timeout_ms);
+                break;
+
+            case SPI_MGMT_CMD_TRANSFER:
+                result = h->ops->transfer(h, msg.tx_data, msg.rx_data,
+                                          msg.len, h->timeout_ms);
+                break;
+
+            case SPI_MGMT_CMD_REINIT:
+                h->ops->hw_deinit(h);
+                result = h->ops->hw_init(h);
+                break;
+
+            default:
+                break;
+        }
+
+        if (msg.result_code != NULL)
+            *msg.result_code = result;
+
+notify:
+        if (msg.result_notify != NULL)
+            xTaskNotifyGive(msg.result_notify);
+    }
+}
+
+int32_t spi_mgmt_start(void)
+{
+    _mgmt_queue = xQueueCreate(SPI_MGMT_QUEUE_DEPTH, sizeof(spi_mgmt_msg_t));
+    if (_mgmt_queue == NULL)
+        return OS_ERR_MEM_OF;
+
+    int32_t tid = os_thread_create(spi_mgmt_thread,
+                                   "spi_mgmt",
+                                   PROC_SERVICE_SPI_MGMT_STACK_SIZE,
+                                   PROC_SERVICE_SPI_MGMT_PRIORITY,
+                                   NULL);
+    return (tid >= 0) ? OS_ERR_NONE : OS_ERR_OP;
+}
+
+QueueHandle_t spi_mgmt_get_queue(void)
+{
+    return _mgmt_queue;
+}
+
+int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
+                                const uint8_t *tx, uint8_t *rx,
+                                uint16_t len, uint32_t timeout_ms)
+{
+    if (_mgmt_queue == NULL)
+        return OS_ERR_OP;
+
+    int32_t result = OS_ERR_OP;
+
+    spi_mgmt_msg_t msg = {
+        .cmd           = SPI_MGMT_CMD_TRANSFER,
+        .bus_id        = bus_id,
+        .tx_data       = tx,
+        .rx_data       = rx,
+        .len           = len,
+        .result_notify = xTaskGetCurrentTaskHandle(),
+        .result_code   = &result,
+    };
+
+    if (xQueueSend(_mgmt_queue, &msg, pdMS_TO_TICKS(timeout_ms)) != pdTRUE)
+        return OS_ERR_OP;
+
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms));
+    return result;
+}
+
+int32_t spi_mgmt_async_transmit(uint8_t bus_id,
+                                 const uint8_t *data, uint16_t len)
+{
+    if (_mgmt_queue == NULL || data == NULL)
+        return OS_ERR_OP;
+
+    spi_mgmt_msg_t msg = {
+        .cmd           = SPI_MGMT_CMD_TRANSMIT,
+        .bus_id        = bus_id,
+        .tx_data       = data,
+        .rx_data       = NULL,
+        .len           = len,
+        .result_notify = NULL,
+        .result_code   = NULL,
+    };
+
+    return (xQueueSend(_mgmt_queue, &msg, 0) == pdTRUE) ? OS_ERR_NONE : OS_ERR_OP;
+}
+
+#endif /* CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0 */

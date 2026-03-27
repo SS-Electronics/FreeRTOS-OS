@@ -1,187 +1,94 @@
 /*
-# Copyright (C) 2024 Subhajit Roy
-# This file is part of RTOS Basic Software
-#
-# RTOS Basic Software is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# RTOS Basic Software is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-*/
-
-#include "drv_spi.h"
-#if (INC_DRIVER_COMM_IIC == 1)
-
-static drv_spi_handle_type 	spi_handle;
-static uint8_t 			   	print_buffer[PRINTK_BUFF_LENGTH];
-static uint8_t			   	spi_dev_tx_buffer[32];
-static uint8_t				spi_dev_rx_buffer[32];
-
-
-
-
-/*************************************************************
- * Func:
- * Desc:
+ * drv_spi.c — Generic SPI driver
  *
- * @parm:
- * @ret:
+ * This file is part of FreeRTOS-OS Project.
  *
- ************************************************************/
-drv_spi_handle_type* drv_spi_get_handle(void)
+ * Vendor-agnostic SPI driver.  All bus operations go through the
+ * drv_spi_hal_ops_t table bound at registration time by spi_mgmt.c.
+ * Chip-select control is the caller's responsibility.
+ */
+
+#include <drivers/drv_handle.h>
+#include <config/mcu_config.h>
+#include <def_err.h>
+
+#if (CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0)
+
+/* ── Handle storage ───────────────────────────────────────────────────── */
+
+static drv_spi_handle_t _spi_handles[CONFIG_MCU_NO_OF_SPI_PERIPHERAL];
+
+/* ── Registration API ─────────────────────────────────────────────────── */
+
+int32_t drv_spi_register(uint8_t dev_id,
+                          const drv_spi_hal_ops_t *ops,
+                          uint32_t clock_hz,
+                          uint32_t timeout_ms)
 {
-	return &spi_handle;
+    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || ops == NULL)
+        return OS_ERR_OP;
+
+    drv_spi_handle_t *h = &_spi_handles[dev_id];
+
+    h->dev_id      = dev_id;
+    h->ops         = ops;
+    h->clock_hz    = clock_hz;
+    h->timeout_ms  = timeout_ms;
+    h->initialized = 0;
+    h->last_err    = OS_ERR_NONE;
+
+    return h->ops->hw_init(h);
 }
 
-/*************************************************************
- * Func:
- * Desc:
- *
- * @parm:
- * @ret:
- *
- ************************************************************/
-drv_status_type drv_spi_init(uint8_t device_id)
+/* ── Handle accessor ──────────────────────────────────────────────────── */
+
+drv_spi_handle_t *drv_spi_get_handle(uint8_t dev_id)
 {
-	drv_status_type status = KERNEL_OK;
-
-	status |= HAL_SPI_Init(spi_handle.handle[device_id]);
-
-	/* Keep the CS pin high */
-	drv_gpio_set_pin(PORT_SPI_CS, PIN_SPI_CS);
-	return status;
+    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL)
+        return NULL;
+    return &_spi_handles[dev_id];
 }
 
-/*************************************************************
- * Func: Transmit operation
- * Desc:
- *
- * @parm:
- * @ret:
- *
- ************************************************************/
-drv_status_type		drv_spi_transmit(spi_pdu_struct_type * tx_pdu)
+/* ── Public driver API ────────────────────────────────────────────────── */
+
+int32_t drv_spi_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
 {
-	drv_status_type status = KERNEL_OK;
+    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || data == NULL)
+        return OS_ERR_OP;
 
-	for( int i = 0; i < tx_pdu->length ; i++ )
-	{
-		spi_dev_tx_buffer[i] = tx_pdu->tx_data[i];
-	}
+    drv_spi_handle_t *h = &_spi_handles[dev_id];
 
-	/* Keet the CS LOW */
-	drv_gpio_clear_pin(PORT_SPI_CS, PIN_SPI_CS);
+    if (!h->initialized || h->ops == NULL)
+        return OS_ERR_OP;
 
-	status |= HAL_SPI_Transmit(spi_handle.handle[tx_pdu->device_id],
-								spi_dev_tx_buffer, tx_pdu->length, 1000);
-
-	/* keep the CS HIGH */
-	drv_gpio_set_pin(PORT_SPI_CS, PIN_SPI_CS);
-
-#if(DRV_DETAIL_DEBUG_EN == 1)
-	if(status != KERNEL_OK)
-	{
-		sprintf((char*)print_buffer, "[DRV: SPI-> %d ] RD OP Failed!\n\r",tx_pdu->device_id);
-		printk(print_buffer);
-	}
-#endif
-
-
-	return status;
+    return h->ops->transmit(h, data, len, h->timeout_ms);
 }
 
-/*************************************************************
- * Func: Receive operation
- * Desc:
- *
- * @parm:
- * @ret:
- *
- ************************************************************/
-drv_status_type		drv_spi_receive(spi_pdu_struct_type * rx_pdu)
+int32_t drv_spi_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
 {
-	drv_status_type status = KERNEL_OK;
+    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || data == NULL)
+        return OS_ERR_OP;
 
-	for( int i = 0; i < rx_pdu->length ; i++ )
-	{
-		spi_dev_rx_buffer[i] = 0;
-	}
+    drv_spi_handle_t *h = &_spi_handles[dev_id];
 
-	/* Keet the CS LOW */
-	drv_gpio_clear_pin(PORT_SPI_CS, PIN_SPI_CS);
+    if (!h->initialized || h->ops == NULL)
+        return OS_ERR_OP;
 
-	status |= HAL_SPI_Receive(spi_handle.handle[rx_pdu->device_id],
-							  spi_dev_rx_buffer, rx_pdu->length, 1000);
-
-	for( int i = 0; i < rx_pdu->length ; i++ )
-	{
-		rx_pdu->rx_data[i] = spi_dev_rx_buffer[i];
-	}
-
-	/* keep the CS HIGH */
-	drv_gpio_set_pin(PORT_SPI_CS, PIN_SPI_CS);
-
-#if(DRV_DETAIL_DEBUG_EN == 1)
-	if(status != KERNEL_OK)
-	{
-		sprintf((char*)print_buffer, "[DRV: SPI-> %d ] RD OP Failed!\n\r",rx_pdu->device_id);
-		printk(print_buffer);
-	}
-#endif
-	return status;
+    return h->ops->receive(h, data, len, h->timeout_ms);
 }
 
-/*************************************************************
- * Func: Transaction both tx + rx
- * Desc:
- *
- * @parm:
- * @ret:
- *
- ************************************************************/
-drv_status_type	drv_spi_transfer(spi_pdu_struct_type * txn_pdu)
+int32_t drv_spi_transfer(uint8_t dev_id,
+                          const uint8_t *tx, uint8_t *rx, uint16_t len)
 {
-	drv_status_type status = KERNEL_OK;
+    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || tx == NULL || rx == NULL)
+        return OS_ERR_OP;
 
+    drv_spi_handle_t *h = &_spi_handles[dev_id];
 
+    if (!h->initialized || h->ops == NULL)
+        return OS_ERR_OP;
 
-	for( int i = 0; i < txn_pdu->length ; i++ )
-	{
-		spi_dev_tx_buffer[i] = txn_pdu->tx_data[i];
-		spi_dev_rx_buffer[i] = 0;
-	}
-
-	/* Keet the CS LOW */
-	drv_gpio_clear_pin(PORT_SPI_CS, PIN_SPI_CS);
-
-	status |= HAL_SPI_TransmitReceive(spi_handle.handle[txn_pdu->device_id],
-									  spi_dev_tx_buffer,
-									  spi_dev_rx_buffer,
-									  txn_pdu->length, 1000);
-
-
-	for( int i = 0; i < txn_pdu->length ; i++ )
-	{
-		txn_pdu->rx_data[i] = spi_dev_rx_buffer[i];
-	}
-
-	/* keep the CS HIGH */
-	drv_gpio_set_pin(PORT_SPI_CS, PIN_SPI_CS);
-
-#if(DRV_DETAIL_DEBUG_EN == 1)
-	if(status != KERNEL_OK)
-	{
-		sprintf((char*)print_buffer, "[DRV: SPI-> %d ] TXN OP Failed!\n\r",txn_pdu->device_id);
-		printk(print_buffer);
-	}
-#endif
-	return status;
+    return h->ops->transfer(h, tx, rx, len, h->timeout_ms);
 }
 
-
-
-#endif
+#endif /* CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0 */
