@@ -79,6 +79,8 @@ The driver subsystem has three strict layers. Higher layers never call lower-lay
 └─────────────────────────────────────────────────────────────┘
 ```
 
+**Board configuration is the single source of truth for all peripheral parameters.** Management threads read `board_get_config()` at startup and self-register every peripheral listed in the board XML. See [BOARD.md](BOARD.md) for the complete XML → BSP generation flow.
+
 **The vendor is selected at compile time** via `CONFIG_DEVICE_VARIANT` in [`include/config/mcu_config.h`](include/config/mcu_config.h):
 
 ```c
@@ -292,8 +294,10 @@ The `hw` field inside each handle embeds the vendor-specific hardware state. `CO
 
 | `CONFIG_DEVICE_VARIANT` | `drv_hw_uart_ctx_t` | `drv_hw_iic_ctx_t` | `drv_hw_spi_ctx_t` | `drv_hw_gpio_ctx_t` |
 |---|---|---|---|---|
-| `MCU_VAR_STM` | `{ UART_HandleTypeDef huart; }` | `{ I2C_HandleTypeDef hi2c; }` | `{ SPI_HandleTypeDef hspi; }` | `{ GPIO_TypeDef *port; uint16_t pin; uint8_t active_state; }` |
-| `MCU_VAR_INFINEON` | `{ uint32_t channel_base; uint32_t baudrate; }` | `{ uint32_t channel_base; uint32_t clock_hz; }` | `{ uint32_t channel_base; uint32_t clock_hz; }` | `{ uint32_t port_base; uint32_t pin; uint8_t active_state; }` |
+| `MCU_VAR_STM` | `{ UART_HandleTypeDef huart; }` | `{ I2C_HandleTypeDef hi2c; }` | `{ SPI_HandleTypeDef hspi; }` | `{ GPIO_TypeDef *port; uint16_t pin; uint32_t mode; uint32_t pull; uint32_t speed; uint8_t active_state; }` |
+| `MCU_VAR_INFINEON` | `{ uint32_t channel_base; uint32_t baudrate; }` | `{ uint32_t channel_base; uint32_t clock_hz; }` | `{ uint32_t channel_base; uint32_t clock_hz; }` | `{ uint32_t port_base; uint32_t pin; uint32_t mode; uint32_t pull; uint32_t speed; uint8_t active_state; }` |
+
+The STM32 `drv_hw_gpio_ctx_t` carries `mode`, `pull`, and `speed` so that `hal_gpio_stm32_set_config()` can store full pin parameters and `hw_init` can call `HAL_GPIO_Init()` with the correct configuration. **`set_config` is store-only — it does not call `HAL_GPIO_Init` directly.** `hw_init` (called by `drv_gpio_register`) performs the actual hardware initialisation, preventing double-init.
 
 ### Registration API
 
@@ -656,11 +660,11 @@ void reset_mcu(void);
 
 Each peripheral class has a dedicated FreeRTOS service thread in `services/`. These threads:
 
-1. **Own** the driver registration — they call `drv_xxx_register()` after a startup delay so that all OS subsystems are ready.
-2. **Serialise** hardware access — application tasks post messages to the management queue instead of calling the driver API directly, preventing concurrent bus access.
-3. **Recover** from errors — on `last_err != OS_ERR_NONE` the thread attempts a `hw_deinit` + `hw_init` reinit cycle before returning an error.
+1. **Self-register all peripherals** — at startup they call `board_get_config()` and iterate the board descriptor tables. For every entry they call `hal_xxx_set_config()` (stores params) then `drv_xxx_register()` (calls `hw_init`). No user code is required to register peripherals.
+2. **Serialise hardware access** — application tasks post messages to the management queue instead of calling the driver API directly, preventing concurrent bus access.
+3. **Recover from errors** — the `REINIT` command triggers `hw_deinit()` + `hw_init()` through the management queue.
 
-All management threads are activated via `INC_SERVICE_*` flags in [`include/config/os_config.h`](include/config/os_config.h).
+All management threads are activated via `INC_SERVICE_*` flags in [`include/config/os_config.h`](include/config/os_config.h). The number of peripherals registered is determined by the `BOARD_*_COUNT` constants in the generated `include/board/board_device_ids.h`, not by Kconfig values.
 
 ---
 
@@ -675,16 +679,33 @@ All management threads are activated via `INC_SERVICE_*` flags in [`include/conf
 ```
 os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT)  ← wait for OS ready
     │
-    ├─ drv_uart_register(id, hal_uart_stm32_get_ops(), UART_1_BAUD, 10)
-    │   for each id in 0..NO_OF_UART-1
+    ├─ ops = hal_uart_stm32_get_ops()
+    │   bc  = board_get_config()
+    │   for i in 0..bc->uart_count-1:
+    │       d = &bc->uart_table[i]
+    │       h = drv_uart_get_handle(d->dev_id)
+    │       hal_uart_stm32_set_config(h, d->instance, d->word_len, …)
+    │       drv_uart_register(d->dev_id, ops, d->baudrate, timeout)
+    │           └─ ops->hw_init(h) → HAL_UART_Init() + start_rx_it()
     │
     └─ loop: xQueueReceive(_mgmt_queue, &msg, portMAX_DELAY)
                 │
                 ├─ UART_MGMT_CMD_TRANSMIT → ops->transmit()
-                │   on error: hw_deinit() + hw_init()
                 ├─ UART_MGMT_CMD_REINIT  → hw_deinit() + hw_init()
                 └─ UART_MGMT_CMD_DEINIT  → hw_deinit()
 ```
+
+**RX callback dispatch chain:**
+
+```
+HAL_UART_RxCpltCallback()
+  └─ drv_uart_rx_isr_dispatch(dev_id, byte)
+       ├─ ringbuffer_putchar()              ← IPC ring buffer (for os_read())
+       └─ board_get_uart_cbs(dev_id)
+              └─ on_rx_byte(dev_id, byte)  ← application callback (if registered)
+```
+
+TX-done and error callbacks follow the same pattern via `HAL_UART_TxCpltCallback()` and `HAL_UART_ErrorCallback()`.
 
 #### Message structure
 
@@ -732,6 +753,8 @@ QueueHandle_t uart_mgmt_get_queue(void);
 **Header:** [`include/services/iic_mgmt.h`](include/services/iic_mgmt.h)
 **Source:** [`services/iic_mgmt.c`](services/iic_mgmt.c)
 **Config flag:** `INC_SERVICE_IIC_MGMT` in `os_config.h`
+
+At startup the thread iterates `board_get_config()->iic_table` and registers all I2C buses automatically via `hal_iic_stm32_set_config()` + `drv_iic_register()`.
 
 Adds a **synchronous receive** path via FreeRTOS task notification — the caller blocks until the management thread completes the I2C read, then the result is written back to `*result_code`.
 
@@ -791,7 +814,7 @@ int32_t iic_mgmt_sync_receive(uint8_t bus_id, uint16_t dev_addr,
 **Header:** [`include/services/spi_mgmt.h`](include/services/spi_mgmt.h)
 **Source:** [`services/spi_mgmt.c`](services/spi_mgmt.c)
 
-Like the I2C management thread but for SPI. Supports both a fire-and-forget async transmit and a blocking full-duplex transfer with task-notification synchronisation.
+Compiled unconditionally; the C-level guard `#if (BOARD_SPI_COUNT > 0)` eliminates dead code when no SPI buses are defined. At startup, iterates `board_get_config()->spi_table` and registers all buses. Like the I2C management thread but for SPI — supports both a fire-and-forget async transmit and a blocking full-duplex transfer with task-notification synchronisation.
 
 ```c
 int32_t spi_mgmt_start(void);
@@ -814,6 +837,12 @@ int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
 
 **Header:** [`include/services/gpio_mgmt.h`](include/services/gpio_mgmt.h)
 **Source:** [`services/gpio_mgmt.c`](services/gpio_mgmt.c)
+
+At startup, iterates `board_get_config()->gpio_table` and for each entry:
+1. Calls `board_gpio_clk_enable(d->port)` — enables the RCC peripheral clock
+2. Calls `hal_gpio_stm32_set_config(h, port, pin, mode, pull, speed, active_state)` — stores params
+3. Calls `drv_gpio_register(d->dev_id, ops)` — calls `hw_init()` which runs `HAL_GPIO_Init()`
+4. Applies `initial_state` by calling `h->ops->set(h)` for output pins configured as initially active
 
 Handles asynchronous and **delayed** GPIO commands (e.g. "assert reset for 10 ms then release").
 
@@ -925,19 +954,37 @@ The VS Code IntelliSense configuration mirrors these paths in [`.vscode/c_cpp_pr
 
 ---
 
+## Peripheral Counts and Board Configuration
+
+**Peripheral counts are no longer set by Kconfig.** They come exclusively from the auto-generated header:
+
+```
+include/board/board_device_ids.h   ← generated by scripts/gen_board_config.py
+  #define BOARD_UART_COUNT  2
+  #define BOARD_IIC_COUNT   1
+  #define BOARD_SPI_COUNT   1
+  #define BOARD_GPIO_COUNT  3
+```
+
+`include/config/mcu_config.h` re-exports these as `NO_OF_UART`, `NO_OF_IIC`, `NO_OF_SPI`, `NO_OF_GPIO` for backward compatibility. Driver source files use `BOARD_*_COUNT` directly.
+
+**Add or remove a peripheral by editing the board XML and running `make board-gen`** — no Kconfig changes needed.
+
 ## Kconfig Flags That Affect Drivers
 
 Run `make menuconfig` to configure these interactively.
 
 | Kconfig symbol | C macro | Effect |
 |---|---|---|
-| `CONFIG_NO_OF_UART` | `NO_OF_UART` | UART handle array size and IPC queue count |
-| `CONFIG_NO_OF_IIC` | `NO_OF_IIC` | I2C handle array size |
-| `CONFIG_HAL_SPI_MODULE_ENABLED` | `CONFIG_MCU_NO_OF_SPI_PERIPHERAL` | Enables SPI HAL module and SPI mgmt thread |
-| `CONFIG_HAL_TIM_MODULE_ENABLED` | — | Enables timer driver and encoder APIs |
 | `CONFIG_INC_SERVICE_UART_MGMT` | `INC_SERVICE_UART_MGMT` | Compiles `uart_mgmt.c` and starts the thread |
 | `CONFIG_INC_SERVICE_IIC_MGMT` | `INC_SERVICE_IIC_MGMT` | Compiles `iic_mgmt.c` and starts the thread |
+| `CONFIG_HAL_UART_MODULE_ENABLED` | `HAL_UART_MODULE_ENABLED` | STM32 HAL UART — disabling zeros the UART table |
+| `CONFIG_HAL_I2C_MODULE_ENABLED` | `HAL_I2C_MODULE_ENABLED` | STM32 HAL I2C — disabling zeros the I2C table |
+| `CONFIG_HAL_SPI_MODULE_ENABLED` | `HAL_SPI_MODULE_ENABLED` | STM32 HAL SPI — disabling zeros the SPI table |
+| `CONFIG_HAL_TIM_MODULE_ENABLED` | `HAL_TIM_MODULE_ENABLED` | Enables timer driver and encoder APIs |
 | `CONFIG_HAL_IWDG_MODULE_ENABLED` | `CONFIG_MCU_WDG_EN` | Enables watchdog driver support |
+
+> `spi_mgmt.c` and `gpio_mgmt.c` are always compiled (unconditionally in `services/Makefile`). C-level guards (`#if BOARD_SPI_COUNT > 0`) eliminate dead code at compile time when no buses are defined.
 
 ---
 

@@ -91,6 +91,9 @@ typedef struct {
 typedef struct {
     GPIO_TypeDef       *port;
     uint16_t            pin;
+    uint32_t            mode;           /* GPIO_MODE_OUTPUT_PP, GPIO_MODE_AF_PP, … */
+    uint32_t            pull;           /* GPIO_NOPULL / GPIO_PULLUP / GPIO_PULLDOWN */
+    uint32_t            speed;          /* GPIO_SPEED_FREQ_LOW … _VERY_HIGH */
     uint8_t             active_state;   /* GPIO_PIN_SET or GPIO_PIN_RESET */
 } drv_hw_gpio_ctx_t;
 
@@ -120,6 +123,9 @@ typedef struct {
 typedef struct {
     uint32_t    port_base;      /* GPIO port base address */
     uint32_t    pin;
+    uint32_t    mode;
+    uint32_t    pull;
+    uint32_t    speed;
     uint8_t     active_state;
 } drv_hw_gpio_ctx_t;
 

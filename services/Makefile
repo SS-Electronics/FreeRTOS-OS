@@ -27,8 +27,6 @@ ifeq ($(CONFIG_INC_SERVICE_IIC_MGMT),1)
 obj-y += services/iic_mgmt.o
 endif
 
-ifneq ($(CONFIG_MCU_NO_OF_SPI_PERIPHERAL),0)
+# spi_mgmt.c guards itself with #if (BOARD_SPI_COUNT > 0) at compile time
 obj-y += services/spi_mgmt.o
-endif
-
 obj-y += services/gpio_mgmt.o

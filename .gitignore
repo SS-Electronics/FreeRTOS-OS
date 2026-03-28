@@ -51,8 +51,6 @@
 # Ignore build output
 /build/
 
-# VS Code settings
-.vscode/
 
 .config
 .config.old

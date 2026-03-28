@@ -8,6 +8,7 @@
 
 #include <os/kernel.h>
 #include <drivers/drv_handle.h>
+#include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 #  include <drivers/cpu/hal/stm32/hal_gpio_stm32.h>
@@ -21,14 +22,43 @@ static void gpio_mgmt_thread(void *arg)
 
     os_thread_delay(TIME_OFFSET_GPIO_MANAGEMENT);
 
-    /*
-     * GPIO handles are registered by board-specific code (e.g. stm32f4xx_hal_msp.c
-     * or a board_init() function) rather than here, because GPIO configuration
-     * (port, pin, mode, pull) is inherently board-specific.
-     *
-     * The management thread just processes command messages once lines are
-     * registered via drv_gpio_register().
-     */
+    /* Register all GPIO lines described in the board configuration.
+     * For each line: enable the GPIO clock, configure the pin parameters
+     * in the hw context, then call drv_gpio_register() which calls hw_init(). */
+    {
+        const drv_gpio_hal_ops_t *ops =
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+            hal_gpio_stm32_get_ops();
+#else
+            NULL;
+#endif
+        if (ops != NULL)
+        {
+            const board_config_t *bc = board_get_config();
+            for (uint8_t i = 0; i < bc->gpio_count; i++)
+            {
+                const board_gpio_desc_t *d = &bc->gpio_table[i];
+                drv_gpio_handle_t       *h = drv_gpio_get_handle(d->dev_id);
+
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+                board_gpio_clk_enable(d->port);
+                hal_gpio_stm32_set_config(h,
+                                          d->port,
+                                          d->pin,
+                                          d->mode,
+                                          d->pull,
+                                          d->speed,
+                                          d->active_state);
+#endif
+                int32_t err = drv_gpio_register(d->dev_id, ops);
+                (void)err;
+
+                /* Apply initial state for output pins */
+                if (h->initialized && d->initial_state && h->ops != NULL)
+                    h->ops->set(h);
+            }
+        }
+    }
 
     gpio_mgmt_msg_t msg;
 

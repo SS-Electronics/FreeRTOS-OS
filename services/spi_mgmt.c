@@ -8,12 +8,13 @@
 
 #include <os/kernel.h>
 #include <drivers/drv_handle.h>
+#include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 #  include <drivers/com/hal/stm32/hal_spi_stm32.h>
 #endif
 
-#if (CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0)
+#if (BOARD_SPI_COUNT > 0)
 
 static QueueHandle_t _mgmt_queue = NULL;
 
@@ -23,7 +24,7 @@ static void spi_mgmt_thread(void *arg)
 
     os_thread_delay(TIME_OFFSET_SPI_MANAGEMENT);
 
-    /* Register all SPI buses */
+    /* Register all SPI buses described in the board configuration */
     {
         const drv_spi_hal_ops_t *ops =
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
@@ -33,8 +34,31 @@ static void spi_mgmt_thread(void *arg)
 #endif
         if (ops != NULL)
         {
-            for (uint8_t id = 0; id < CONFIG_MCU_NO_OF_SPI_PERIPHERAL; id++)
-                drv_spi_register(id, ops, 1000000U, 10);
+            const board_config_t *bc = board_get_config();
+            for (uint8_t i = 0; i < bc->spi_count; i++)
+            {
+                const board_spi_desc_t *d = &bc->spi_table[i];
+                drv_spi_handle_t       *h = drv_spi_get_handle(d->dev_id);
+
+                /*
+                 * Populate the vendor hw context BEFORE drv_spi_register()
+                 * calls hw_init(), which reads Instance and all Init fields.
+                 */
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+                hal_spi_stm32_set_config(h,
+                                         d->instance,
+                                         d->mode,
+                                         d->direction,
+                                         d->data_size,
+                                         d->clk_polarity,
+                                         d->clk_phase,
+                                         d->nss,
+                                         d->baud_prescaler,
+                                         d->bit_order);
+#endif
+                int32_t err = drv_spi_register(d->dev_id, ops, 0, 10);
+                (void)err;
+            }
         }
     }
 
@@ -148,4 +172,4 @@ int32_t spi_mgmt_async_transmit(uint8_t bus_id,
     return (xQueueSend(_mgmt_queue, &msg, 0) == pdTRUE) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-#endif /* CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0 */
+#endif /* BOARD_SPI_COUNT > 0 */

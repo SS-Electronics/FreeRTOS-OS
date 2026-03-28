@@ -19,6 +19,7 @@
 
 #include <os/kernel.h>
 #include <drivers/drv_handle.h>
+#include <board/board_config.h>
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
 
@@ -45,7 +46,6 @@ static void uart_mgmt_thread(void *arg)
     os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT);
 
     /* ── Register and initialise all enabled UART devices ── */
-#if (NO_OF_UART > 0)
     {
         const drv_uart_hal_ops_t *ops =
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
@@ -57,17 +57,28 @@ static void uart_mgmt_thread(void *arg)
 #endif
         if (ops != NULL)
         {
-            for (uint8_t id = 0; id < NO_OF_UART; id++)
+            const board_config_t *bc = board_get_config();
+
+            for (uint8_t i = 0; i < bc->uart_count; i++)
             {
-                int32_t err = drv_uart_register(id,
-                                                ops,
-                                                UART_1_BAUD,    /* default baud */
-                                                10);            /* 10 ms timeout */
+                const board_uart_desc_t *d = &bc->uart_table[i];
+                drv_uart_handle_t       *h = drv_uart_get_handle(d->dev_id);
+
+                /*
+                 * Populate the vendor hw context (instance, framing) BEFORE
+                 * drv_uart_register() calls hw_init(), which reads these fields.
+                 */
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+                hal_uart_stm32_set_config(h, d->instance,
+                                          d->word_len, d->stop_bits,
+                                          d->parity,   d->mode);
+#endif
+                int32_t err = drv_uart_register(d->dev_id, ops,
+                                                d->baudrate, 10);
                 (void)err;
             }
         }
     }
-#endif /* NO_OF_UART > 0 */
 
     /* ── Main event loop ── */
     uart_mgmt_msg_t msg;

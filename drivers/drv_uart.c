@@ -14,6 +14,7 @@
 #include <drivers/drv_handle.h>
 #include <config/mcu_config.h>
 #include <config/os_config.h>
+#include <board/board_config.h>
 #include <def_err.h>
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
@@ -22,13 +23,13 @@
 
 /* ── Handle storage (owned by this module) ────────────────────────────── */
 
-static drv_uart_handle_t _uart_handles[NO_OF_UART];
+static drv_uart_handle_t _uart_handles[BOARD_UART_COUNT];
 
 /* One staging byte per UART used by the interrupt-driven RX path */
-static uint8_t _rx_stage_byte[NO_OF_UART];
+static uint8_t _rx_stage_byte[BOARD_UART_COUNT];
 
 /* Ring-buffer pointers linked to per-UART IPC queues */
-static struct ringbuffer *_rx_rb[NO_OF_UART];
+static struct ringbuffer *_rx_rb[BOARD_UART_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
 
@@ -43,7 +44,7 @@ int32_t drv_uart_register(uint8_t dev_id,
                            uint32_t baudrate,
                            uint32_t timeout_ms)
 {
-    if (dev_id >= NO_OF_UART || ops == NULL)
+    if (dev_id >= BOARD_UART_COUNT || ops == NULL)
         return OS_ERR_OP;
 
     drv_uart_handle_t *h = &_uart_handles[dev_id];
@@ -72,7 +73,7 @@ int32_t drv_uart_register(uint8_t dev_id,
 
 drv_uart_handle_t *drv_uart_get_handle(uint8_t dev_id)
 {
-    if (dev_id >= NO_OF_UART)
+    if (dev_id >= BOARD_UART_COUNT)
         return NULL;
     return &_uart_handles[dev_id];
 }
@@ -89,7 +90,7 @@ drv_uart_handle_t *drv_uart_get_handle(uint8_t dev_id)
  */
 int32_t drv_serial_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
 {
-    if (dev_id >= NO_OF_UART || data == NULL || len == 0)
+    if (dev_id >= BOARD_UART_COUNT || data == NULL || len == 0)
         return OS_ERR_OP;
 
     drv_uart_handle_t *h = &_uart_handles[dev_id];
@@ -110,7 +111,7 @@ int32_t drv_serial_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
  */
 int32_t drv_serial_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
 {
-    if (dev_id >= NO_OF_UART || data == NULL || len == 0)
+    if (dev_id >= BOARD_UART_COUNT || data == NULL || len == 0)
         return OS_ERR_OP;
 
     drv_uart_handle_t *h = &_uart_handles[dev_id];
@@ -132,13 +133,18 @@ int32_t drv_serial_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
  */
 void drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte)
 {
-    if (dev_id >= NO_OF_UART)
+    if (dev_id >= BOARD_UART_COUNT)
         return;
 
     drv_uart_handle_t *h = &_uart_handles[dev_id];
 
     if (h->initialized && h->ops != NULL && h->ops->rx_isr_cb != NULL)
         h->ops->rx_isr_cb(h, rx_byte, _rx_rb[dev_id]);
+
+    /* Dispatch to application callback registered via board_uart_register_rx_cb() */
+    const board_uart_cbs_t *cbs = board_get_uart_cbs(dev_id);
+    if (cbs != NULL && cbs->on_rx_byte != NULL)
+        cbs->on_rx_byte(dev_id, rx_byte);
 }
 
 /* ── STM32 HAL callback (compiled only for STM32 targets) ─────────────── */
@@ -152,7 +158,7 @@ void drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte)
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    for (uint8_t id = 0; id < NO_OF_UART; id++)
+    for (uint8_t id = 0; id < BOARD_UART_COUNT; id++)
     {
         drv_uart_handle_t *h = &_uart_handles[id];
         if (h->initialized && &h->hw.huart == huart)
@@ -165,19 +171,30 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-    (void)huart;
-    /* Reserved for DMA / interrupt-driven TX completion */
+    for (uint8_t id = 0; id < BOARD_UART_COUNT; id++)
+    {
+        drv_uart_handle_t *h = &_uart_handles[id];
+        if (h->initialized && &h->hw.huart == huart)
+        {
+            const board_uart_cbs_t *cbs = board_get_uart_cbs(id);
+            if (cbs != NULL && cbs->on_tx_done != NULL)
+                cbs->on_tx_done(id);
+            return;
+        }
+    }
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-    /* Mark the matching handle as errored; uart_mgmt will reinit */
-    for (uint8_t id = 0; id < NO_OF_UART; id++)
+    for (uint8_t id = 0; id < BOARD_UART_COUNT; id++)
     {
         drv_uart_handle_t *h = &_uart_handles[id];
         if (h->initialized && &h->hw.huart == huart)
         {
             h->last_err = OS_ERR_OP;
+            const board_uart_cbs_t *cbs = board_get_uart_cbs(id);
+            if (cbs != NULL && cbs->on_error != NULL)
+                cbs->on_error(id, huart->ErrorCode);
             return;
         }
     }

@@ -18,17 +18,15 @@ static int32_t stm32_gpio_hw_init(drv_gpio_handle_t *h)
     if (h == NULL || h->hw.port == NULL)
         return OS_ERR_OP;
 
-    /* Enable the GPIO clock via the HAL RCC macro */
-    /* NOTE: Applications must enable the peripheral clock before calling
-     * hw_init.  The generic GPIO driver cannot know which clock to enable
-     * without hard-coding port-to-clock mappings.  A board-specific
-     * gpio_clock_enable() hook in stm32f4xx_hal_msp.c is the correct place. */
-
+    /*
+     * mode/pull/speed were stored in the hw context by hal_gpio_stm32_set_config().
+     * board_gpio_clk_enable() must be called before this (done by gpio_mgmt).
+     */
     GPIO_InitTypeDef cfg = {
         .Pin   = h->hw.pin,
-        .Mode  = GPIO_MODE_OUTPUT_PP,
-        .Pull  = GPIO_NOPULL,
-        .Speed = GPIO_SPEED_FREQ_LOW,
+        .Mode  = h->hw.mode  ? h->hw.mode  : GPIO_MODE_OUTPUT_PP,
+        .Pull  = h->hw.pull,
+        .Speed = h->hw.speed ? h->hw.speed : GPIO_SPEED_FREQ_LOW,
     };
 
     HAL_GPIO_Init(h->hw.port, &cfg);
@@ -109,21 +107,15 @@ void hal_gpio_stm32_set_config(drv_gpio_handle_t *h,
     if (h == NULL || port == NULL)
         return;
 
+    /* Store all parameters in the hw context.
+     * hw_init() will call HAL_GPIO_Init() using these values.
+     * Caller must invoke board_gpio_clk_enable(port) before drv_gpio_register(). */
     h->hw.port         = port;
     h->hw.pin          = pin;
+    h->hw.mode         = mode;
+    h->hw.pull         = pull;
+    h->hw.speed        = speed;
     h->hw.active_state = active_state;
-
-    /* Store init params in a local struct; the hw_init call will re-apply them.
-     * We keep mode/pull/speed in the hw context by repurposing the GPIO_InitTypeDef
-     * that will be rebuilt in hw_init — for simplicity we apply them here directly
-     * so the caller gets the correct configuration even before hw_init. */
-    GPIO_InitTypeDef cfg = {
-        .Pin   = pin,
-        .Mode  = mode,
-        .Pull  = pull,
-        .Speed = speed,
-    };
-    HAL_GPIO_Init(port, &cfg);
 }
 
 #endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */

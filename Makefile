@@ -37,6 +37,18 @@ AUTOCONF_H      			:= include/config/autoconf.h
 ##############################################################
 
 
+##############################################################
+# Board selection
+# Override on the command line:  make CONFIG_BOARD=my_custom_board
+# The XML file boards/$(CONFIG_BOARD).xml is the single source of truth.
+CONFIG_BOARD    ?= stm32f411_devboard
+BOARD_XML       := boards/$(CONFIG_BOARD).xml
+BOARD_BSP_C     := boards/$(CONFIG_BOARD)/board_config.c
+BOARD_BSP_H     := include/board/board_device_ids.h
+export CONFIG_BOARD
+##############################################################
+
+
 
 
 
@@ -67,7 +79,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := arch kernel mm init include drivers services
+SUBDIRS := arch kernel mm init include drivers services boards
 
 INCLUDES :=
 
@@ -181,8 +193,24 @@ $(AUTOCONF_H): $(KCONFIG_CONFIG)
 
 
 ##############################################################
-# build stages 
-all: $(BUILD)/kernel.elf 
+# Board BSP generation
+# Run the Python generator whenever the XML changes.
+# This produces $(BOARD_BSP_C) and $(BOARD_BSP_H) before any C compiles.
+$(BOARD_BSP_C) $(BOARD_BSP_H): $(BOARD_XML)
+	@echo "### Generating BSP from $< ..."
+	@python3 scripts/gen_board_config.py $<
+	@echo "### BSP generation done"
+
+.PHONY: board-gen
+board-gen: $(BOARD_BSP_C) $(BOARD_BSP_H)
+	@echo "### Board: $(CONFIG_BOARD)  XML: $(BOARD_XML)"
+##############################################################
+
+
+##############################################################
+# build stages
+# BSP files are generated before compiling any C source.
+all: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BUILD)/kernel.elf
 
 # Link final kernel
 $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
@@ -240,6 +268,7 @@ $(BUILD):
 
 clean:
 	@rm -rf $(BUILD)
+	@rm -f $(BOARD_BSP_C) $(BOARD_BSP_H)
 	@echo '##############################################'
 	@echo ' '
 	@echo 'Clean completed!'

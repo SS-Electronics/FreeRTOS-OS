@@ -8,15 +8,15 @@
  */
 
 #include <drivers/drv_handle.h>
-#include <config/mcu_config.h>
+#include <config/mcu_config.h>   /* pulls board_device_ids.h → BOARD_IIC_COUNT */
 #include <config/os_config.h>
 #include <def_err.h>
 
-#if (NO_OF_IIC > 0)
+#if (BOARD_IIC_COUNT > 0)
 
 /* ── Handle storage ───────────────────────────────────────────────────── */
 
-static drv_iic_handle_t _iic_handles[NO_OF_IIC];
+static drv_iic_handle_t _iic_handles[BOARD_IIC_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
 
@@ -25,7 +25,7 @@ int32_t drv_iic_register(uint8_t dev_id,
                           uint32_t clock_hz,
                           uint32_t timeout_ms)
 {
-    if (dev_id >= NO_OF_IIC || ops == NULL)
+    if (dev_id >= BOARD_IIC_COUNT || ops == NULL)
         return OS_ERR_OP;
 
     drv_iic_handle_t *h = &_iic_handles[dev_id];
@@ -44,7 +44,7 @@ int32_t drv_iic_register(uint8_t dev_id,
 
 drv_iic_handle_t *drv_iic_get_handle(uint8_t dev_id)
 {
-    if (dev_id >= NO_OF_IIC)
+    if (dev_id >= BOARD_IIC_COUNT)
         return NULL;
     return &_iic_handles[dev_id];
 }
@@ -63,7 +63,7 @@ drv_iic_handle_t *drv_iic_get_handle(uint8_t dev_id)
 int32_t drv_iic_transmit(uint8_t dev_id, uint16_t dev_addr,
                           uint8_t reg_addr, const uint8_t *data, uint16_t len)
 {
-    if (dev_id >= NO_OF_IIC || data == NULL)
+    if (dev_id >= BOARD_IIC_COUNT || data == NULL)
         return OS_ERR_OP;
 
     drv_iic_handle_t *h = &_iic_handles[dev_id];
@@ -80,7 +80,7 @@ int32_t drv_iic_transmit(uint8_t dev_id, uint16_t dev_addr,
 int32_t drv_iic_receive(uint8_t dev_id, uint16_t dev_addr,
                          uint8_t reg_addr, uint8_t *data, uint16_t len)
 {
-    if (dev_id >= NO_OF_IIC || data == NULL)
+    if (dev_id >= BOARD_IIC_COUNT || data == NULL)
         return OS_ERR_OP;
 
     drv_iic_handle_t *h = &_iic_handles[dev_id];
@@ -96,7 +96,7 @@ int32_t drv_iic_receive(uint8_t dev_id, uint16_t dev_addr,
  */
 int32_t drv_iic_device_ready(uint8_t dev_id, uint16_t dev_addr)
 {
-    if (dev_id >= NO_OF_IIC)
+    if (dev_id >= BOARD_IIC_COUNT)
         return OS_ERR_OP;
 
     drv_iic_handle_t *h = &_iic_handles[dev_id];
@@ -107,4 +107,4 @@ int32_t drv_iic_device_ready(uint8_t dev_id, uint16_t dev_addr)
     return h->ops->is_device_ready(h, dev_addr, h->timeout_ms);
 }
 
-#endif /* NO_OF_IIC > 0 */
+#endif /* BOARD_IIC_COUNT > 0 */

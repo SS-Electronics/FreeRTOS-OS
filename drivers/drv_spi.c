@@ -9,14 +9,14 @@
  */
 
 #include <drivers/drv_handle.h>
-#include <config/mcu_config.h>
+#include <config/mcu_config.h>   /* pulls board_device_ids.h → BOARD_SPI_COUNT */
 #include <def_err.h>
 
-#if (CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0)
+#if (BOARD_SPI_COUNT > 0)
 
 /* ── Handle storage ───────────────────────────────────────────────────── */
 
-static drv_spi_handle_t _spi_handles[CONFIG_MCU_NO_OF_SPI_PERIPHERAL];
+static drv_spi_handle_t _spi_handles[BOARD_SPI_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
 
@@ -25,7 +25,7 @@ int32_t drv_spi_register(uint8_t dev_id,
                           uint32_t clock_hz,
                           uint32_t timeout_ms)
 {
-    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || ops == NULL)
+    if (dev_id >= BOARD_SPI_COUNT || ops == NULL)
         return OS_ERR_OP;
 
     drv_spi_handle_t *h = &_spi_handles[dev_id];
@@ -44,7 +44,7 @@ int32_t drv_spi_register(uint8_t dev_id,
 
 drv_spi_handle_t *drv_spi_get_handle(uint8_t dev_id)
 {
-    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL)
+    if (dev_id >= BOARD_SPI_COUNT)
         return NULL;
     return &_spi_handles[dev_id];
 }
@@ -53,7 +53,7 @@ drv_spi_handle_t *drv_spi_get_handle(uint8_t dev_id)
 
 int32_t drv_spi_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
 {
-    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || data == NULL)
+    if (dev_id >= BOARD_SPI_COUNT || data == NULL)
         return OS_ERR_OP;
 
     drv_spi_handle_t *h = &_spi_handles[dev_id];
@@ -66,7 +66,7 @@ int32_t drv_spi_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
 
 int32_t drv_spi_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
 {
-    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || data == NULL)
+    if (dev_id >= BOARD_SPI_COUNT || data == NULL)
         return OS_ERR_OP;
 
     drv_spi_handle_t *h = &_spi_handles[dev_id];
@@ -80,7 +80,7 @@ int32_t drv_spi_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
 int32_t drv_spi_transfer(uint8_t dev_id,
                           const uint8_t *tx, uint8_t *rx, uint16_t len)
 {
-    if (dev_id >= CONFIG_MCU_NO_OF_SPI_PERIPHERAL || tx == NULL || rx == NULL)
+    if (dev_id >= BOARD_SPI_COUNT || tx == NULL || rx == NULL)
         return OS_ERR_OP;
 
     drv_spi_handle_t *h = &_spi_handles[dev_id];
@@ -91,4 +91,4 @@ int32_t drv_spi_transfer(uint8_t dev_id,
     return h->ops->transfer(h, tx, rx, len, h->timeout_ms);
 }
 
-#endif /* CONFIG_MCU_NO_OF_SPI_PERIPHERAL > 0 */
+#endif /* BOARD_SPI_COUNT > 0 */

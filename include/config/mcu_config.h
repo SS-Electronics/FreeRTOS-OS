@@ -39,26 +39,46 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * OS-managed peripheral counts  (from Kconfig → autoconf.h)
- * These control IPC queue array sizes and service thread counts.
+ * Board device IDs — generated from boards/<BOARD>.xml by gen_board_config.py
+ * Defines BOARD_UART_COUNT, BOARD_IIC_COUNT, BOARD_SPI_COUNT, BOARD_GPIO_COUNT
+ * and per-peripheral #define IDs (UART_DEBUG, I2C_SENSOR_BUS, …).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+#include <board/board_device_ids.h>
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * OS-managed peripheral counts — sourced from the generated board config.
+ * Fallbacks are provided so the project still compiles if board-gen has not
+ * been run yet (will fail gracefully at link time, not at preprocessing).
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-#ifndef CONFIG_NO_OF_UART
-  #define NO_OF_UART    1
+#ifdef BOARD_UART_COUNT
+  #define NO_OF_UART    BOARD_UART_COUNT
 #else
-  #define NO_OF_UART    CONFIG_NO_OF_UART
+  #define NO_OF_UART    1   /* fallback — run 'make board-gen' */
 #endif
 
-#ifndef CONFIG_NO_OF_IIC
-  #define NO_OF_IIC     0
+#ifdef BOARD_IIC_COUNT
+  #define NO_OF_IIC     BOARD_IIC_COUNT
 #else
-  #define NO_OF_IIC     CONFIG_NO_OF_IIC
+  #define NO_OF_IIC     0
+#endif
+
+#ifdef BOARD_SPI_COUNT
+  #define NO_OF_SPI     BOARD_SPI_COUNT
+#else
+  #define NO_OF_SPI     0
+#endif
+
+#ifdef BOARD_GPIO_COUNT
+  #define NO_OF_GPIO    BOARD_GPIO_COUNT
+#else
+  #define NO_OF_GPIO    0
 #endif
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Peripheral enable flags  (legacy macros, kept for driver compatibility)
- * Driven by Kconfig — enable a HAL module in menuconfig to turn these on.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 #ifdef CONFIG_HAL_IWDG_MODULE_ENABLED
@@ -71,12 +91,8 @@
 
 #define CONFIG_MCU_NO_OF_UART_PERIPHERAL  NO_OF_UART
 #define CONFIG_MCU_NO_OF_IIC_PERIPHERAL   NO_OF_IIC
-
-#ifdef CONFIG_HAL_SPI_MODULE_ENABLED
-  #define CONFIG_MCU_NO_OF_SPI_PERIPHERAL (1)
-#else
-  #define CONFIG_MCU_NO_OF_SPI_PERIPHERAL (0)
-#endif
+#define CONFIG_MCU_NO_OF_SPI_PERIPHERAL   NO_OF_SPI
+#define CONFIG_MCU_NO_OF_GPIO_PERIPHERAL  NO_OF_GPIO
 
 /* RS-485, CAN, USB, ETH — not on STM32F411 */
 #define CONFIG_MCU_NO_OF_RS485_PERIPHERAL (0)
@@ -92,16 +108,17 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * Individual UART instance enable
- * STM32F411VET6 has USART1 (PA9/PA10), USART2 (PA2/PA3), USART6 (PC6/PC7)
+ * Individual UART instance enable — derived from board UART count.
+ * The actual UART-to-USART mapping lives in boards/<board>/board_config.c.
+ * These flags remain for backward compatibility with drivers that test them.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 #define UART_1_EN    (NO_OF_UART >= 1 ? 1 : 0)
 #define UART_2_EN    (NO_OF_UART >= 2 ? 1 : 0)
-#define UART_6_EN    (NO_OF_UART >= 3 ? 1 : 0)  /* USART6 is instance 3 on F411 */
-#define UART_3_EN    (0)   /* Not present on F411VET6 */
-#define UART_4_EN    (0)   /* Not present on F411VET6 */
-#define UART_5_EN    (0)   /* Not present on F411VET6 */
+#define UART_6_EN    (NO_OF_UART >= 3 ? 1 : 0)
+#define UART_3_EN    (0)
+#define UART_4_EN    (0)
+#define UART_5_EN    (0)
 
 
 /* ═══════════════════════════════════════════════════════════════════════════

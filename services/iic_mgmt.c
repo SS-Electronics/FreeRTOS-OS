@@ -8,6 +8,7 @@
 
 #include <os/kernel.h>
 #include <drivers/drv_handle.h>
+#include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 #  include <drivers/com/hal/stm32/hal_iic_stm32.h>
@@ -25,8 +26,7 @@ static void iic_mgmt_thread(void *arg)
 
     os_thread_delay(TIME_OFFSET_IIC_MANAGEMENT);
 
-    /* Register all enabled I2C buses */
-#if (NO_OF_IIC > 0)
+    /* Register all I2C buses described in the board configuration */
     {
         const drv_iic_hal_ops_t *ops =
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
@@ -38,11 +38,26 @@ static void iic_mgmt_thread(void *arg)
 #endif
         if (ops != NULL)
         {
-            for (uint8_t id = 0; id < NO_OF_IIC; id++)
-                drv_iic_register(id, ops, 400000U, IIC_ACK_TIMEOUT_MS);
+            const board_config_t *bc = board_get_config();
+            for (uint8_t i = 0; i < bc->iic_count; i++)
+            {
+                const board_iic_desc_t *d = &bc->iic_table[i];
+                drv_iic_handle_t       *h = drv_iic_get_handle(d->dev_id);
+
+                /*
+                 * Populate the vendor hw context (instance, addr_mode) BEFORE
+                 * drv_iic_register() calls hw_init(), which reads these fields.
+                 */
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+                hal_iic_stm32_set_config(h, d->instance,
+                                         d->addr_mode, d->dual_addr);
+#endif
+                int32_t err = drv_iic_register(d->dev_id, ops,
+                                               d->clock_hz, IIC_ACK_TIMEOUT_MS);
+                (void)err;
+            }
         }
     }
-#endif /* NO_OF_IIC > 0 */
 
     iic_mgmt_msg_t msg;
 

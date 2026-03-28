@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "name": "STM32F411xE",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/include/config",
+                "${workspaceFolder}/include/services",
+                "${workspaceFolder}/include/board",
+                "${workspaceFolder}/arch/arm/CMSIS_6",
+                "${workspaceFolder}/arch/devices/STM/STM32F4xx",
+                "${workspaceFolder}/arch/devices/STM/stm32f4xx-hal-driver/Inc",
+                "${workspaceFolder}/kernel",
+                "${workspaceFolder}/kernel/FreeRTOS-Kernel/include",
+                "${workspaceFolder}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F",
+                "${workspaceFolder}/lib"
+            ],
+            "defines": [
+                "STM32F411xE",
+                "USE_HAL_DRIVER",
+                "__ARM_ARCH_7EM__"
+            ],
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "gnu99",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "gcc-arm",
+            "forcedInclude": [
+                "${workspaceFolder}/include/config/autoconf.h"
+            ]
+        }
+    ],
+    "version": 4
+}
