@@ -1,0 +1,201 @@
+{
+    // ─────────────────────────────────────────────────────────────────────────
+    //  FreeRTOS-OS  —  VSCode Task Definitions
+    //
+    //  Keyboard shortcuts (default VSCode):
+    //    Ctrl+Shift+B  →  run the default build task (task labelled "build")
+    //    Ctrl+Shift+P  →  "Tasks: Run Task"  to pick any task by name
+    //
+    //  Task dependency graph:
+    //
+    //    board-gen ─┐
+    //               ├─► build ─► flash
+    //               │
+    //    (kconfig)──┘
+    //
+    //  The "Build, Flash & Debug" launch config uses "preLaunchTask": "build",
+    //  which triggers this tasks.json "build" task automatically before GDB
+    //  starts — exactly like the STM32CubeIDE F5 flow.
+    // ─────────────────────────────────────────────────────────────────────────
+    "version": "2.0.0",
+    "tasks": [
+
+        // ── Board BSP generation ─────────────────────────────────────────────
+        {
+            "label": "board-gen",
+            "detail": "Generate board_config.c + board_device_ids.h from XML",
+            "type": "shell",
+            "command": "make board-gen",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+
+        // ── Build ────────────────────────────────────────────────────────────
+        {
+            "label": "build",
+            "detail": "make all — generate BSP if needed, then compile & link",
+            "type": "shell",
+            "command": "make all",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            // GCC diagnostic parsing so errors appear in the Problems panel
+            "problemMatcher": [
+                {
+                    "owner": "gcc",
+                    "fileLocation": ["relative", "${workspaceFolder}"],
+                    "pattern": {
+                        "regexp": "^(.+):(\\d+):(\\d+):\\s+(warning|error):\\s+(.+)$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                }
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+
+        // ── Build with custom board ──────────────────────────────────────────
+        {
+            "label": "build (custom board)",
+            "detail": "make all CONFIG_BOARD=<your_board>  — edit the command below",
+            "type": "shell",
+            "command": "make all CONFIG_BOARD=${input:boardName}",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": ["$gcc"],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+
+        // ── Flash (via OpenOCD — no debug session) ───────────────────────────
+        {
+            "label": "flash",
+            "detail": "Program build/kernel.elf into flash via OpenOCD and reset",
+            "type": "shell",
+            "command": "make flash",
+            "options": { "cwd": "${workspaceFolder}" },
+            "dependsOn": ["build"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": false
+            }
+        },
+
+        // ── Clean ────────────────────────────────────────────────────────────
+        {
+            "label": "clean",
+            "detail": "Remove build artifacts and generated BSP files",
+            "type": "shell",
+            "command": "make clean",
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": false
+            }
+        },
+
+        // ── Kconfig ──────────────────────────────────────────────────────────
+        {
+            "label": "menuconfig",
+            "detail": "Open ncurses Kconfig menu (run in an external terminal)",
+            "type": "shell",
+            "command": "make menuconfig",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+
+        // ── Generate autoconf from .config ───────────────────────────────────
+        {
+            "label": "config-outputs",
+            "detail": "Generate autoconf.h + autoconf.mk from .config",
+            "type": "shell",
+            "command": "make config-outputs",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+
+        // ── OpenOCD server (manual — for the "Attach" launch config) ─────────
+        // Run this task first, then use "STM32F411 — Attach" launch config.
+        // The "Build, Flash & Debug" launch config starts OpenOCD automatically
+        // and does NOT need this task.
+        {
+            "label": "openocd-server",
+            "detail": "Start OpenOCD GDB server on port 3333 (for Attach mode)",
+            "type": "shell",
+            "command": "openocd -f arch/debug_cfg/stm32_f411xx_debug.cfg -c \"gdb_port 3333\" -c \"telnet_port 4444\" -c \"tcl_port 6666\"",
+            "options": { "cwd": "${workspaceFolder}" },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "openocd",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "Open On-Chip Debugger",
+                    "endsPattern": "Listening on port 3333"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+
+        // ── Install debug tools (SVD file + Cortex-Debug extension) ──────────
+        {
+            "label": "install-debug-tools",
+            "detail": "Download STM32F411 SVD and install Cortex-Debug extension",
+            "type": "shell",
+            "command": "bash scripts/install_debug_tools.sh",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        }
+    ],
+
+    // ── Input variables ──────────────────────────────────────────────────────
+    "inputs": [
+        {
+            "id": "boardName",
+            "type": "promptString",
+            "description": "Board name (must match boards/<name>.xml)",
+            "default": "stm32f411_devboard"
+        }
+    ]
+}

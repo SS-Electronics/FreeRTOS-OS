@@ -1,0 +1,30 @@
+{
+    // ── Recommended extensions for FreeRTOS-OS development ───────────────────
+    // VSCode will prompt to install these when the workspace is opened.
+    "recommendations": [
+        // ARM Cortex-M debugger — OpenOCD/J-Link/ST-Link, FreeRTOS awareness,
+        // peripheral register viewer (SVD), SWO/ITM decoder
+        "marus25.cortex-debug",
+
+        // C/C++ IntelliSense, go-to-definition, diagnostics
+        "ms-vscode.cpptools",
+
+        // Enhanced IntelliSense for embedded C (optional but faster)
+        "ms-vscode.cpptools-extension-pack",
+
+        // XML syntax highlight (board XML, SVD files)
+        "redhat.vscode-xml",
+
+        // Makefile syntax + make run shortcuts
+        "ms-vscode.makefile-tools",
+
+        // Serial monitor (UART output without leaving VSCode)
+        "ms-vscode.vscode-serial-monitor",
+
+        // Hex viewer for .hex / .bin flash images
+        "ms-vscode.hexeditor",
+
+        // GitLens (optional — git blame inline)
+        "eamodio.gitlens"
+    ]
+}

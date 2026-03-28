@@ -1,0 +1,177 @@
+{
+    // ─────────────────────────────────────────────────────────────────────────
+    //  FreeRTOS-OS  —  VSCode Debug Configurations
+    //
+    //  Requires the "Cortex-Debug" extension (marus25.cortex-debug).
+    //  Install it from the VSCode marketplace or:
+    //    code --install-extension marus25.cortex-debug
+    //
+    //  Three launch configurations are provided:
+    //
+    //  1. "Build, Flash & Debug"
+    //     Builds the firmware, flashes it via OpenOCD, then starts a GDB
+    //     session halted at main().  This is the normal development workflow
+    //     and matches what STM32CubeIDE does with a single F5 press.
+    //
+    //  2. "Attach (no flash)"
+    //     Attaches GDB to a target that is already running.  Useful when you
+    //     want to inspect state without restarting.
+    //
+    //  3. "Flash Only"
+    //     Programs the ELF into flash and resets — no debug session opened.
+    //     Equivalent to the "Run" button in STM32CubeIDE.
+    //
+    //  SVD file  (peripheral register viewer)
+    //  ───────────────────────────────────────
+    //  Run  scripts/install_debug_tools.sh  once to download the STM32F411
+    //  SVD file into arch/debug_cfg/.  Without it the "Peripherals" panel
+    //  won't appear, but all other debug features work normally.
+    //
+    //  FreeRTOS awareness
+    //  ──────────────────
+    //  "rtos": "FreeRTOS" enables the Cortex-Debug RTOS plugin.  The "RTOS
+    //  Threads" panel shows all FreeRTOS task stacks — analogous to the
+    //  "FreeRTOS Task List" in STM32CubeIDE.
+    // ─────────────────────────────────────────────────────────────────────────
+    "version": "0.2.0",
+    "configurations": [
+
+        // ── 1. Build → Flash → Debug ─────────────────────────────────────────
+        {
+            "name": "STM32F411 — Build, Flash & Debug",
+            "type": "cortex-debug",
+            "request": "launch",
+
+            // ── GDB server ──────────────────────────────────────────────────
+            "servertype": "openocd",
+            "configFiles": [
+                "arch/debug_cfg/stm32_f411xx_debug.cfg"
+            ],
+            // Show OpenOCD + GDB output in the Debug Console
+            "showDevDebugOutput": "both",
+
+            // ── Target binary ────────────────────────────────────────────────
+            "executable": "${workspaceFolder}/build/kernel.elf",
+
+            // ── Toolchain ────────────────────────────────────────────────────
+            "gdbPath": "arm-none-eabi-gdb",
+
+            // ── CPU / interface ──────────────────────────────────────────────
+            "device": "STM32F411VE",
+            "interface": "swd",
+            "runToEntryPoint": "main",
+
+            // ── Peripheral register viewer (needs SVD — run install script) ──
+            "svdFile": "${workspaceFolder}/arch/debug_cfg/STM32F411.svd",
+
+            // ── FreeRTOS task-level stack awareness ──────────────────────────
+            "rtos": "FreeRTOS",
+
+            // ── Build before launching ───────────────────────────────────────
+            "preLaunchTask": "build",
+
+            // ── GDB commands issued BEFORE loading the program ───────────────
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "set print pretty on",
+                "set print object on",
+                "set pagination off"
+            ],
+
+            // ── GDB commands issued AFTER loading + before running ───────────
+            "postLaunchCommands": [
+                "monitor reset halt"
+            ],
+
+            // ── SWO / ITM printf output ──────────────────────────────────────
+            // Enable only if ITM_DEBUG_EN is set in os_config.h.
+            // Set cpuFrequency to your actual HCLK (100 MHz for STM32F411).
+            "swoConfig": {
+                "enabled": false,
+                "cpuFrequency": 100000000,
+                "swoFrequency": 2000000,
+                "source": "probe",
+                "decoders": [
+                    {
+                        "type": "console",
+                        "label": "ITM port 0",
+                        "port": 0,
+                        "encoding": "ascii"
+                    }
+                ]
+            }
+        },
+
+        // ── 2. Attach (no flash, no reset) ──────────────────────────────────
+        {
+            "name": "STM32F411 — Attach",
+            "type": "cortex-debug",
+            "request": "attach",
+
+            "servertype": "openocd",
+            "configFiles": [
+                "arch/debug_cfg/stm32_f411xx_debug.cfg"
+            ],
+            "showDevDebugOutput": "both",
+
+            "executable": "${workspaceFolder}/build/kernel.elf",
+            "gdbPath": "arm-none-eabi-gdb",
+
+            "device": "STM32F411VE",
+            "interface": "swd",
+
+            "svdFile": "${workspaceFolder}/arch/debug_cfg/STM32F411.svd",
+            "rtos": "FreeRTOS",
+
+            // Attach halts the target immediately; use these commands to
+            // restore a clean debug state without reflashing.
+            "postLaunchCommands": [
+                "monitor halt",
+                "set mem inaccessible-by-default off",
+                "set print pretty on",
+                "set pagination off"
+            ],
+
+            "swoConfig": {
+                "enabled": false,
+                "cpuFrequency": 100000000,
+                "swoFrequency": 2000000,
+                "source": "probe",
+                "decoders": [
+                    { "type": "console", "label": "ITM port 0", "port": 0 }
+                ]
+            }
+        },
+
+        // ── 3. Flash Only (program + reset, no debug session) ────────────────
+        {
+            "name": "STM32F411 — Flash Only",
+            "type": "cortex-debug",
+            "request": "launch",
+
+            "servertype": "openocd",
+            "configFiles": [
+                "arch/debug_cfg/stm32_f411xx_debug.cfg"
+            ],
+            "showDevDebugOutput": "raw",
+
+            "executable": "${workspaceFolder}/build/kernel.elf",
+            "gdbPath": "arm-none-eabi-gdb",
+
+            "device": "STM32F411VE",
+            "interface": "swd",
+            "svdFile": "${workspaceFolder}/arch/debug_cfg/STM32F411.svd",
+
+            "preLaunchTask": "build",
+
+            // After load, reset and run — then immediately disconnect GDB.
+            "postLaunchCommands": [
+                "monitor reset run",
+                "disconnect",
+                "quit"
+            ],
+
+            "runToEntryPoint": ""
+        }
+    ]
+}

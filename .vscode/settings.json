@@ -1,0 +1,56 @@
+{
+    // ── Cortex-Debug global settings ─────────────────────────────────────────
+    "cortex-debug.armToolchainPath": "/usr/bin",
+    "cortex-debug.openocdPath": "/usr/bin/openocd",
+    "cortex-debug.gdbPath": "arm-none-eabi-gdb",
+
+    // Show the peripheral register panel by default when a debug session starts
+    "cortex-debug.variableUseNaturalFormat": true,
+
+    // FreeRTOS kernel source path — enables source-level stepping inside
+    // the kernel during debug (match your actual submodule path)
+    "cortex-debug.rtos.freertos.kernelPath": "${workspaceFolder}/kernel/FreeRTOS-Kernel",
+
+    // ── Editor: C/C++ (IntelliSense already set in c_cpp_properties.json) ────
+    "editor.formatOnSave": false,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [100],
+
+    // ── File associations ─────────────────────────────────────────────────────
+    "files.associations": {
+        "*.h":   "c",
+        "*.c":   "c",
+        "*.ld":  "plaintext",
+        "*.cfg": "tcl",
+        "*.xml": "xml",
+        "*.svd": "xml"
+    },
+
+    // ── Exclude noisy folders from file explorer + search ─────────────────────
+    "files.exclude": {
+        "build/":                            true,
+        "**/*.o":                            true,
+        "**/*.asm":                          false,
+        "arch/arm/CMSIS_6/":                 false,
+        "arch/devices/STM/stm32f4xx-hal-driver/": false,
+        "kernel/FreeRTOS-Kernel/":           false,
+        "com_stack/canopen-stack/":          true
+    },
+    "search.exclude": {
+        "build/":                            true,
+        "arch/arm/CMSIS_6/":                 true,
+        "arch/devices/STM/stm32f4xx-hal-driver/": true,
+        "kernel/FreeRTOS-Kernel/":           true,
+        "com_stack/":                        true
+    },
+
+    // ── Terminal: default to bash ─────────────────────────────────────────────
+    "terminal.integrated.defaultProfile.linux": "bash",
+
+    // ── C/C++ extension ──────────────────────────────────────────────────────
+    "C_Cpp.default.compilerPath": "/usr/bin/arm-none-eabi-gcc",
+    "C_Cpp.default.intelliSenseMode": "gcc-arm",
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.default.cStandard": "gnu99"
+}

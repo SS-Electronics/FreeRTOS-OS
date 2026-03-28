@@ -279,7 +279,40 @@ clean:
 
 
 ##############################################################
-.PHONY: print-interface print-target
+# Flash target — programs the ELF into MCU flash via OpenOCD
+# Usage:
+#   make flash                      (uses default CONFIG_BOARD)
+#   make flash CONFIG_BOARD=my_board
+#
+# OpenOCD 'program' command:
+#   verify  — reads back flash and compares with ELF (catches write errors)
+#   reset   — issues a system reset after programming
+#   exit    — closes OpenOCD immediately after flashing
+flash: $(BUILD)/kernel.elf
+	@echo '##############################################'
+	@echo 'Flashing $(BUILD)/kernel.elf via OpenOCD ...'
+	@echo '##############################################'
+	openocd -f $(OPENOCD_TARGET) \
+	        -c "program $(BUILD)/kernel.elf verify reset exit"
+	@echo ' '
+	@echo 'Flash complete. Target is running.'
+	@echo '##############################################'
+##############################################################
+
+
+##############################################################
+# Documentation target — generates Doxygen HTML
+docs:
+	@doxygen Doxyfile 2>&1 | grep -v "^$$" || true
+	@echo 'Docs generated → docs/generated/html/index.html'
+
+clean-docs:
+	@rm -rf docs/generated
+##############################################################
+
+
+##############################################################
+.PHONY: print-interface print-target flash docs clean-docs
 
 print-interface:
 	@echo $(OPENOCD_INTERFACE)
