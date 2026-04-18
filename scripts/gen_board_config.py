@@ -27,6 +27,7 @@ Makefile integration
 import xml.etree.ElementTree as ET
 import argparse
 import os
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -140,6 +141,24 @@ class VendorCodegen:
         """Return list of #include lines needed at the top of board_config.c."""
         raise NotImplementedError
 
+    # ── HAL handle generation ────────────────────────────────────────────────
+
+    def hal_handle_type(self, periph_type: str) -> str:
+        """Return the HAL handle typedef name for the given peripheral type."""
+        return ''
+
+    def hal_handle_name(self, instance: str) -> str:
+        """Convert an instance name (e.g. 'USART1') to a handle name ('huart1')."""
+        return ''
+
+    def hal_handle_guard(self, periph_type: str) -> str:
+        """Return the #ifdef guard for the HAL module (e.g. 'HAL_UART_MODULE_ENABLED')."""
+        return ''
+
+    def hal_handle_includes(self, periph_type: str) -> list:
+        """Return list of #include lines required by this peripheral's handle type."""
+        return []
+
 
 # ── STM32 ─────────────────────────────────────────────────────────────────────
 
@@ -216,6 +235,41 @@ class STM32Codegen(VendorCodegen):
 
     def device_includes(self):
         return ['#include <device.h>']
+
+    _HAL_HANDLE_TYPE = {
+        'uart': 'UART_HandleTypeDef',
+        'i2c':  'I2C_HandleTypeDef',
+        'spi':  'SPI_HandleTypeDef',
+    }
+    _HAL_MODULE_GUARD = {
+        'uart': 'HAL_UART_MODULE_ENABLED',
+        'i2c':  'HAL_I2C_MODULE_ENABLED',
+        'spi':  'HAL_SPI_MODULE_ENABLED',
+    }
+    _HAL_INCLUDE = {
+        'uart': 'stm32f4xx_hal_uart.h',
+        'i2c':  'stm32f4xx_hal_i2c.h',
+        'spi':  'stm32f4xx_hal_spi.h',
+    }
+
+    def hal_handle_type(self, periph_type: str) -> str:
+        return self._HAL_HANDLE_TYPE.get(periph_type.lower(), '')
+
+    def hal_handle_name(self, instance: str) -> str:
+        m = re.match(r'(USART|I2C|SPI|UART)(\d+)', instance, re.IGNORECASE)
+        if m:
+            prefix = m.group(1).lower()
+            if prefix == 'usart':
+                prefix = 'uart'
+            return f'h{prefix}{m.group(2)}'
+        return f'h{instance.lower()}'
+
+    def hal_handle_guard(self, periph_type: str) -> str:
+        return self._HAL_MODULE_GUARD.get(periph_type.lower(), '')
+
+    def hal_handle_includes(self, periph_type: str) -> list:
+        inc = self._HAL_INCLUDE.get(periph_type.lower(), '')
+        return [f'#include "{inc}"'] if inc else []
 
 
 # ── Infineon XMC ──────────────────────────────────────────────────────────────
@@ -374,11 +428,13 @@ class BoardConfigGenerator:
         Path(c_outdir).mkdir(parents=True, exist_ok=True)
         Path(h_outdir).mkdir(parents=True, exist_ok=True)
 
-        c_path = Path(c_outdir) / 'board_config.c'
-        h_path = Path(h_outdir) / 'board_device_ids.h'
+        c_path  = Path(c_outdir) / 'board_config.c'
+        h_path  = Path(h_outdir) / 'board_device_ids.h'
+        bh_path = Path(h_outdir) / 'board_handles.h'
 
         c_path.write_text(self._gen_board_config_c())
         h_path.write_text(self._gen_device_ids_h())
+        bh_path.write_text(self._gen_board_handles_h())
 
         print(f'[gen_board_config] Board   : {self.board_name}')
         print(f'[gen_board_config] Vendor  : {self.vendor}  MCU: {self.mcu}')
@@ -386,6 +442,7 @@ class BoardConfigGenerator:
               f'I2C: {len(self.i2cs)}   SPI: {len(self.spis)}   GPIO: {len(self.gpios)}')
         print(f'[gen_board_config] -> {c_path}')
         print(f'[gen_board_config] -> {h_path}')
+        print(f'[gen_board_config] -> {bh_path}')
 
     # ── board_device_ids.h ────────────────────────────────────────────────────
 
@@ -414,6 +471,40 @@ class BoardConfigGenerator:
         L.append(_INC_GUARD_CLOSE.format(guard=guard))
         return '\n'.join(L)
 
+    # ── board_handles.h ───────────────────────────────────────────────────────
+
+    def _gen_board_handles_h(self) -> str:
+        cg    = self.cg
+        guard = f'BOARD_{self.board_name.upper()}_HANDLES_H_'
+        L     = []
+        L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
+        L.append(_INC_GUARD_OPEN.format(guard=guard))
+        L.append(f'/* Board: {self.board_name}  MCU: {self.mcu} */')
+        L.append('')
+
+        periph_groups = [('uart', self.uarts), ('i2c', self.i2cs), ('spi', self.spis)]
+        for ptype, items in periph_groups:
+            htype = cg.hal_handle_type(ptype)
+            if not htype or not items:
+                continue
+            mod_guard = cg.hal_handle_guard(ptype)
+            includes  = cg.hal_handle_includes(ptype)
+            if mod_guard:
+                L.append(f'#ifdef {mod_guard}')
+            for inc in includes:
+                L.append(inc)
+            for item in items:
+                inst  = item.get('instance', '')
+                hname = cg.hal_handle_name(inst)
+                if hname:
+                    L.append(f'extern {htype} {hname};')
+            if mod_guard:
+                L.append(f'#endif /* {mod_guard} */')
+            L.append('')
+
+        L.append(_INC_GUARD_CLOSE.format(guard=guard))
+        return '\n'.join(L)
+
     # ── board_config.c ────────────────────────────────────────────────────────
 
     def _gen_board_config_c(self) -> str:
@@ -428,6 +519,27 @@ class BoardConfigGenerator:
         for inc in cg.device_includes():
             L.append(inc)
         L.append('')
+
+        # ── HAL peripheral handle definitions (storage for extern decls in board_handles.h)
+        periph_groups = [('uart', self.uarts), ('i2c', self.i2cs), ('spi', self.spis)]
+        has_handles = any(cg.hal_handle_type(pt) and items for pt, items in periph_groups)
+        if has_handles:
+            L.append('/* ── HAL peripheral handles ─────────────────────────────────────────────── */')
+            for ptype, items in periph_groups:
+                htype = cg.hal_handle_type(ptype)
+                if not htype or not items:
+                    continue
+                mod_guard = cg.hal_handle_guard(ptype)
+                if mod_guard:
+                    L.append(f'#ifdef {mod_guard}')
+                for item in items:
+                    inst  = item.get('instance', '')
+                    hname = cg.hal_handle_name(inst)
+                    if hname:
+                        L.append(f'{htype} {hname};')
+                if mod_guard:
+                    L.append(f'#endif /* {mod_guard} */')
+            L.append('')
 
         # ── Collect all GPIO ports used (for gpio_clk_enable)
         all_ports = set()

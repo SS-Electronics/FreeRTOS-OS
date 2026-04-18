@@ -2,7 +2,7 @@
  * AUTO-GENERATED — DO NOT EDIT
  * Generator : scripts/gen_board_config.py
  * Source    : boards/stm32f411_devboard.xml
- * Date      : 2026-04-06
+ * Date      : 2026-04-18
  *
  * Re-generate:
  *   python3 scripts/gen_board_config.py boards/stm32f411_devboard.xml
@@ -12,6 +12,18 @@
 #include <board/board_device_ids.h>
 #include <config/mcu_config.h>
 #include <device.h>
+
+/* ── HAL peripheral handles ─────────────────────────────────────────────── */
+#ifdef HAL_UART_MODULE_ENABLED
+UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
+#endif /* HAL_UART_MODULE_ENABLED */
+#ifdef HAL_I2C_MODULE_ENABLED
+I2C_HandleTypeDef hi2c1;
+#endif /* HAL_I2C_MODULE_ENABLED */
+#ifdef HAL_SPI_MODULE_ENABLED
+SPI_HandleTypeDef hspi1;
+#endif /* HAL_SPI_MODULE_ENABLED */
 
 /* ── Peripheral clock-enable wrappers ─────────────────────────────────── */
 static void _usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }

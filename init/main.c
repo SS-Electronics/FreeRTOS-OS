@@ -35,6 +35,11 @@ __SECTION_BOOT __USED void main(void)
 {
 
 
+
+	/** Call App main */
+	app_main();
+
+
 	/* Program shouldn't go after that  */
 	while(1)
 	{
