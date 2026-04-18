@@ -92,7 +92,16 @@ TARGET_SYSMBOL_DEF +=
 
 OPENOCD_INTERFACE :=
 
-OPENOCD_TARGET:= 
+OPENOCD_TARGET:=
+
+# Application integration
+# Set APP_DIR to the path of your application (relative to this Makefile).
+# Example: make app APP_DIR=../app
+APP_DIR     ?=
+APP_INCLUDES :=
+
+# Output binary name: 'kernel' for standalone OS, 'app' when APP_DIR is set.
+TARGET_NAME ?= kernel
 ##############################################################
 
 
@@ -106,6 +115,13 @@ include $(patsubst %, %/Makefile, $(SUBDIRS))
 
 # Prepend build/ to all objects
 OBJS := $(addprefix $(BUILD)/, $(obj-y))
+
+# Include app sources when APP_DIR is provided
+ifdef APP_DIR
+-include $(APP_DIR)/Makefile
+APP_OBJS := $(addprefix $(BUILD)/app/, $(app-obj-y))
+OBJS     += $(APP_OBJS)
+endif
 
 export INCLUDES
 
@@ -157,8 +173,11 @@ oldconfig:
 
 config-outputs: $(AUTOCONF_MK) $(AUTOCONF_H)
 
-# ── autoconf.mk ──────────────────────────────────────────────────────────────
-# Makefile-syntax fragment consumed by sub-directory Makefiles.
+# ── autoconf.mk / autoconf.h — only generated when .config exists ────────────
+# Without a .config (i.e. before menuconfig has been run) the build still
+# proceeds; empty stub files are created so -include doesn't cause an error.
+ifneq ($(wildcard $(KCONFIG_CONFIG)),)
+
 $(AUTOCONF_MK): $(KCONFIG_CONFIG)
 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
 	@rm -f $@
@@ -169,9 +188,6 @@ $(AUTOCONF_MK): $(KCONFIG_CONFIG)
 	       $(KCONFIG_CONFIG) | sort -u > $@
 	@echo "### $@ done"
 
-# ── autoconf.h ───────────────────────────────────────────────────────────────
-# C header included by stm32f4xx_hal_conf.h, FreeRTOSConfig.h, mcu_config.h.
-# Mapping:  =y -> #define X 1  |  =n -> omitted (undefined = not set)  |  =N -> #define X N
 $(AUTOCONF_H): $(KCONFIG_CONFIG)
 	@echo "### Generating $@ from $(KCONFIG_CONFIG)"
 	@mkdir -p $(dir $@)
@@ -184,6 +200,18 @@ $(AUTOCONF_H): $(KCONFIG_CONFIG)
 	        $(KCONFIG_CONFIG) | sort -u                                         >> $@
 	@printf '\n#endif /* __AUTOCONF_H__ */\n'                                  >> $@
 	@echo "### $@ done"
+
+else
+
+# No .config yet — create empty stubs so -include is a no-op.
+$(AUTOCONF_MK):
+	@touch $@
+
+$(AUTOCONF_H):
+	@mkdir -p $(dir $@)
+	@touch $@
+
+endif
 ##############################################################
 
 
@@ -211,15 +239,15 @@ board-gen: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H)
 ##############################################################
 # build stages
 # BSP files are generated before compiling any C source.
-all: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BUILD)/kernel.elf
+all: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BUILD)/$(TARGET_NAME).elf
 
-# Link final kernel
-$(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
+# Link final binary
+$(BUILD)/$(TARGET_NAME).elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo '**********************************************'
 	@echo 'Linking together...'
 	@echo '**********************************************'
 
-	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)"  -o $@ $(OBJS)
+	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)" -o $@ $(OBJS)
 
 	@echo '##############################################'
 	@echo ' '
@@ -236,12 +264,10 @@ $(BUILD)/kernel.elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo '##############################################'
 	@echo ' '
 	@echo 'Generating Assembly'
-	@arm-none-eabi-objcopy -O ihex $@ $@.hex
-	@echo ' '
 	@arm-none-eabi-objdump -D $@ > $@.asm
 	@echo '##############################################'
 
-# Rule for compiling into build dir
+# Rule for compiling OS sources into build dir
 $(BUILD)/%.o: %.c | $(BUILD) $(AUTOCONF)
 	@echo '----------------------------------------------'
 	@echo 'Building C Source $< ...'
@@ -256,6 +282,15 @@ $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
 	@echo '----------------------'
 	@mkdir -p $(dir $@)
 	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
+	@echo '**********************************************'
+
+# Rule for compiling app sources into build/app/
+$(BUILD)/app/%.o: $(APP_DIR)/%.c | $(BUILD) $(AUTOCONF)
+	@echo '----------------------------------------------'
+	@echo 'Building App Source $< ...'
+	@echo '----------------------'
+	@mkdir -p $(dir $@)
+	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) $(APP_INCLUDES) -c $< -o $@
 	@echo '**********************************************'
 
 # Create build directory
@@ -289,12 +324,12 @@ clean:
 #   verify  — reads back flash and compares with ELF (catches write errors)
 #   reset   — issues a system reset after programming
 #   exit    — closes OpenOCD immediately after flashing
-flash: $(BUILD)/kernel.elf
+flash: $(BUILD)/$(TARGET_NAME).elf
 	@echo '##############################################'
-	@echo 'Flashing $(BUILD)/kernel.elf via OpenOCD ...'
+	@echo 'Flashing $(BUILD)/$(TARGET_NAME).elf via OpenOCD ...'
 	@echo '##############################################'
 	openocd -f $(OPENOCD_TARGET) \
-	        -c "program $(BUILD)/kernel.elf verify reset exit"
+	        -c "program $(BUILD)/$(TARGET_NAME).elf verify reset exit"
 	@echo ' '
 	@echo 'Flash complete. Target is running.'
 	@echo '##############################################'
@@ -302,13 +337,20 @@ flash: $(BUILD)/kernel.elf
 
 
 ##############################################################
-# Documentation target — generates Doxygen HTML
+# Documentation
+DOXYGEN  ?= doxygen
+DOXYFILE ?= Doxyfile
+DOC_DIR  ?= docs/generated
+
 docs:
-	@doxygen Doxyfile 2>&1 | grep -v "^$$" || true
-	@echo 'Docs generated → docs/generated/html/index.html'
+	@echo "Generating documentation..."
+	$(DOXYGEN) $(DOXYFILE)
+	@echo "Documentation generated in $(DOC_DIR)/html"
 
 clean-docs:
-	@rm -rf docs/generated
+	@echo "Cleaning documentation..."
+	@rm -rf $(DOC_DIR)/html
+	@echo "Documentation cleaned."
 ##############################################################
 
 
@@ -320,39 +362,4 @@ print-interface:
 
 print-target:
 	@echo $(OPENOCD_TARGET)
-
-##############################################################
-
-
-
-##############################################################
-
-#               Doc Generator 
-
-# Path to Doxygen executable
-DOXYGEN ?= doxygen
-
-# Doxygen configuration file
-DOXYFILE ?= Doxyfile
-
-# Documentation output directory (must match Doxyfile OUTPUT_DIRECTORY)
-DOC_DIR ?= docs/generated
-
-.PHONY: docs clean-docs
-
-
-
-# Generate documentation
-docs:
-	@echo "Generating documentation..."
-	$(DOXYGEN) $(DOXYFILE)
-	@echo "Documentation generated in $(DOC_DIR)/html"
-
-# Clean generated documentation
-clean-docs:
-	@echo "Cleaning documentation..."
-	@rm -rf $(DOC_DIR)/html
-	@echo "Documentation cleaned."
-
-
 ##############################################################
