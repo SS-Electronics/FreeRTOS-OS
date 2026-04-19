@@ -48,7 +48,6 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include "stm32f4xx.h"
 #include "STM32F411/stm32_f411xe.h"
 #include "system_stm32f4xx.h"
-#include "stm32f4xx_it.h"
 
 /* HAL Driver level include — stm32f4xx_hal.h includes all enabled modules
  * in the correct dependency order (DMA before TIM, etc.) based on hal_conf.h */
@@ -62,10 +61,6 @@ extern const uint8_t        AHBPrescTable[16];    /*!< AHB prescalers table valu
 extern const uint8_t        APBPrescTable[8];     /*!< APB prescalers table values */
 
 
-/*  System-level peripheral handles (not board-XML-driven) */
-#ifdef HAL_TIM_MODULE_ENABLED
-extern TIM_HandleTypeDef        htim1;
-#endif
 
 /* Board-level peripheral handles (auto-generated from boards/<board>.xml) */
 #include <board/board_handles.h>

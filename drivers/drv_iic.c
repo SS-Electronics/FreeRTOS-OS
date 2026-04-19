@@ -9,7 +9,7 @@
 
 #include <drivers/drv_handle.h>
 #include <config/mcu_config.h>   /* pulls board_device_ids.h → BOARD_IIC_COUNT */
-#include <config/os_config.h>
+#include <conf_os.h>
 #include <def_err.h>
 
 #if (BOARD_IIC_COUNT > 0)

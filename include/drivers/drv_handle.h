@@ -48,6 +48,8 @@ typedef struct drv_uart_handle  drv_uart_handle_t;
 typedef struct drv_iic_handle   drv_iic_handle_t;
 typedef struct drv_spi_handle   drv_spi_handle_t;
 typedef struct drv_gpio_handle  drv_gpio_handle_t;
+typedef struct drv_timer_handle drv_timer_handle_t;
+typedef struct drv_wdg_handle   drv_wdg_handle_t;
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -97,6 +99,26 @@ typedef struct {
     uint8_t             active_state;   /* GPIO_PIN_SET or GPIO_PIN_RESET */
 } drv_hw_gpio_ctx_t;
 
+#ifdef HAL_TIM_MODULE_ENABLED
+typedef struct {
+    TIM_HandleTypeDef   htim;
+} drv_hw_timer_ctx_t;
+#else
+typedef struct {
+    uint32_t            _reserved;
+} drv_hw_timer_ctx_t;
+#endif
+
+#ifdef HAL_IWDG_MODULE_ENABLED
+typedef struct {
+    IWDG_HandleTypeDef  hiwdg;
+} drv_hw_wdg_ctx_t;
+#else
+typedef struct {
+    uint32_t            _reserved;
+} drv_hw_wdg_ctx_t;
+#endif
+
 #elif (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
 /*
  * Infineon XMC series — baremetal register-mapped peripheral access.
@@ -128,6 +150,16 @@ typedef struct {
     uint32_t    speed;
     uint8_t     active_state;
 } drv_hw_gpio_ctx_t;
+
+typedef struct {
+    uint32_t    timer_base;     /* CCU4/CCU8 slice base address */
+    uint32_t    period;
+} drv_hw_timer_ctx_t;
+
+typedef struct {
+    uint32_t    wdg_base;       /* WDT register base address */
+    uint32_t    timeout_ms;
+} drv_hw_wdg_ctx_t;
 
 #else
 #error "CONFIG_DEVICE_VARIANT not set or unsupported. Check mcu_config.h."
@@ -255,6 +287,23 @@ typedef struct drv_spi_hal_ops {
 } drv_spi_hal_ops_t;
 
 
+/* ── Watchdog ops ─────────────────────────────────────────────────────── */
+typedef struct drv_wdg_hal_ops {
+    int32_t (*hw_init)  (drv_wdg_handle_t *h);
+    int32_t (*hw_deinit)(drv_wdg_handle_t *h);
+    void    (*refresh)  (drv_wdg_handle_t *h);
+} drv_wdg_hal_ops_t;
+
+
+/* ── Timer ops ────────────────────────────────────────────────────────── */
+typedef struct drv_timer_hal_ops {
+    int32_t  (*hw_init)    (drv_timer_handle_t *h);
+    int32_t  (*hw_deinit)  (drv_timer_handle_t *h);
+    uint32_t (*get_counter)(drv_timer_handle_t *h);
+    void     (*set_counter)(drv_timer_handle_t *h, uint32_t val);
+} drv_timer_hal_ops_t;
+
+
 /* ── GPIO ops ─────────────────────────────────────────────────────────── */
 typedef struct drv_gpio_hal_ops {
     int32_t (*hw_init)(drv_gpio_handle_t *h);
@@ -304,6 +353,23 @@ struct drv_spi_handle {
     int32_t                  last_err;
 };
 
+/** @brief Watchdog peripheral handle (singleton — one WDG per MCU). */
+struct drv_wdg_handle {
+    uint8_t                  initialized;
+    drv_hw_wdg_ctx_t         hw;
+    const drv_wdg_hal_ops_t *ops;
+    int32_t                  last_err;
+};
+
+/** @brief Generic timer peripheral handle. */
+struct drv_timer_handle {
+    uint8_t                    dev_id;
+    uint8_t                    initialized;
+    drv_hw_timer_ctx_t         hw;
+    const drv_timer_hal_ops_t *ops;
+    int32_t                    last_err;
+};
+
 /** @brief Generic GPIO pin handle. */
 struct drv_gpio_handle {
     uint8_t                   dev_id;        /**< Logical GPIO line ID            */
@@ -330,6 +396,12 @@ struct drv_gpio_handle {
     { .dev_id = (_id), .initialized = 0, .ops = NULL, \
       .clock_hz = (_clk), .timeout_ms = (_tmout), .last_err = OS_ERR_NONE }
 
+#define DRV_WDG_HANDLE_INIT() \
+    { .initialized = 0, .ops = NULL, .last_err = OS_ERR_NONE }
+
+#define DRV_TIMER_HANDLE_INIT(_id) \
+    { .dev_id = (_id), .initialized = 0, .ops = NULL, .last_err = OS_ERR_NONE }
+
 #define DRV_GPIO_HANDLE_INIT(_id) \
     { .dev_id = (_id), .initialized = 0, .ops = NULL, .last_err = OS_ERR_NONE }
 
@@ -344,15 +416,19 @@ struct drv_gpio_handle {
 extern "C" {
 #endif
 
-int32_t drv_uart_register(uint8_t dev_id, const drv_uart_hal_ops_t *ops, uint32_t baudrate, uint32_t timeout_ms);
-int32_t drv_iic_register (uint8_t dev_id, const drv_iic_hal_ops_t  *ops, uint32_t clock_hz,  uint32_t timeout_ms);
-int32_t drv_spi_register (uint8_t dev_id, const drv_spi_hal_ops_t  *ops, uint32_t clock_hz,  uint32_t timeout_ms);
-int32_t drv_gpio_register(uint8_t dev_id, const drv_gpio_hal_ops_t *ops);
+int32_t drv_uart_register (uint8_t dev_id, const drv_uart_hal_ops_t  *ops, uint32_t baudrate, uint32_t timeout_ms);
+int32_t drv_iic_register  (uint8_t dev_id, const drv_iic_hal_ops_t   *ops, uint32_t clock_hz, uint32_t timeout_ms);
+int32_t drv_spi_register  (uint8_t dev_id, const drv_spi_hal_ops_t   *ops, uint32_t clock_hz, uint32_t timeout_ms);
+int32_t drv_gpio_register (uint8_t dev_id, const drv_gpio_hal_ops_t  *ops);
+int32_t drv_timer_register(uint8_t dev_id, const drv_timer_hal_ops_t *ops);
+int32_t drv_wdg_register  (const drv_wdg_hal_ops_t *ops);
 
-drv_uart_handle_t *drv_uart_get_handle(uint8_t dev_id);
-drv_iic_handle_t  *drv_iic_get_handle (uint8_t dev_id);
-drv_spi_handle_t  *drv_spi_get_handle (uint8_t dev_id);
-drv_gpio_handle_t *drv_gpio_get_handle(uint8_t dev_id);
+drv_uart_handle_t  *drv_uart_get_handle (uint8_t dev_id);
+drv_iic_handle_t   *drv_iic_get_handle  (uint8_t dev_id);
+drv_spi_handle_t   *drv_spi_get_handle  (uint8_t dev_id);
+drv_gpio_handle_t  *drv_gpio_get_handle (uint8_t dev_id);
+drv_timer_handle_t *drv_timer_get_handle(uint8_t dev_id);
+drv_wdg_handle_t   *drv_wdg_get_handle  (void);
 
 #ifdef __cplusplus
 }

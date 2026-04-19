@@ -51,6 +51,14 @@ void hal_uart_stm32_set_config(drv_uart_handle_t *h,
                                uint32_t           parity,
                                uint32_t           mode);
 
+/**
+ * @brief  Called from the USARTx_IRQHandler to dispatch HAL_UART_IRQHandler
+ *         to whichever generic handle owns @p instance.
+ *
+ * @param  instance  USART peripheral instance (e.g. USART1, USART2).
+ */
+void hal_uart_stm32_irq_handler(USART_TypeDef *instance);
+
 #ifdef __cplusplus
 }
 #endif

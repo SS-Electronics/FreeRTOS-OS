@@ -150,4 +150,19 @@ void hal_uart_stm32_set_config(drv_uart_handle_t *h,
     /* BaudRate will be set from h->baudrate in hw_init */
 }
 
+/* ── IRQ dispatch ─────────────────────────────────────────────────────── */
+
+void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
+{
+    for (uint8_t id = 0; id < NO_OF_UART; id++)
+    {
+        drv_uart_handle_t *h = drv_uart_get_handle(id);
+        if (h != NULL && h->initialized && h->hw.huart.Instance == instance)
+        {
+            HAL_UART_IRQHandler(&h->hw.huart);
+            return;
+        }
+    }
+}
+
 #endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */

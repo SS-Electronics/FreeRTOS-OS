@@ -28,6 +28,10 @@ INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/include
 
 
 
+# Newlib bare-metal glue — architecture-agnostic, required by all targets
+obj-y += kernel/syscalls.o
+obj-y += kernel/sysmem.o
+
 obj-y += kernel/FreeRTOS-Kernel/croutine.o
 obj-y += kernel/FreeRTOS-Kernel/list.o
 obj-y += kernel/FreeRTOS-Kernel/queue.o

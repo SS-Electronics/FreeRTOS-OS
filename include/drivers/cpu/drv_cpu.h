@@ -1,42 +1,30 @@
 /*
-# Copyright (C) 2024 Subhajit Roy
-# This file is part of RTOS OS project
-#
-# RTOS OS project is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# RTOS OS project is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-*/
+ * drv_cpu.h — CPU-level driver public API
+ *
+ * This file is part of FreeRTOS-OS Project.
+ */
 
 #ifndef OS_DRIVERS_DEVICE_CPU_DRV_CPU_H_
 #define OS_DRIVERS_DEVICE_CPU_DRV_CPU_H_
 
-#include <def_std.h>
-#include <def_compiler.h>
-#include <def_env_macros.h>
-#include <def_hw.h>
-#include <conf_os.h>
-#include <lib/ringbuffer.h>
-#include <ipc/mqueue.h>
+#include <drivers/drv_handle.h>
+#include <config/mcu_config.h>
 
-
-
-/**************  API Export *****************/
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void 					drv_cpu_interrupt_prio_set(void);
-void 					reset_mcu(void);
+/* CPU / NVIC utilities */
+void drv_cpu_interrupt_prio_set(void);
+void reset_mcu(void);
+
+/* Watchdog — always declared; stubs compile to nothing when WDG is disabled */
+int32_t           drv_wdg_register(const drv_wdg_hal_ops_t *ops);
+drv_wdg_handle_t *drv_wdg_get_handle(void);
+void              drv_wdg_refresh(void);
 
 #ifdef __cplusplus
 }
 #endif
-/**************  END API Export *****************/
 
 #endif /* OS_DRIVERS_DEVICE_CPU_DRV_CPU_H_ */

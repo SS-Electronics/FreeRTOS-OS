@@ -76,6 +76,8 @@
   #define NO_OF_GPIO    0
 #endif
 
+#define NO_OF_TIMER   CONFIG_MCU_NO_OF_TIMER_PERIPHERAL
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Peripheral enable flags  (legacy macros, kept for driver compatibility)
