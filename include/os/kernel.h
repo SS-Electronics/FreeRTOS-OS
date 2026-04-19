@@ -28,6 +28,9 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include <def_attributes.h>
 #include <def_std.h>
 #include <def_err.h>
+#include <FreeRTOS.h>
+
+
 
 #include "mm/list.h"
 

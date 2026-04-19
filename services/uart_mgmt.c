@@ -22,6 +22,7 @@
 #include <board/board_config.h>
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
+#include <ipc/mqueue.h>
 
 /* Vendor HAL selection — include only the active backend */
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
@@ -160,6 +161,20 @@ int32_t uart_mgmt_async_transmit(uint8_t dev_id, const uint8_t *data, uint16_t l
 
     BaseType_t ok = xQueueSend(_mgmt_queue, &msg, 0);
     return (ok == pdTRUE) ? OS_ERR_NONE : OS_ERR_OP;
+}
+
+int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte)
+{
+    if (dev_id >= NO_OF_UART || byte == NULL)
+        return OS_ERR_OP;
+
+    struct ringbuffer *rb =
+        (struct ringbuffer *)ipc_mqueue_get_handle(global_uart_rx_mqueue_list[dev_id]);
+
+    if (rb == NULL)
+        return OS_ERR_OP;
+
+    return (ringbuffer_getchar(rb, byte) > 0U) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
 #endif /* INC_SERVICE_UART_MGMT == 1 */

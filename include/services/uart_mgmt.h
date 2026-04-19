@@ -95,6 +95,17 @@ QueueHandle_t uart_mgmt_get_queue(void);
  */
 int32_t uart_mgmt_async_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len);
 
+/**
+ * @brief  Read one byte from the UART RX ring buffer.
+ *
+ * Non-blocking.  Returns OS_ERR_NONE and stores the byte at *byte when one
+ * is available, or OS_ERR_OP when the buffer is empty.
+ *
+ * @param  dev_id  UART device index.
+ * @param  byte    Output pointer for the received byte.
+ */
+int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte);
+
 #ifdef __cplusplus
 }
 #endif

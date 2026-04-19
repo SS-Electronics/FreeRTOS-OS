@@ -78,6 +78,11 @@
 #define PIPE_IIC_PDU_RX_SIZE					(100)
 #define PIPE_DIAGNOSTICS_SIZE					(1)
 #define ITM_PRINT_BUFF_LENGTH                   (50)
+#define CONF_MAX_CHAR_IN_PRINTK                 ITM_PRINT_BUFF_LENGTH
+
+/* UART hardware index used by printk() — must be < NO_OF_UART.
+ * 0 = first UART (UART_DEBUG / USART1 on the default devboard). */
+#define COMM_PRINTK_HW_ID                       (0)
 
 
 

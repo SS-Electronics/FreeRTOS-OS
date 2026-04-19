@@ -89,7 +89,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := arch kernel mm drivers include services init
+SUBDIRS := arch kernel mm ipc drivers include services init
 
 INCLUDES :=
 
@@ -310,6 +310,15 @@ $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
 	@echo '----------------------'
 	@mkdir -p $(dir $@)
 	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
+	@echo '**********************************************'
+
+# Rule for .cpp files that are actually C code (e.g. ipc/ringbuffer.cpp)
+$(BUILD)/%.o: %.cpp | $(BUILD) $(AUTOCONF)
+	@echo '----------------------------------------------'
+	@echo 'Building C Source (cpp ext) $< ...'
+	@echo '----------------------'
+	@mkdir -p $(dir $@)
+	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -x c -c $< -o $@
 	@echo '**********************************************'
 
 # Rule for compiling app sources into build/app/
