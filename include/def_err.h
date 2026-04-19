@@ -37,6 +37,9 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #define OS_ERR_MEM_OF       -2
 #define OS_ERR_MEM_OP       -3
 
+#define ERROR_NONE          OS_ERR_NONE
+#define ERROR_OP            OS_ERR_OP
+
 
 
 

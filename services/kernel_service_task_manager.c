@@ -21,7 +21,7 @@
  *
  *
  * *****************************************************/
-static type_message_queue_descriptor 						*mqueue_handles;
+static struct list_node 								*mqueue_handles;
 
 static status_type 											status;
 

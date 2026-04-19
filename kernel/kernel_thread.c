@@ -21,7 +21,7 @@
  * along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "os/kernel.h"
+#include <os/kernel.h>
 
 
 /**

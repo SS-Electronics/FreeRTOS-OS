@@ -17,10 +17,20 @@
 #define KERNEL_SERVICES_H_
 
 #include <def_std.h>
+#include <def_err.h>
+#include <conf_os.h>
+#include <ipc/mqueue.h>
+
+#include <FreeRTOS.h>
+#include <task.h>
 
 /* Driver related includes*/
 
-
+/* Map legacy CONF_THREAD_* names to the conf_os.h PROC_SERVICE_* names */
+#define CONF_THREAD_UART_MGMT_STACK_SIZE    PROC_SERVICE_SERIAL_MGMT_STACK_SIZE
+#define CONF_THREAD_UART_MGMT_PRIORITY      PROC_SERVICE_SERIAL_MGMT_PRIORITY
+#define CONF_THREAD_IIC_MGMT_STACK_SIZE     PROC_SERVICE_IIC_MGMT_STACK_SIZE
+#define CONF_THREAD_IIC_MGMT_PRIORITY       PROC_SERVICE_IIC_MGMT_PRIORITY
 
 
 
@@ -30,7 +40,7 @@ extern "C" {
 #endif
 
 
-status_type os_kernel_thread_register(void);
+status_t os_kernel_thread_register(void);
 
 
 

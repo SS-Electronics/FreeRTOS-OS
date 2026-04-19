@@ -1,44 +1,54 @@
 {
     // ─────────────────────────────────────────────────────────────────────────
-    //  FreeRTOS-OS  —  VSCode Task Definitions
+    //  FreeRTOS-OS  —  VS Code Task Definitions
     //
-    //  Keyboard shortcuts (default VSCode):
-    //    Ctrl+Shift+B  →  run the default build task (task labelled "build")
-    //    Ctrl+Shift+P  →  "Tasks: Run Task"  to pick any task by name
+    //  Keyboard shortcuts:
+    //    Ctrl+Shift+B   →  default build task  ("build")
+    //    Ctrl+Shift+P   →  "Tasks: Run Task"   (pick any task)
     //
-    //  Task dependency graph:
+    //  Task dependency graph for F5 (debug) flow:
     //
-    //    board-gen ─┐
-    //               ├─► build ─► flash
-    //               │
-    //    (kconfig)──┘
+    //    detect-target ─┐
+    //                   ├─► build-and-detect ─► [launch.json preLaunchTask]
+    //    build ─────────┘
     //
-    //  The "Build, Flash & Debug" launch config uses "preLaunchTask": "build",
-    //  which triggers this tasks.json "build" task automatically before GDB
-    //  starts — exactly like the STM32CubeIDE F5 flow.
+    //  "detect-target" reads CONFIG_TARGET_MCU from include/config/autoconf.h
+    //  and writes build/active_debug.cfg + arch/debug_cfg/active_target.svd.
+    //  This is the equivalent of STM32CubeIDE's project-specific debug config
+    //  but fully automatic — switch MCU via  make menuconfig, no IDE changes.
     // ─────────────────────────────────────────────────────────────────────────
     "version": "2.0.0",
     "tasks": [
 
-        // ── Board BSP generation ─────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  CORE: detect-target
+        //  Reads CONFIG_TARGET_MCU from autoconf.h, writes:
+        //    build/active_debug.cfg        (OpenOCD wrapper for the active MCU)
+        //    arch/debug_cfg/active_target.svd  (symlink to MCU SVD)
+        //    build/debug_env.json          (machine-readable properties)
+        // ══════════════════════════════════════════════════════════════════════
         {
-            "label": "board-gen",
-            "detail": "Generate board_config.c + board_device_ids.h from XML",
+            "label": "detect-target",
+            "detail": "Auto-detect CONFIG_TARGET_MCU → write build/active_debug.cfg",
             "type": "shell",
-            "command": "make board-gen",
+            "command": "python3 scripts/gen_active_debug.py",
             "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": [],
             "presentation": {
                 "reveal": "always",
                 "panel": "dedicated",
-                "clear": true
+                "clear": true,
+                "showReuseMessage": false
             }
         },
 
-        // ── Build ────────────────────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  CORE: build
+        //  Compiles and links kernel + application.  Default Ctrl+Shift+B task.
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "build",
-            "detail": "make all — generate BSP if needed, then compile & link",
+            "detail": "make all — compile & link (uses APP_DIR=../app automatically)",
             "type": "shell",
             "command": "make all",
             "options": { "cwd": "${workspaceFolder}" },
@@ -46,7 +56,6 @@
                 "kind": "build",
                 "isDefault": true
             },
-            // GCC diagnostic parsing so errors appear in the Problems panel
             "problemMatcher": [
                 {
                     "owner": "gcc",
@@ -68,10 +77,29 @@
             }
         },
 
-        // ── Build with custom board ──────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  CORE: build-and-detect  (preLaunchTask for all Auto launch configs)
+        //  Runs detect-target first, then build.  Mirrors the CubeIDE F5 flow:
+        //  validate debug config → compile → flash → debug.
+        // ══════════════════════════════════════════════════════════════════════
+        {
+            "label": "build-and-detect",
+            "detail": "Detect target MCU, then build — used as preLaunchTask for Auto configs",
+            "dependsOn": ["detect-target", "build"],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  Build with custom board
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "build (custom board)",
-            "detail": "make all CONFIG_BOARD=<your_board>  — edit the command below",
+            "detail": "make all CONFIG_BOARD=<name>  — prompts for board name",
             "type": "shell",
             "command": "make all CONFIG_BOARD=${input:boardName}",
             "options": { "cwd": "${workspaceFolder}" },
@@ -83,14 +111,18 @@
             }
         },
 
-        // ── Flash (via OpenOCD — no debug session) ───────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  Flash (program + reset, no debug)
+        //  Uses OPENOCD_TARGET resolved by the Makefile from CONFIG_TARGET_MCU.
+        //  Depends on build so the ELF is always up-to-date.
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "flash",
-            "detail": "Program build/kernel.elf into flash via OpenOCD and reset",
+            "detail": "Detect target → build → program via OpenOCD → reset (no debug)",
             "type": "shell",
             "command": "make flash",
             "options": { "cwd": "${workspaceFolder}" },
-            "dependsOn": ["build"],
+            "dependsOn": ["build-and-detect"],
             "problemMatcher": [],
             "presentation": {
                 "reveal": "always",
@@ -99,10 +131,29 @@
             }
         },
 
-        // ── Clean ────────────────────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  Board BSP generation
+        // ══════════════════════════════════════════════════════════════════════
+        {
+            "label": "board-gen",
+            "detail": "Generate board_config.c + board_device_ids.h from board XML",
+            "type": "shell",
+            "command": "make board-gen",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        },
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  Clean
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "clean",
-            "detail": "Remove build artifacts and generated BSP files",
+            "detail": "Remove build/ artifacts and generated BSP files",
             "type": "shell",
             "command": "make clean",
             "options": { "cwd": "${workspaceFolder}" },
@@ -115,10 +166,12 @@
             }
         },
 
-        // ── Kconfig ──────────────────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  Kconfig — interactive target/feature selection
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "menuconfig",
-            "detail": "Open ncurses Kconfig menu (run in an external terminal)",
+            "detail": "Open Kconfig ncurses menu — set CONFIG_TARGET_MCU, peripherals, etc.",
             "type": "shell",
             "command": "make menuconfig",
             "options": { "cwd": "${workspaceFolder}" },
@@ -130,10 +183,13 @@
             }
         },
 
-        // ── Generate autoconf from .config ───────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  Generate autoconf.h from .config
+        //  Run after menuconfig (or after editing .config directly).
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "config-outputs",
-            "detail": "Generate autoconf.h + autoconf.mk from .config",
+            "detail": "Regenerate include/config/autoconf.h + autoconf.mk from .config",
             "type": "shell",
             "command": "make config-outputs",
             "options": { "cwd": "${workspaceFolder}" },
@@ -144,22 +200,22 @@
             }
         },
 
-        // ── OpenOCD server (manual — for the "Attach" launch config) ─────────
-        // Run this task first, then use "STM32F411 — Attach" launch config.
-        // The "Build, Flash & Debug" launch config starts OpenOCD automatically
-        // and does NOT need this task.
+        // ══════════════════════════════════════════════════════════════════════
+        //  OpenOCD server — manual mode for the "Auto — Attach" launch config
+        //  The "Auto — Build, Flash & Debug" config starts OpenOCD automatically;
+        //  this task is only needed when you want a persistent server for Attach.
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "openocd-server",
-            "detail": "Start OpenOCD GDB server on port 3333 (for Attach mode)",
+            "detail": "Start OpenOCD GDB server on :3333 (for Attach mode)",
             "type": "shell",
-            "command": "openocd -f arch/debug_cfg/stm32_f411xx_debug.cfg -c \"gdb_port 3333\" -c \"telnet_port 4444\" -c \"tcl_port 6666\"",
+            // detect-target must run first so active_debug.cfg exists
+            "command": "python3 scripts/gen_active_debug.py && openocd -f build/active_debug.cfg -c \"gdb_port 3333\" -c \"telnet_port 4444\" -c \"tcl_port 6666\"",
             "options": { "cwd": "${workspaceFolder}" },
             "isBackground": true,
             "problemMatcher": {
                 "owner": "openocd",
-                "pattern": {
-                    "regexp": "^$"
-                },
+                "pattern": { "regexp": "^$" },
                 "background": {
                     "activeOnStart": true,
                     "beginsPattern": "Open On-Chip Debugger",
@@ -173,10 +229,14 @@
             }
         },
 
-        // ── Install debug tools (SVD file + Cortex-Debug extension) ──────────
+        // ══════════════════════════════════════════════════════════════════════
+        //  Install debug tools
+        //  Downloads SVD files for all supported MCUs into arch/debug_cfg/.
+        //  Run once after cloning.  Needs internet access.
+        // ══════════════════════════════════════════════════════════════════════
         {
             "label": "install-debug-tools",
-            "detail": "Download STM32F411 SVD and install Cortex-Debug extension",
+            "detail": "Download MCU SVD files + install Cortex-Debug extension",
             "type": "shell",
             "command": "bash scripts/install_debug_tools.sh",
             "options": { "cwd": "${workspaceFolder}" },
@@ -189,12 +249,12 @@
         }
     ],
 
-    // ── Input variables ──────────────────────────────────────────────────────
+    // ── Input variables ───────────────────────────────────────────────────────
     "inputs": [
         {
             "id": "boardName",
             "type": "promptString",
-            "description": "Board name (must match boards/<name>.xml)",
+            "description": "Board name (must match app/board/<name>.xml)",
             "default": "stm32f411_devboard"
         }
     ]

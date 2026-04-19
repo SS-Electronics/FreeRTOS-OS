@@ -1,30 +1,53 @@
 {
-    // ── Recommended extensions for FreeRTOS-OS development ───────────────────
-    // VSCode will prompt to install these when the workspace is opened.
+    // ─────────────────────────────────────────────────────────────────────────
+    //  FreeRTOS-OS  —  Recommended VS Code Extensions
+    //
+    //  VS Code will prompt "Do you want to install the recommended extensions?"
+    //  when this workspace is opened.
+    //
+    //  Install all at once:
+    //    code --install-extension marus25.cortex-debug
+    //    code --install-extension ms-vscode.cpptools
+    //    code --install-extension ms-vscode.makefile-tools
+    //    … (or just accept the VS Code prompt)
+    // ─────────────────────────────────────────────────────────────────────────
     "recommendations": [
-        // ARM Cortex-M debugger — OpenOCD/J-Link/ST-Link, FreeRTOS awareness,
-        // peripheral register viewer (SVD), SWO/ITM decoder
+
+        // ── Essential (debug will not work without these) ─────────────────────
+        // ARM Cortex-M debugger: OpenOCD/J-Link/ST-Link, FreeRTOS task view,
+        // SVD peripheral register panel, SWO/ITM decoder
         "marus25.cortex-debug",
 
         // C/C++ IntelliSense, go-to-definition, diagnostics
         "ms-vscode.cpptools",
 
-        // Enhanced IntelliSense for embedded C (optional but faster)
-        "ms-vscode.cpptools-extension-pack",
-
-        // XML syntax highlight (board XML, SVD files)
-        "redhat.vscode-xml",
-
-        // Makefile syntax + make run shortcuts
+        // ── Highly recommended ────────────────────────────────────────────────
+        // Makefile syntax highlighting + run shortcuts
         "ms-vscode.makefile-tools",
 
-        // Serial monitor (UART output without leaving VSCode)
+        // Serial monitor — view UART output without leaving VS Code
         "ms-vscode.vscode-serial-monitor",
 
         // Hex viewer for .hex / .bin flash images
         "ms-vscode.hexeditor",
 
-        // GitLens (optional — git blame inline)
-        "eamodio.gitlens"
+        // XML syntax highlighting for board XML and SVD files
+        "redhat.vscode-xml",
+
+        // ── Optional but useful ───────────────────────────────────────────────
+        // Enhanced IntelliSense pack (faster parsing for large embedded codebases)
+        "ms-vscode.cpptools-extension-pack",
+
+        // Git blame inline, history, compare
+        "eamodio.gitlens",
+
+        // Linker script (.ld) syntax highlighting
+        "ZixuanWang.linkerscript",
+
+        // ARM assembly syntax highlighting (.s / .S)
+        "dan-c-underwood.arm",
+
+        // Doxygen comment generation (/** triggers template)
+        "cschlosser.doxdocgen"
     ]
 }

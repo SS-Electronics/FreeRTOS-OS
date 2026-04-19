@@ -36,7 +36,8 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 
 
 
-typedef int32_t status_t;    
+typedef int32_t status_t;
+typedef status_t status_type;
 
 
 

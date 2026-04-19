@@ -89,7 +89,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := arch kernel mm init include drivers services
+SUBDIRS := arch kernel mm drivers include services init
 
 INCLUDES :=
 

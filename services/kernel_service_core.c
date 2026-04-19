@@ -32,9 +32,9 @@ static StackType_t  thread_stack_service_iic_mgmt[ CONF_THREAD_IIC_MGMT_STACK_SI
  *
  *
  * *****************************************************/
-status_type os_kernel_thread_register(void)
+status_t os_kernel_thread_register(void)
 {
-	status_type status = ERROR_NONE;
+	status_t status = OS_ERR_NONE;
 
 	/* Register UART management task */
 	thread_handle_service_uart_mgmt = xTaskCreateStatic( thread_uart_mgmt,
@@ -48,7 +48,7 @@ status_type os_kernel_thread_register(void)
 	if( thread_handle_service_uart_mgmt == NULL )
 	{
 		/* Exception mechanism */
-		status |= ERROR_OP;
+		status |= OS_ERR_OP;
 	}
 
 	/* Register IIC management task */
@@ -63,7 +63,7 @@ status_type os_kernel_thread_register(void)
 	if( thread_handle_service_iic_mgmt == NULL )
 	{
 		/* Exception mechanism */
-		status |= ERROR_OP;
+		status |= OS_ERR_OP;
 	}
 
 
