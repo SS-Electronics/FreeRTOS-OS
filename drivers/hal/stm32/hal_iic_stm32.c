@@ -6,7 +6,7 @@
 
 #include <config/mcu_config.h>
 
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_I2C_MODULE_ENABLED)
 
 #include <drivers/drv_handle.h>
 #include <drivers/com/hal/stm32/hal_iic_stm32.h>
@@ -173,4 +173,4 @@ void hal_iic_stm32_set_config(drv_iic_handle_t *h,
     /* ClockSpeed will be set from h->clock_hz in hw_init */
 }
 
-#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */
+#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM && HAL_I2C_MODULE_ENABLED */

@@ -7,6 +7,7 @@ This document explains how hardware board configuration flows from a user-author
 ## Table of Contents
 
 - [Concept](#concept)
+- [Directory Layout](#directory-layout)
 - [End-to-End Flow](#end-to-end-flow)
 - [XML Board Description](#xml-board-description)
   - [Root Element](#root-element)
@@ -23,6 +24,7 @@ This document explains how hardware board configuration flows from a user-author
   - [MicrochipCodegen Notes](#microchipcodegen-notes)
 - [Generated Files](#generated-files)
   - [board_device_ids.h](#board_device_idsh)
+  - [board_handles.h](#board_handlesh)
   - [board_config.c](#board_configc)
 - [Makefile Integration](#makefile-integration)
 - [Driver Registration Flow](#driver-registration-flow)
@@ -36,68 +38,93 @@ This document explains how hardware board configuration flows from a user-author
 
 The board configuration system is analogous to a Linux Device Tree, but resolved entirely at compile time as constant C structs.
 
-Instead of scattering pin assignments and peripheral parameters across multiple C files, the user defines all hardware peripherals once in a single XML file. The code generator translates this XML into two C artifacts:
+Instead of scattering pin assignments and peripheral parameters across multiple C files, the user defines all hardware peripherals once in a single XML file. The code generator translates this XML into C artifacts that become the single source of truth for drivers, management threads, and application code.
 
-1. `include/board/board_device_ids.h` — user-facing `#define` constants (device IDs and counts)
-2. `boards/<board_name>/board_config.c` — peripheral descriptor tables, callback tables, and the board API implementation
+**Board files belong to the application, not the OS.** Everything board-specific lives under `app/board/`. The OS only owns the stable API header (`include/board/board_config.h`) that defines the types and function signatures.
 
-All drivers, management threads, and application code share these two files as the single source of truth.
+---
+
+## Directory Layout
+
+```
+FreeRTOS-OS-App/
+│
+├── app/
+│   └── board/
+│       ├── stm32f411_devboard.xml     ← user-authored board description
+│       ├── board_config.c             ← generated — do not edit
+│       ├── board_device_ids.h         ← generated — do not edit
+│       └── board_handles.h            ← generated — do not edit
+│
+└── FreeRTOS-OS/
+    ├── include/
+    │   └── board/
+    │       ├── board_config.h         ← stable OS API (hand-written, not generated)
+    │       ├── board_device_ids.h     ← stub — zero counts for standalone kernel builds
+    │       └── board_handles.h        ← stub — empty for standalone kernel builds
+    └── scripts/
+        └── gen_board_config.py        ← code generator
+```
+
+**Include path resolution** — when `APP_DIR` is set (i.e. `make app`), `-I$(APP_DIR)` is prepended to the compiler include search path. This ensures `<board/board_device_ids.h>` and `<board/board_handles.h>` resolve to the real generated files in `app/board/`, shadowing the stubs in `FreeRTOS-OS/include/board/`. For a standalone `make kernel` build (no app), the stubs are used so the OS still compiles with zero peripheral counts.
 
 ---
 
 ## End-to-End Flow
 
 ```
-boards/<board>.xml          (user authors / edits)
+app/board/<board>.xml          (user authors / edits)
         │
-        │  python3 scripts/gen_board_config.py boards/<board>.xml
+        │  make board-gen APP_DIR=../app
+        │  (python3 scripts/gen_board_config.py app/board/<board>.xml
+        │           --outdir app/board --incdir app/board)
         ▼
 ┌───────────────────────────────────────────────────────┐
 │  gen_board_config.py                                  │
 │  ├── Parses XML with ElementTree                      │
 │  ├── Selects VendorCodegen backend (STM / Infineon …) │
 │  ├── Translates XML attributes → HAL constants        │
-│  └── Emits two files ──────────────────────────────── │
+│  └── Emits three files ────────────────────────────── │
 └───────────────────────────────────────────────────────┘
-        │                           │
-        ▼                           ▼
-include/board/              boards/<board>/
-board_device_ids.h          board_config.c
-  #define UART_DEBUG 0        _uart_table[]
-  #define BOARD_UART_COUNT 2  _gpio_table[]
-  …                           board_get_config()
-                              board_uart_register_rx_cb()
-                              …
-        │                           │
-        └──────────┬────────────────┘
-                   │  #include <board/board_device_ids.h>
-                   │  #include <board/board_config.h>
-                   ▼
-         include/config/mcu_config.h
-           #define NO_OF_UART  BOARD_UART_COUNT
-           (re-exports counts for backward compatibility)
-                   │
-                   ▼
-     drivers/drv_uart.c   drv_iic.c   drv_spi.c   drv_gpio.c
-       (array sizes come from BOARD_*_COUNT)
-                   │
-                   ▼
-     services/uart_mgmt.c   iic_mgmt.c   spi_mgmt.c   gpio_mgmt.c
-       (read board_get_config() at startup, register all peripherals
-        into the generic driver layer automatically)
-                   │
-                   ▼
-         Application code
-           #include <board/board_device_ids.h>
-           uart_mgmt_async_transmit(UART_DEBUG, data, len);
-           board_uart_register_rx_cb(UART_DEBUG, my_rx_handler);
+        │                │                │
+        ▼                ▼                ▼
+app/board/          app/board/       app/board/
+board_device_ids.h  board_handles.h  board_config.c
+  #define UART_DEBUG 0  extern huart1   _uart_table[]
+  #define BOARD_UART_COUNT 2            _gpio_table[]
+  …                                     board_get_config()
+                                        board_uart_register_rx_cb()
+                                        …
+        │                │                │
+        └────────────────┴────────────────┘
+                         │  #include <board/board_device_ids.h>
+                         │  #include <board/board_config.h>
+                         ▼
+              include/config/mcu_config.h
+                #define NO_OF_UART  BOARD_UART_COUNT
+                (re-exports counts for backward compatibility)
+                         │
+                         ▼
+           drivers/drv_uart.c   drv_iic.c   drv_spi.c   drv_gpio.c
+             (array sizes come from BOARD_*_COUNT)
+                         │
+                         ▼
+           services/uart_mgmt.c   iic_mgmt.c   spi_mgmt.c   gpio_mgmt.c
+             (read board_get_config() at startup, register all peripherals
+              into the generic driver layer automatically)
+                         │
+                         ▼
+             Application code
+               #include <board/board_device_ids.h>
+               uart_mgmt_async_transmit(UART_DEBUG, data, len);
+               board_uart_register_rx_cb(UART_DEBUG, my_rx_handler);
 ```
 
 ---
 
 ## XML Board Description
 
-Board XML files live in `boards/<board_name>.xml`. The filename (without `.xml`) is the board name used by `CONFIG_BOARD`.
+Board XML files live in `app/board/<board_name>.xml`. The filename (without `.xml`) is the board name used by `CONFIG_BOARD`.
 
 ### Root Element
 
@@ -281,50 +308,40 @@ gen_board_config.py
 │   ├── STM32Codegen                   — STM32 HAL constant translation
 │   ├── InfineonCodegen                — XMC baremetal stubs
 │   └── MicrochipCodegen               — SERCOM/USART stubs
-├── generate_device_ids_h(root, outpath)
-├── generate_board_config_c(root, cg, outdir, xml_path)
-│   ├── _emit_uart_table(root, cg)
-│   ├── _emit_iic_table(root, cg)
-│   ├── _emit_spi_table(root, cg)
-│   ├── _emit_gpio_table(root, cg)
-│   ├── _emit_gpio_clk_enable(root, cg)
-│   ├── _emit_callback_tables(root, cg)
-│   └── _emit_board_api(root, cg)
-└── main()
-    ├── Parse arguments / XML
-    ├── Detect vendor → instantiate VendorCodegen
-    └── Call generate_device_ids_h + generate_board_config_c
+└── BoardConfigGen
+    ├── generate(c_outdir, h_outdir)   — top-level entry point
+    ├── _gen_board_config_c()
+    │   ├── _emit_uart_table()
+    │   ├── _emit_iic_table()
+    │   ├── _emit_spi_table()
+    │   ├── _emit_gpio_table()
+    │   ├── _emit_gpio_clk_enable()
+    │   ├── _emit_callback_tables()
+    │   └── _emit_board_api()
+    ├── _gen_device_ids_h()
+    └── _gen_board_handles_h()
+```
+
+**CLI:**
+
+```
+python3 scripts/gen_board_config.py <xml>
+    [--outdir / -o <dir>]   directory for board_config.c   (default: FreeRTOS-OS/boards/<board>/)
+    [--incdir / -i <dir>]   directory for board_device_ids.h and board_handles.h
+                            (default: FreeRTOS-OS/include/board/)
+```
+
+When invoked by `make board-gen` both flags are set to `$(APP_DIR)/board`:
+
+```
+python3 scripts/gen_board_config.py app/board/stm32f411_devboard.xml \
+    --outdir app/board \
+    --incdir app/board
 ```
 
 ### VendorCodegen Class Hierarchy
 
-`VendorCodegen` is an abstract base that defines the translation interface. Each vendor subclass implements it using vendor-specific constant names:
-
-```python
-class VendorCodegen:
-    def gpio_port(self, letter: str) -> str: ...     # "A" → "GPIOA" / "XMC_GPIO_PORT_A"
-    def gpio_pin(self, num: str) -> str: ...          # "9" → "GPIO_PIN_9" / "9"
-    def gpio_speed(self, speed: str) -> str: ...
-    def gpio_pull(self, pull: str) -> str: ...
-    def gpio_af_mode(self, is_od=False) -> str: ...
-    def gpio_out_mode(self, is_od=False) -> str: ...
-    def gpio_in_mode(self) -> str: ...
-    def gpio_it_mode(self, edge: str) -> str: ...
-    def gpio_active_state(self, state: str) -> str: ...
-    def af_constant(self, af_num: str, instance: str) -> str: ...
-    def uart_wordlen(self, bits: str) -> str: ...
-    def uart_stopbits(self, n: str) -> str: ...
-    def uart_parity(self, p: str) -> str: ...
-    def uart_mode(self, m: str) -> str: ...
-    def i2c_addr_mode(self, m: str) -> str: ...
-    def i2c_dual_addr(self, m: str) -> str: ...
-    def spi_mode/direction/datasize/polarity/phase/nss/prescaler/bitorder(…): ...
-    def periph_clk_fn(self, periph_type, instance): ...  # returns (fn_name, fn_body)
-    def gpio_clk_enable_body(self, ports: set) -> str: ...
-    def device_includes(self) -> list: ...               # vendor-specific #includes
-```
-
-Vendor is selected automatically from the XML `vendor` attribute:
+`VendorCodegen` is an abstract base that defines the translation interface. Vendor is selected automatically from the XML `vendor` attribute:
 
 ```python
 vendor_map = {
@@ -333,6 +350,28 @@ vendor_map = {
     'MICROCHIP': MicrochipCodegen,
 }
 cg = vendor_map[vendor.upper()]()
+```
+
+Each subclass implements:
+
+```python
+class VendorCodegen:
+    def gpio_port(self, letter: str) -> str: ...     # "A" → "GPIOA" / "XMC_GPIO_PORT_A"
+    def gpio_pin(self, num: str) -> str: ...          # "9" → "GPIO_PIN_9"
+    def gpio_speed(self, speed: str) -> str: ...
+    def gpio_pull(self, pull: str) -> str: ...
+    def gpio_af_mode(self, is_od=False) -> str: ...
+    def gpio_out_mode(self, is_od=False) -> str: ...
+    def gpio_in_mode(self) -> str: ...
+    def gpio_it_mode(self, edge: str) -> str: ...
+    def gpio_active_state(self, state: str) -> str: ...
+    def af_constant(self, af_num: str, instance: str) -> str: ...
+    def uart_wordlen / stopbits / parity / mode(…): ...
+    def i2c_addr_mode / dual_addr(…): ...
+    def spi_mode / direction / datasize / polarity / phase / nss / prescaler / bitorder(…): ...
+    def periph_clk_fn(self, periph_type, instance): ...
+    def gpio_clk_enable_body(self, ports: set) -> str: ...
+    def device_includes(self) -> list: ...
 ```
 
 ### STM32Codegen Attribute Mappings
@@ -376,9 +415,11 @@ static void _usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
 
 ## Generated Files
 
+All three generated files are placed in `app/board/` and are regenerated on every `make board-gen`. **Do not edit them** — edit the XML instead.
+
 ### board_device_ids.h
 
-`include/board/board_device_ids.h` — **do not edit**, regenerated on every `make board-gen`.
+`app/board/board_device_ids.h`
 
 ```c
 /* UART device IDs */
@@ -401,23 +442,53 @@ static void _usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
 #define BOARD_GPIO_COUNT     3
 ```
 
-These `BOARD_*_COUNT` constants drive static array sizes in the driver layer. `include/config/mcu_config.h` re-exports them as `NO_OF_UART`, `NO_OF_IIC`, `NO_OF_SPI`, `NO_OF_GPIO` for backward compatibility with existing driver code.
+`BOARD_*_COUNT` constants drive static array sizes in the driver layer. `include/config/mcu_config.h` re-exports them as `NO_OF_UART`, `NO_OF_IIC`, `NO_OF_SPI`, `NO_OF_GPIO` for driver source compatibility.
+
+### board_handles.h
+
+`app/board/board_handles.h`
+
+Declares (and defines the storage for) the HAL peripheral handle globals. Included by `device.h` so every translation unit that uses a HAL handle can reach it.
+
+```c
+#ifdef HAL_UART_MODULE_ENABLED
+#include "stm32f4xx_hal_uart.h"
+extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
+#endif
+
+#ifdef HAL_I2C_MODULE_ENABLED
+#include "stm32f4xx_hal_i2c.h"
+extern I2C_HandleTypeDef hi2c1;
+#endif
+
+#ifdef HAL_SPI_MODULE_ENABLED
+#include "stm32f4xx_hal_spi.h"
+extern SPI_HandleTypeDef hspi1;
+#endif
+```
+
+The actual definitions (`UART_HandleTypeDef huart1;` etc.) live in `board_config.c`, wrapped in the same `#ifdef` guards.
+
+> **Standalone kernel build (no APP_DIR):** `FreeRTOS-OS/include/board/board_handles.h` is a stub containing only the include guard. This lets the OS compile without an application attached.
 
 ### board_config.c
 
-`boards/<board_name>/board_config.c` — **do not edit**. Contains:
+`app/board/board_config.c`
 
-1. **Peripheral clock-enable wrappers** — one static function per peripheral instance
-2. **Peripheral descriptor tables** — `_uart_table[]`, `_iic_table[]`, `_spi_table[]`, `_gpio_table[]`; each entry is a `board_uart_desc_t` / `board_iic_desc_t` / `board_spi_desc_t` / `board_gpio_desc_t` with all HAL constants filled in
-3. **HAL module guards** — each table is wrapped in `#ifdef HAL_xxx_MODULE_ENABLED … #else #define _XXX_TABLE NULL #endif` so disabling a HAL module at Kconfig time zeros the corresponding driver array safely
-4. **Top-level `g_board_config`** — the one `board_config_t` instance pointed to by `board_get_config()`
+Compiled as an **application source** (via `app-obj-y += board/board_config.o` in `app/Makefile`). Contains:
+
+1. **HAL handle definitions** — `UART_HandleTypeDef huart1;` etc., guarded by `HAL_xxx_MODULE_ENABLED`
+2. **Peripheral clock-enable wrappers** — one static function per peripheral instance
+3. **Peripheral descriptor tables** — `_uart_table[]`, `_iic_table[]`, `_spi_table[]`, `_gpio_table[]`; each entry is a fully initialised descriptor struct with all HAL constants filled in; each table is wrapped in `#ifdef HAL_xxx_MODULE_ENABLED`
+4. **Top-level `g_board_config`** — the one `board_config_t` instance returned by `board_get_config()`
 5. **`board_get_config()`** — returns `&g_board_config`
-6. **`board_find_uart/iic/spi()`** — linear search helpers returning a descriptor by instance pointer
+6. **`board_find_uart/iic/spi()`** — linear search helpers returning a descriptor by peripheral instance pointer
 7. **`board_gpio_clk_enable()`** — if/else chain enabling the RCC clock for a given GPIO port
-8. **Mutable callback tables** — one `board_uart_cbs_t _uart_cbs[BOARD_UART_COUNT]` (and similar for iic/spi/gpio), zero-initialised
+8. **Mutable callback tables** — `board_uart_cbs_t _uart_cbs[BOARD_UART_COUNT]` etc., zero-initialised
 9. **Callback registration and getter functions** — `board_uart_register_rx_cb()`, `board_get_uart_cbs()`, etc.
 
-Example snippet from the UART table:
+Example UART table entry:
 
 ```c
 static const board_uart_desc_t _uart_table[BOARD_UART_COUNT] = {
@@ -447,36 +518,48 @@ static const board_uart_desc_t _uart_table[BOARD_UART_COUNT] = {
 
 ## Makefile Integration
 
-The top-level `Makefile` handles code generation automatically:
+Board files live in the application tree. The build system wires them in automatically when `APP_DIR` is provided.
+
+### Key variables in `FreeRTOS-OS/Makefile`
 
 ```makefile
-CONFIG_BOARD ?= stm32f411_devboard
-BOARD_XML    := boards/$(CONFIG_BOARD).xml
-BOARD_BSP_C  := boards/$(CONFIG_BOARD)/board_config.c
-BOARD_BSP_H  := include/board/board_device_ids.h
+CONFIG_BOARD    ?= stm32f411_devboard
 
-# Auto-generate BSP from XML before compiling
-$(BOARD_BSP_C) $(BOARD_BSP_H): $(BOARD_XML)
-    @echo "### Generating BSP from $< ..."
-    @python3 scripts/gen_board_config.py $<
-
-all: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BUILD)/kernel.elf
+ifdef APP_DIR
+BOARD_XML       := $(APP_DIR)/board/$(CONFIG_BOARD).xml
+BOARD_BSP_C     := $(APP_DIR)/board/board_config.c
+BOARD_BSP_H     := $(APP_DIR)/board/board_device_ids.h
+BOARD_HANDLES_H := $(APP_DIR)/board/board_handles.h
+# Prepend so app/board/ headers shadow the include/board/ stubs
+INCLUDES        += -I$(APP_DIR)    # added first, before arch and OS includes
+endif
 ```
 
-Available `make` targets related to board configuration:
-
-| Target | Effect |
-|--------|--------|
-| `make all` | Generates BSP (if XML is newer), then builds firmware |
-| `make board-gen` | Forces BSP regeneration from XML |
-| `make CONFIG_BOARD=my_board all` | Select a different board |
-| `make clean` | Removes build artifacts and generated BSP files |
-
-The `boards/Makefile` sub-directory Makefile adds the generated `board_config.c` to the link:
+### board-gen recipe
 
 ```makefile
-obj-y += boards/$(CONFIG_BOARD)/board_config.o
+$(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H): $(BOARD_XML)
+    python3 scripts/gen_board_config.py $< \
+        --outdir $(APP_DIR)/board \
+        --incdir $(APP_DIR)/board
 ```
+
+### `app/Makefile` fragment
+
+```makefile
+app-obj-y += board/board_config.o   # compiled as an app source
+```
+
+### Make targets
+
+| Target | Command | Effect |
+|--------|---------|--------|
+| Generate BSP | `make board-gen APP_DIR=../app` | Runs generator, writes files into `app/board/` |
+| Full app build | `make app` (from project root) | Auto-generates BSP if XML is newer, then builds |
+| Different board | `make board-gen CONFIG_BOARD=my_board APP_DIR=../app` | Select a different XML file |
+| Clean | `make clean` (from project root) | Removes build artifacts and generated BSP files |
+
+> `make board-gen` without `APP_DIR` prints an error and exits. The top-level `Makefile` passes `APP_DIR=../app` automatically for all `app` and `board-gen` targets.
 
 ---
 
@@ -534,36 +617,26 @@ The generated `board_config.c` holds a mutable callback table for each periphera
 #include <board/board_device_ids.h>
 #include <board/board_config.h>
 
-/* Called from ISR when a byte arrives on UART_DEBUG */
 static void my_rx_handler(uint8_t dev_id, uint8_t byte)
 {
     /* process byte — keep this short, ISR context */
 }
 
-/* Called when a transmit completes */
-static void my_tx_done(uint8_t dev_id)
-{
-    /* signal a task if needed */
-}
-
-/* Called on UART error */
-static void my_error(uint8_t dev_id, uint32_t error_code)
-{
-    /* log or recover */
-}
+static void my_tx_done(uint8_t dev_id)  { /* signal a task if needed */  }
+static void my_error  (uint8_t dev_id, uint32_t error_code) { /* log */ }
 
 void app_setup_callbacks(void)
 {
-    board_uart_register_rx_cb(UART_DEBUG, my_rx_handler);
-    board_uart_register_tx_done_cb(UART_DEBUG, my_tx_done);
-    board_uart_register_error_cb(UART_DEBUG, my_error);
+    board_uart_register_rx_cb      (UART_DEBUG, my_rx_handler);
+    board_uart_register_tx_done_cb (UART_DEBUG, my_tx_done);
+    board_uart_register_error_cb   (UART_DEBUG, my_error);
 }
 ```
 
 ### I2C callbacks
 
 ```c
-board_iic_register_done_cb(I2C_SENSOR_BUS, my_iic_done);
+board_iic_register_done_cb (I2C_SENSOR_BUS, my_iic_done);
 board_iic_register_error_cb(I2C_SENSOR_BUS, my_iic_error);
 ```
 
@@ -576,11 +649,7 @@ board_spi_register_done_cb(SPI_FLASH_BUS, my_spi_done);
 ### GPIO interrupt callbacks
 
 ```c
-/* Called from EXTI IRQ handler when BTN_USER fires */
-static void btn_irq(uint8_t dev_id)
-{
-    /* debounce and signal task */
-}
+static void btn_irq(uint8_t dev_id) { /* debounce and signal task */ }
 
 board_gpio_register_irq_cb(BTN_USER, btn_irq);
 ```
@@ -588,33 +657,37 @@ board_gpio_register_irq_cb(BTN_USER, btn_irq);
 ### Callback dispatch chain (UART RX example)
 
 ```
-HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-  └─ drv_uart_rx_isr_dispatch(dev_id, rx_byte)
-       ├─ pushes byte into ring buffer (IPC queue for os_read())
-       └─ board_get_uart_cbs(dev_id)->on_rx_byte(dev_id, byte)
-            └─ application my_rx_handler()
+USART1_IRQHandler() [hal_it_stm32.c]
+  └─ hal_uart_stm32_irq_handler(USART1)
+       └─ HAL_UART_IRQHandler(&h->hw.huart)
+            └─ HAL_UART_RxCpltCallback(huart)
+                 └─ drv_uart_rx_isr_dispatch(dev_id, rx_byte)
+                      ├─ pushes byte into ring buffer (IPC queue for os_read())
+                      └─ board_get_uart_cbs(dev_id)->on_rx_byte(dev_id, byte)
+                           └─ application my_rx_handler()
 ```
 
 ---
 
 ## Adding a New Board
 
-1. **Create the XML file** — copy `boards/stm32f411_devboard.xml` to `boards/<my_board>.xml` and edit to match your hardware.
+1. **Create the XML file** — copy `app/board/stm32f411_devboard.xml` to `app/board/<my_board>.xml` and edit to match your hardware.
 
-2. **Generate the BSP:**
+2. **Generate the BSP** (from the project root):
 
    ```bash
-   make CONFIG_BOARD=my_board board-gen
+   make board-gen CONFIG_BOARD=my_board
    ```
 
-   This creates:
-   - `boards/my_board/board_config.c`
-   - `include/board/board_device_ids.h`
+   This creates (or overwrites):
+   - `app/board/board_config.c`
+   - `app/board/board_device_ids.h`
+   - `app/board/board_handles.h`
 
 3. **Build:**
 
    ```bash
-   make CONFIG_BOARD=my_board all
+   make app CONFIG_BOARD=my_board
    ```
 
 4. **Use device IDs in application code:**
@@ -633,7 +706,7 @@ No other source files need to change. The management threads self-register all p
 
 ## Adding a New Vendor Backend
 
-1. **Subclass `VendorCodegen`** in `gen_board_config.py`:
+1. **Subclass `VendorCodegen`** in `scripts/gen_board_config.py`:
 
    ```python
    class MyVendorCodegen(VendorCodegen):
@@ -655,7 +728,7 @@ No other source files need to change. The management threads self-register all p
    }
    ```
 
-3. **Add a vendor HAL backend** in `drivers/hal/myvendor/` implementing `drv_uart_hal_ops_t`, `drv_iic_hal_ops_t`, `drv_spi_hal_ops_t`, `drv_gpio_hal_ops_t` — see `DRIVERS.md` for the ops vtable interface.
+3. **Add a vendor HAL backend** in `drivers/hal/myvendor/` implementing `drv_uart_hal_ops_t`, `drv_iic_hal_ops_t`, `drv_spi_hal_ops_t`, `drv_gpio_hal_ops_t` — see [DRIVERS.md](DRIVERS.md) for the ops vtable interface.
 
 4. **Guard the HAL includes** in management service source files with `#elif (CONFIG_DEVICE_VARIANT == MCU_VAR_MYVENDOR)` blocks, following the existing pattern in `uart_mgmt.c`, `iic_mgmt.c`, etc.
 

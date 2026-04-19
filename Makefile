@@ -39,14 +39,23 @@ AUTOCONF_H      			:= include/config/autoconf.h
 
 ##############################################################
 # Board selection
-# Override on the command line:  make CONFIG_BOARD=my_custom_board
-# The XML file boards/$(CONFIG_BOARD).xml is the single source of truth.
+# Board files live in the application tree (APP_DIR/board/).
+# Override board name:  make CONFIG_BOARD=my_board APP_DIR=../app
 CONFIG_BOARD    ?= stm32f411_devboard
-BOARD_XML       := boards/$(CONFIG_BOARD).xml
-BOARD_BSP_C     := boards/$(CONFIG_BOARD)/board_config.c
-BOARD_BSP_H     := include/board/board_device_ids.h
-BOARD_HANDLES_H := include/board/board_handles.h
 export CONFIG_BOARD
+
+ifdef APP_DIR
+BOARD_XML       := $(APP_DIR)/board/$(CONFIG_BOARD).xml
+BOARD_BSP_C     := $(APP_DIR)/board/board_config.c
+BOARD_BSP_H     := $(APP_DIR)/board/board_device_ids.h
+BOARD_HANDLES_H := $(APP_DIR)/board/board_handles.h
+else
+# Standalone kernel build — no board config; stubs in include/board/ are used.
+BOARD_XML       :=
+BOARD_BSP_C     :=
+BOARD_BSP_H     :=
+BOARD_HANDLES_H :=
+endif
 ##############################################################
 
 
@@ -80,9 +89,14 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := arch kernel mm init include drivers services boards
+SUBDIRS := arch kernel mm init include drivers services
 
 INCLUDES :=
+
+# When APP_DIR is set, add it first so app/board/ headers shadow include/board/ stubs
+ifdef APP_DIR
+INCLUDES += -I$(APP_DIR)
+endif
 
 LINKER_SCRIPT :=
 
@@ -223,23 +237,37 @@ endif
 
 ##############################################################
 # Board BSP generation
-# Run the Python generator whenever the XML changes.
-# This produces $(BOARD_BSP_C) and $(BOARD_BSP_H) before any C compiles.
+# Board files live in APP_DIR/board/. Requires APP_DIR to be set.
+# Run: make board-gen APP_DIR=../app
+ifdef APP_DIR
 $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H): $(BOARD_XML)
 	@echo "### Generating BSP from $< ..."
-	@python3 scripts/gen_board_config.py $<
+	@python3 scripts/gen_board_config.py $< \
+		--outdir $(APP_DIR)/board \
+		--incdir $(APP_DIR)/board
 	@echo "### BSP generation done"
 
 .PHONY: board-gen
 board-gen: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H)
 	@echo "### Board: $(CONFIG_BOARD)  XML: $(BOARD_XML)"
+else
+.PHONY: board-gen
+board-gen:
+	@echo "### board-gen requires APP_DIR — e.g.: make board-gen APP_DIR=../app"
+	@exit 1
+endif
 ##############################################################
 
 
 ##############################################################
 # build stages
-# BSP files are generated before compiling any C source.
-all: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BUILD)/$(TARGET_NAME).elf
+# BSP files are generated before compiling any C source (when APP_DIR is set).
+ifdef APP_DIR
+BOARD_PREREQS := $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H)
+else
+BOARD_PREREQS :=
+endif
+all: $(BOARD_PREREQS) $(BUILD)/$(TARGET_NAME).elf
 
 # Link final binary
 $(BUILD)/$(TARGET_NAME).elf: $(OBJS) | $(BUILD) $(AUTOCONF)
@@ -304,7 +332,9 @@ $(BUILD):
 
 clean:
 	@rm -rf $(BUILD)
+ifdef APP_DIR
 	@rm -f $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H)
+endif
 	@echo '##############################################'
 	@echo ' '
 	@echo 'Clean completed!'

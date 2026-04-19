@@ -9,7 +9,7 @@
 
 #include <config/mcu_config.h>
 
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
 
 #include <drivers/drv_handle.h>
 
@@ -49,6 +49,6 @@ void hal_spi_stm32_set_config(drv_spi_handle_t *h,
 }
 #endif
 
-#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */
+#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM && HAL_SPI_MODULE_ENABLED */
 
 #endif /* DRIVERS_HAL_STM32_HAL_SPI_STM32_H_ */
