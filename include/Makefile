@@ -23,4 +23,5 @@
 
 
 INCLUDES += -I$(CURDIR)/include
-INCLUDES += -I$(CURDIR)/include/config
+INCLUDES += -I$(CURDIR)
+INCLUDES += -I$(CURDIR)/config

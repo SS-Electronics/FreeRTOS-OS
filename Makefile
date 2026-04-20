@@ -33,7 +33,7 @@ KCONFIG_CONFIG 				?= .config
 # autoconf.mk  — included by sub-Makefiles for conditional compilation
 AUTOCONF_MK     			:= autoconf.mk
 # autoconf.h   — included by C source / headers for CONFIG_* symbols
-AUTOCONF_H      			:= include/config/autoconf.h
+AUTOCONF_H      			:= config/autoconf.h
 ##############################################################
 
 

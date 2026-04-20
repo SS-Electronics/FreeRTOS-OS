@@ -57,7 +57,8 @@
 
 autoconf.mk
 
-# Generated device configuration headers (make config-outputs)
+# Generated configuration headers (make config-outputs)
+config/autoconf.h
 arch/devices/device_conf/
 
 modules.order
