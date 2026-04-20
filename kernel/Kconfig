@@ -125,7 +125,7 @@ config NO_OF_UART
 
 config NO_OF_IIC
     int "Number of I2C peripherals to manage"
-    default 0
+    default 1
     range 0 3
     help
       STM32F411VET6 has I2C1, I2C2, I2C3.
@@ -136,7 +136,7 @@ config INC_SERVICE_UART_MGMT
 
 config INC_SERVICE_IIC_MGMT
     bool "Enable I2C management service thread"
-    default n
+    default y
 
 config INC_SERVICE_CAN_MGMT
     bool "Enable CAN management service thread"

@@ -47,7 +47,7 @@ MCU_DEBUG_MAP = {
     },
 }
 
-AUTOCONF_H  = "include/config/autoconf.h"
+AUTOCONF_H  = "config/autoconf.h"
 BUILD_DIR   = "build"
 OUTPUT_CFG  = os.path.join(BUILD_DIR, "active_debug.cfg")
 OUTPUT_ENV  = os.path.join(BUILD_DIR, "debug_env.json")

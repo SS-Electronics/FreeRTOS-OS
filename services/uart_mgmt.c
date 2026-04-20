@@ -135,9 +135,12 @@ static void uart_mgmt_thread(void *arg)
 int32_t uart_mgmt_start(void)
 {
     _mgmt_queue = xQueueCreate(UART_MGMT_QUEUE_DEPTH, sizeof(uart_mgmt_msg_t));
-    if (_mgmt_queue == NULL)
-        return OS_ERR_MEM_OF;
 
+    if (_mgmt_queue == NULL)
+    {
+        return OS_ERR_MEM_OF;
+    }
+        
     int32_t tid = os_thread_create(uart_mgmt_thread,
                                    "uart_mgmt",
                                    PROC_SERVICE_SERIAL_MGMT_STACK_SIZE,

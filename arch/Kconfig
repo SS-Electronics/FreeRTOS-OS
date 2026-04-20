@@ -161,7 +161,7 @@ config HAL_SPI_MODULE_ENABLED
 
 config HAL_I2C_MODULE_ENABLED
     bool "I2C (I2C1..I2C3)"
-    default n
+    default y
 
 config HAL_I2S_MODULE_ENABLED
     bool "I2S audio interface"

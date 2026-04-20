@@ -135,11 +135,6 @@ class VendorCodegen:
     def spi_prescaler(self, n: str) -> str:  raise NotImplementedError
     def spi_bitorder(self, b: str) -> str:   raise NotImplementedError
 
-    # ── Includes ─────────────────────────────────────────────────────────────
-
-    def device_includes(self) -> list:
-        """Return list of #include lines needed at the top of board_config.c."""
-        raise NotImplementedError
 
     # ── HAL handle generation ────────────────────────────────────────────────
 
@@ -233,9 +228,6 @@ class STM32Codegen(VendorCodegen):
     def spi_prescaler(self, n):   return self._SPI_PRE.get(str(n), 'SPI_BAUDRATEPRESCALER_16')
     def spi_bitorder(self, b):    return self._SPI_BIT.get(b.lower(), 'SPI_FIRSTBIT_MSB')
 
-    def device_includes(self):
-        return ['#include <device.h>']
-
     _HAL_HANDLE_TYPE = {
         'uart': 'UART_HandleTypeDef',
         'i2c':  'I2C_HandleTypeDef',
@@ -322,14 +314,6 @@ class InfineonCodegen(VendorCodegen):
     def spi_prescaler(self, n):  return f'{n}U'
     def spi_bitorder(self, b):   return '0U'
 
-    def device_includes(self):
-        return [
-            '/* TODO: Include Infineon XMC SDK headers */',
-            '/* #include <xmc_uart.h> */',
-            '/* #include <xmc_i2c.h> */',
-            '/* #include <xmc_spi.h> */',
-            '/* #include <xmc_gpio.h> */',
-        ]
 
 
 # ── Microchip SAM / PIC32 ─────────────────────────────────────────────────────
@@ -381,11 +365,6 @@ class MicrochipCodegen(VendorCodegen):
     def spi_prescaler(self, n):  return f'{n}U'
     def spi_bitorder(self, b):   return '0U'
 
-    def device_includes(self):
-        return [
-            '/* TODO: Include Microchip ASF4 / Harmony device headers */',
-            '/* #include <atmel_start.h> */',
-        ]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -685,11 +664,26 @@ class BoardConfigGenerator:
 
         # ── Header
         L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
+        # mcu_config.h first — defines CONFIG_DEVICE_VARIANT and MCU_VAR_* used below
+        L.append('#include <board/mcu_config.h>')
+        L.append('')
+        L.append('/* Variant-gated device entry point.')
+        L.append(' * arch/devices/device.h selects the correct vendor HAL and device_conf:')
+        L.append(' *   MCU_VAR_STM       \u2192 device_conf/stm32f4xx_hal_conf.h + stm32f4xx_hal.h')
+        L.append(' *   MCU_VAR_INFINEON  \u2192 TODO: device_conf/xmc_conf.h')
+        L.append(' *   MCU_VAR_MICROCHIP \u2192 TODO: device_conf/asf4_conf.h */')
+        L.append('#if   (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)')
+        L.append('#  include <device.h>')
+        L.append('#elif (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)')
+        L.append('#  include <device.h>')
+        L.append('#elif (CONFIG_DEVICE_VARIANT == MCU_VAR_MICROCHIP)')
+        L.append('#  include <device.h>')
+        L.append('#else')
+        L.append('#  error "board_config.c: unknown CONFIG_DEVICE_VARIANT — update mcu_config.h"')
+        L.append('#endif')
+        L.append('')
         L.append('#include <board/board_config.h>')
         L.append('#include <board/board_device_ids.h>')
-        L.append('#include <board/mcu_config.h>')
-        for inc in cg.device_includes():
-            L.append(inc)
         L.append('')
 
         # ── HAL peripheral handle definitions (storage for extern decls in board_handles.h)
