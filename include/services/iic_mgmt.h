@@ -74,6 +74,15 @@ int32_t iic_mgmt_async_transmit(uint8_t bus_id, uint16_t dev_addr,
                                  const uint8_t *data, uint16_t len);
 
 /**
+ * @brief  Post an I2C write request and wait for completion (blocking).
+ * @return Return code from the HAL operation.
+ */
+int32_t iic_mgmt_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                const uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms);
+
+/**
  * @brief  Post an I2C read request and wait for completion (blocking).
  * @return Return code from the HAL operation.
  */
@@ -81,6 +90,21 @@ int32_t iic_mgmt_sync_receive(uint8_t bus_id, uint16_t dev_addr,
                                uint8_t reg_addr, uint8_t use_reg,
                                uint8_t *data, uint16_t len,
                                uint32_t timeout_ms);
+
+/**
+ * @brief  Check if a device responds on the bus (blocking).
+ * @return OS_ERR_NONE if device ACKs, OS_ERR_OP otherwise.
+ */
+int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
+                             uint32_t timeout_ms);
+
+/**
+ * @brief  Post an I2C async receive request (non-blocking, no result).
+ * @note   Caller must ensure data buffer stays valid until mgmt thread runs.
+ */
+int32_t iic_mgmt_async_receive(uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                uint8_t *data, uint16_t len);
 
 #ifdef __cplusplus
 }

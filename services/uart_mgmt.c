@@ -93,18 +93,16 @@ static void uart_mgmt_thread(void *arg)
         if (h == NULL)
             continue;
 
+        int32_t result = OS_ERR_OP;
+
         switch (msg.cmd)
         {
             case UART_MGMT_CMD_TRANSMIT:
                 if (msg.data != NULL && msg.len > 0)
                 {
-                    int32_t err = h->ops->transmit(h,
-                                                   msg.data,
-                                                   msg.len,
-                                                   h->timeout_ms);
-                    if (err != OS_ERR_NONE)
+                    result = h->ops->transmit(h, msg.data, msg.len, h->timeout_ms);
+                    if (result != OS_ERR_NONE)
                     {
-                        /* Attempt a single recovery reinit */
                         h->ops->hw_deinit(h);
                         h->ops->hw_init(h);
                     }
@@ -113,16 +111,22 @@ static void uart_mgmt_thread(void *arg)
 
             case UART_MGMT_CMD_REINIT:
                 h->ops->hw_deinit(h);
-                h->ops->hw_init(h);
+                result = h->ops->hw_init(h);
                 break;
 
             case UART_MGMT_CMD_DEINIT:
                 h->ops->hw_deinit(h);
+                result = OS_ERR_NONE;
                 break;
 
             default:
                 break;
         }
+
+        if (msg.result_code != NULL)
+            *msg.result_code = result;
+        if (msg.result_notify != NULL)
+            xTaskNotifyGive(msg.result_notify);
     }
 }
 
@@ -153,10 +157,12 @@ int32_t uart_mgmt_async_transmit(uint8_t dev_id, const uint8_t *data, uint16_t l
         return OS_ERR_OP;
 
     uart_mgmt_msg_t msg = {
-        .cmd    = UART_MGMT_CMD_TRANSMIT,
-        .dev_id = dev_id,
-        .data   = data,
-        .len    = len,
+        .cmd           = UART_MGMT_CMD_TRANSMIT,
+        .dev_id        = dev_id,
+        .data          = data,
+        .len           = len,
+        .result_notify = NULL,
+        .result_code   = NULL,
     };
 
     BaseType_t ok = xQueueSend(_mgmt_queue, &msg, 0);

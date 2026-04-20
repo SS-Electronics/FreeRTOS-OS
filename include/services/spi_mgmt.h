@@ -68,12 +68,29 @@ extern "C" {
 int32_t       spi_mgmt_start(void);
 QueueHandle_t spi_mgmt_get_queue(void);
 
+/** @brief  Blocking full-duplex transfer (TX + RX simultaneously). */
 int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
                                 const uint8_t *tx, uint8_t *rx,
                                 uint16_t len, uint32_t timeout_ms);
 
+/** @brief  Blocking transmit-only (rx ignored). */
+int32_t spi_mgmt_sync_transmit(uint8_t bus_id,
+                                const uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms);
+
+/** @brief  Blocking receive-only (tx clocked as 0xFF). */
+int32_t spi_mgmt_sync_receive(uint8_t bus_id,
+                               uint8_t *data, uint16_t len,
+                               uint32_t timeout_ms);
+
+/** @brief  Non-blocking transmit-only (fire and forget). */
 int32_t spi_mgmt_async_transmit(uint8_t bus_id,
                                  const uint8_t *data, uint16_t len);
+
+/** @brief  Non-blocking full-duplex transfer (caller manages buffer lifetime). */
+int32_t spi_mgmt_async_transfer(uint8_t bus_id,
+                                 const uint8_t *tx, uint8_t *rx,
+                                 uint16_t len);
 
 #ifdef __cplusplus
 }

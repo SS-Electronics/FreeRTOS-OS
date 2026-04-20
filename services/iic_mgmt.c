@@ -157,6 +157,84 @@ int32_t iic_mgmt_async_transmit(uint8_t bus_id, uint16_t dev_addr,
     return (xQueueSend(_mgmt_queue, &msg, 0) == pdTRUE) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
+int32_t iic_mgmt_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                const uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms)
+{
+    if (_mgmt_queue == NULL || data == NULL)
+        return OS_ERR_OP;
+
+    int32_t result = OS_ERR_OP;
+
+    iic_mgmt_msg_t msg = {
+        .cmd           = IIC_MGMT_CMD_TRANSMIT,
+        .bus_id        = bus_id,
+        .dev_addr      = dev_addr,
+        .reg_addr      = reg_addr,
+        .use_reg       = use_reg,
+        .data          = (uint8_t *)data,
+        .len           = len,
+        .result_notify = xTaskGetCurrentTaskHandle(),
+        .result_code   = &result,
+    };
+
+    if (xQueueSend(_mgmt_queue, &msg, pdMS_TO_TICKS(timeout_ms)) != pdTRUE)
+        return OS_ERR_OP;
+
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms));
+    return result;
+}
+
+int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
+                             uint32_t timeout_ms)
+{
+    if (_mgmt_queue == NULL)
+        return OS_ERR_OP;
+
+    int32_t result = OS_ERR_OP;
+
+    iic_mgmt_msg_t msg = {
+        .cmd           = IIC_MGMT_CMD_PROBE,
+        .bus_id        = bus_id,
+        .dev_addr      = dev_addr,
+        .reg_addr      = 0,
+        .use_reg       = 0,
+        .data          = NULL,
+        .len           = 0,
+        .result_notify = xTaskGetCurrentTaskHandle(),
+        .result_code   = &result,
+    };
+
+    if (xQueueSend(_mgmt_queue, &msg, pdMS_TO_TICKS(timeout_ms)) != pdTRUE)
+        return OS_ERR_OP;
+
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms));
+    return result;
+}
+
+int32_t iic_mgmt_async_receive(uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                uint8_t *data, uint16_t len)
+{
+    if (_mgmt_queue == NULL || data == NULL)
+        return OS_ERR_OP;
+
+    iic_mgmt_msg_t msg = {
+        .cmd           = IIC_MGMT_CMD_RECEIVE,
+        .bus_id        = bus_id,
+        .dev_addr      = dev_addr,
+        .reg_addr      = reg_addr,
+        .use_reg       = use_reg,
+        .data          = data,
+        .len           = len,
+        .result_notify = NULL,
+        .result_code   = NULL,
+    };
+
+    return (xQueueSend(_mgmt_queue, &msg, 0) == pdTRUE) ? OS_ERR_NONE : OS_ERR_OP;
+}
+
 int32_t iic_mgmt_sync_receive(uint8_t bus_id, uint16_t dev_addr,
                                uint8_t reg_addr, uint8_t use_reg,
                                uint8_t *data, uint16_t len,

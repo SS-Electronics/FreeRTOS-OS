@@ -153,6 +153,20 @@ int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
     return result;
 }
 
+int32_t spi_mgmt_sync_transmit(uint8_t bus_id,
+                                const uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms)
+{
+    return spi_mgmt_sync_transfer(bus_id, data, NULL, len, timeout_ms);
+}
+
+int32_t spi_mgmt_sync_receive(uint8_t bus_id,
+                               uint8_t *data, uint16_t len,
+                               uint32_t timeout_ms)
+{
+    return spi_mgmt_sync_transfer(bus_id, NULL, data, len, timeout_ms);
+}
+
 int32_t spi_mgmt_async_transmit(uint8_t bus_id,
                                  const uint8_t *data, uint16_t len)
 {
@@ -164,6 +178,26 @@ int32_t spi_mgmt_async_transmit(uint8_t bus_id,
         .bus_id        = bus_id,
         .tx_data       = data,
         .rx_data       = NULL,
+        .len           = len,
+        .result_notify = NULL,
+        .result_code   = NULL,
+    };
+
+    return (xQueueSend(_mgmt_queue, &msg, 0) == pdTRUE) ? OS_ERR_NONE : OS_ERR_OP;
+}
+
+int32_t spi_mgmt_async_transfer(uint8_t bus_id,
+                                 const uint8_t *tx, uint8_t *rx,
+                                 uint16_t len)
+{
+    if (_mgmt_queue == NULL)
+        return OS_ERR_OP;
+
+    spi_mgmt_msg_t msg = {
+        .cmd           = SPI_MGMT_CMD_TRANSFER,
+        .bus_id        = bus_id,
+        .tx_data       = tx,
+        .rx_data       = rx,
         .len           = len,
         .result_notify = NULL,
         .result_code   = NULL,

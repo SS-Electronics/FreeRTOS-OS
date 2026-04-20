@@ -46,6 +46,7 @@ This document describes the complete driver subsystem from silicon to applicatio
   - [I2C Management — iic_mgmt](#i2c-management--iic_mgmt)
   - [SPI Management — spi_mgmt](#spi-management--spi_mgmt)
   - [GPIO Management — gpio_mgmt](#gpio-management--gpio_mgmt)
+- [Application Driver Layer (`drv_app/`)](#application-driver-layer-drv_app)
 - [External Chip Drivers](#external-chip-drivers)
 - [Adding a New Vendor](#adding-a-new-vendor)
 - [Adding a New Peripheral Driver](#adding-a-new-peripheral-driver)
@@ -61,9 +62,15 @@ The system is built from the silicon up in four distinct layers. Higher layers n
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                  Application / Protocol Stack                      │
-│          drv_serial_transmit()  drv_iic_transmit()  …             │
+│       uart_sync_transmit()  iic_sync_receive()  gpio_read()  …    │
 └───────────────────────────┬────────────────────────────────────────┘
-                            │  Generic driver API
+                            │  Application driver API (drv_app/)
+┌───────────────────────────▼────────────────────────────────────────┐
+│          Application Driver Layer  (drv_app/)                      │
+│   uart_app · spi_app · iic_app · gpio_app                         │
+│   — sync (blocking) and async (fire-and-forget) wrappers           │
+└───────────────────────────┬────────────────────────────────────────┘
+                            │  Internal mgmt queue
 ┌───────────────────────────▼────────────────────────────────────────┐
 │            Management Service Threads  (services/)                 │
 │   uart_mgmt · iic_mgmt · spi_mgmt · gpio_mgmt                    │
@@ -236,12 +243,22 @@ FreeRTOS-OS/
 │           ├── hal_uart_infineon.c
 │           └── hal_iic_infineon.c
 │
-└── services/
+├── services/
+│   ├── Makefile
+│   ├── uart_mgmt.c
+│   ├── iic_mgmt.c
+│   ├── spi_mgmt.c
+│   └── gpio_mgmt.c
+│
+└── drv_app/                           ← Application driver layer (sync + async wrappers)
     ├── Makefile
-    ├── uart_mgmt.c
-    ├── iic_mgmt.c
-    ├── spi_mgmt.c
-    └── gpio_mgmt.c
+    ├── uart_app.c                     ← uart_sync_transmit / uart_sync_receive / uart_async_*
+    ├── spi_app.c                      ← spi_sync_* / spi_async_*
+    ├── iic_app.c                      ← iic_sync_* / iic_async_*
+    └── gpio_app.c                     ← gpio_read / gpio_async_*
+
+# include/drv_app/ mirrors the above:
+#   uart_app.h  spi_app.h  iic_app.h  gpio_app.h
 ```
 
 ---
@@ -1183,10 +1200,22 @@ typedef struct {
 
 ```c
 int32_t       uart_mgmt_start(void);
-int32_t       uart_mgmt_async_transmit(uint8_t dev_id,
-                                        const uint8_t *data, uint16_t len);
 QueueHandle_t uart_mgmt_get_queue(void);
+
+// Non-blocking transmit (fire-and-forget)
+int32_t uart_mgmt_async_transmit(uint8_t dev_id,
+                                  const uint8_t *data, uint16_t len);
+
+// Blocking transmit — suspends caller until management thread completes TX
+// (requires result_notify / result_code fields in uart_mgmt_msg_t)
+// Prefer the drv_app wrapper: uart_sync_transmit()
+
+// Non-blocking: read one byte from the RX ring buffer
+int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte);
 ```
+
+> **Application code should use `drv_app/uart_app.h`** which provides `uart_sync_transmit()`,
+> `uart_sync_receive()`, `uart_async_transmit()`, and `uart_async_read_byte()`.
 
 **Stack / priority:**
 
@@ -1231,18 +1260,31 @@ typedef struct {
 #### Public API
 
 ```c
-int32_t iic_mgmt_start(void);
+int32_t       iic_mgmt_start(void);
 QueueHandle_t iic_mgmt_get_queue(void);
 
+// Async (fire-and-forget)
 int32_t iic_mgmt_async_transmit(uint8_t bus_id, uint16_t dev_addr,
                                  uint8_t reg_addr, uint8_t use_reg,
                                  const uint8_t *data, uint16_t len);
+int32_t iic_mgmt_async_receive (uint8_t bus_id, uint16_t dev_addr,
+                                 uint8_t reg_addr, uint8_t use_reg,
+                                 uint8_t *data, uint16_t len);
 
-int32_t iic_mgmt_sync_receive(uint8_t bus_id, uint16_t dev_addr,
-                               uint8_t reg_addr, uint8_t use_reg,
-                               uint8_t *data, uint16_t len,
-                               uint32_t timeout_ms);
+// Sync (blocking — suspends caller)
+int32_t iic_mgmt_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                const uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms);
+int32_t iic_mgmt_sync_receive (uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms);
+int32_t iic_mgmt_sync_probe   (uint8_t bus_id, uint16_t dev_addr,
+                                uint32_t timeout_ms);
 ```
+
+> **Application code should use `drv_app/iic_app.h`** — thin wrappers with identical signatures.
 
 **Stack / priority:**
 
@@ -1265,15 +1307,23 @@ Iterates `board->spi_table` at startup. Supports both fire-and-forget async tran
 int32_t       spi_mgmt_start(void);
 QueueHandle_t spi_mgmt_get_queue(void);
 
-int32_t spi_mgmt_async_transmit(uint8_t bus_id,
-                                 const uint8_t *data, uint16_t len);
-
-int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
-                                const uint8_t *tx, uint8_t *rx,
+// Sync (blocking)
+int32_t spi_mgmt_sync_transmit(uint8_t bus_id, const uint8_t *data,
                                 uint16_t len, uint32_t timeout_ms);
+int32_t spi_mgmt_sync_receive (uint8_t bus_id, uint8_t *data,
+                                uint16_t len, uint32_t timeout_ms);
+int32_t spi_mgmt_sync_transfer(uint8_t bus_id, const uint8_t *tx,
+                                uint8_t *rx, uint16_t len, uint32_t timeout_ms);
+
+// Async (fire-and-forget)
+int32_t spi_mgmt_async_transmit(uint8_t bus_id, const uint8_t *data,
+                                 uint16_t len);
+int32_t spi_mgmt_async_transfer(uint8_t bus_id, const uint8_t *tx,
+                                 uint8_t *rx, uint16_t len);
 ```
 
-> CS pin must be asserted by the caller before posting the message and deasserted after `spi_mgmt_sync_transfer()` returns.
+> CS pin must be asserted by the caller before the transfer and deasserted after it returns.
+> **Application code should use `drv_app/spi_app.h`** for cleaner naming.
 
 ---
 
@@ -1334,6 +1384,85 @@ Device-specific drivers sit above the generic driver layer in `include/drivers/e
 
 ---
 
+## Application Driver Layer (`drv_app/`)
+
+The `drv_app/` layer provides the **recommended API** for application code. It wraps the management service functions with consistent naming for sync (blocking) and async (non-blocking) patterns so callers do not need to know about FreeRTOS queues or task-notification handles.
+
+**Include path:** `<drv_app/uart_app.h>`, `<drv_app/spi_app.h>`, `<drv_app/iic_app.h>`, `<drv_app/gpio_app.h>`
+
+### Sync vs Async
+
+| Mode | Mechanism | Returns when |
+|---|---|---|
+| **Sync** | Posts to mgmt queue with `result_notify`, calls `ulTaskNotifyTake()` | Operation complete (or timeout) |
+| **Async** | Posts to mgmt queue with `result_notify = NULL` | Message queued (not when hardware finishes) |
+
+### UART app API (`uart_app.h`)
+
+```c
+// Blocking
+int32_t uart_sync_transmit(uint8_t dev_id, const uint8_t *data,
+                            uint16_t len, uint32_t timeout_ms);
+int32_t uart_sync_receive (uint8_t dev_id, uint8_t *buf,
+                            uint16_t len, uint32_t timeout_ms);
+
+// Non-blocking
+int32_t uart_async_transmit  (uint8_t dev_id, const uint8_t *data, uint16_t len);
+int32_t uart_async_read_byte (uint8_t dev_id, uint8_t *byte);
+```
+
+> `uart_sync_receive` polls the RX ring buffer in 1 ms ticks until `len` bytes arrive or timeout expires.
+
+### SPI app API (`spi_app.h`)
+
+```c
+// Blocking
+int32_t spi_sync_transmit(uint8_t bus_id, const uint8_t *data, uint16_t len, uint32_t timeout_ms);
+int32_t spi_sync_receive (uint8_t bus_id, uint8_t *data, uint16_t len, uint32_t timeout_ms);
+int32_t spi_sync_transfer(uint8_t bus_id, const uint8_t *tx, uint8_t *rx,
+                           uint16_t len, uint32_t timeout_ms);
+
+// Non-blocking
+int32_t spi_async_transmit(uint8_t bus_id, const uint8_t *data, uint16_t len);
+int32_t spi_async_transfer(uint8_t bus_id, const uint8_t *tx, uint8_t *rx, uint16_t len);
+```
+
+### I2C app API (`iic_app.h`)
+
+```c
+// Blocking
+int32_t iic_sync_transmit(uint8_t bus_id, uint16_t dev_addr, uint8_t reg_addr,
+                           uint8_t use_reg, const uint8_t *data, uint16_t len,
+                           uint32_t timeout_ms);
+int32_t iic_sync_receive (uint8_t bus_id, uint16_t dev_addr, uint8_t reg_addr,
+                           uint8_t use_reg, uint8_t *data, uint16_t len,
+                           uint32_t timeout_ms);
+int32_t iic_sync_probe   (uint8_t bus_id, uint16_t dev_addr, uint32_t timeout_ms);
+
+// Non-blocking
+int32_t iic_async_transmit(uint8_t bus_id, uint16_t dev_addr, uint8_t reg_addr,
+                            uint8_t use_reg, const uint8_t *data, uint16_t len);
+int32_t iic_async_receive (uint8_t bus_id, uint16_t dev_addr, uint8_t reg_addr,
+                            uint8_t use_reg, uint8_t *data, uint16_t len);
+```
+
+### GPIO app API (`gpio_app.h`)
+
+```c
+// Immediate — calls driver directly, no queue
+uint8_t gpio_read(uint8_t gpio_id);
+
+// Non-blocking — posts to gpio_mgmt queue
+int32_t gpio_async_set    (uint8_t gpio_id);
+int32_t gpio_async_clear  (uint8_t gpio_id);
+int32_t gpio_async_toggle (uint8_t gpio_id);
+int32_t gpio_async_write  (uint8_t gpio_id, uint8_t state);
+int32_t gpio_async_delayed(uint8_t gpio_id, gpio_mgmt_cmd_t cmd,
+                            uint8_t state, uint32_t delay_ms);
+```
+
+---
+
 ## Adding a New Vendor
 
 1. **Add a `MCU_VAR_*` constant** in [`include/config/mcu_config.h`](include/config/mcu_config.h).
@@ -1367,9 +1496,12 @@ Device-specific drivers sit above the generic driver layer in `include/drivers/e
 
 6. **Create a management thread** in `services/xxx_mgmt.{h,c}`.
 
-7. **Update Makefiles:**
+7. **Create a `drv_app/xxx_app.{h,c}`** — sync/async wrappers for application use.
+
+8. **Update Makefiles:**
    - `drivers/Makefile` — add `drv_xxx.o` and the HAL `.o` entries.
    - `services/Makefile` — add `xxx_mgmt.o` under the appropriate Kconfig guard.
+   - `drv_app/Makefile` — add `xxx_app.o`.
 
 ---
 
@@ -1377,7 +1509,7 @@ Device-specific drivers sit above the generic driver layer in `include/drivers/e
 
 | Makefile `-I` flag | Covers |
 |---|---|
-| `-I$(CURDIR)/include` | All project headers (`<drivers/drv_handle.h>`, `<services/uart_mgmt.h>`, …) |
+| `-I$(CURDIR)/include` | All project headers (`<drivers/drv_handle.h>`, `<services/uart_mgmt.h>`, `<drv_app/uart_app.h>`, …) |
 | `-I$(CURDIR)/include/config` | `<autoconf.h>`, `<mcu_config.h>`, `<os_config.h>` |
 | `-I$(CURDIR)` | Cross-directory driver-layer includes (`<drivers/com/hal/stm32/…>`) |
 | `-I$(CURDIR)/arch/devices/STM/stm32f4xx-hal-driver/Inc` | STM32 HAL headers |

@@ -29,6 +29,7 @@
 /* FreeRTOS */
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "task.h"
 
 /* ── Message types ────────────────────────────────────────────────────── */
 
@@ -51,6 +52,8 @@ typedef struct {
     uint8_t          dev_id;
     const uint8_t   *data;
     uint16_t         len;
+    TaskHandle_t     result_notify; /**< Task to notify on completion (NULL = async) */
+    int32_t         *result_code;   /**< Where to store the return code (NULL = ignore) */
 } uart_mgmt_msg_t;
 
 /* ── Management queue depth ───────────────────────────────────────────── */

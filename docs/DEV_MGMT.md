@@ -45,6 +45,7 @@ For the board configuration system that drives peripheral registration, see [BOA
   - [Delayed Command Flow](#delayed-command-flow)
   - [Public API](#gpio-public-api)
   - [Configuration Knobs](#gpio-configuration-knobs)
+- [Application Driver Layer — `drv_app`](#application-driver-layer--drv_app)
 - [Compile-Time Activation](#compile-time-activation)
 - [Thread Timing Summary](#thread-timing-summary)
 - [Adding a New Management Thread](#adding-a-new-management-thread)
@@ -66,6 +67,9 @@ At startup, each thread reads `board_get_config()` and iterates the board periph
 - **Async** path: post a message and return immediately (`xQueueSend` with timeout 0).
 - **Sync** path (I2C read, SPI transfer): post a message that carries `result_notify = xTaskGetCurrentTaskHandle()`, then call `ulTaskNotifyTake()`. The management thread calls `xTaskNotifyGive()` when done, waking the caller.
 
+**5. Use `drv_app/` as the recommended application interface.**
+The `drv_app` layer (`include/drv_app/`) wraps the management service APIs into simple `uart_sync_transmit()` / `spi_async_transfer()` style calls. Application tasks should include `<drv_app/uart_app.h>` etc. rather than calling `uart_mgmt_*` directly. This keeps application code independent of FreeRTOS queue internals.
+
 **5. Startup delays prevent race conditions.**
 Each management thread begins with `os_thread_delay(TIME_OFFSET_xxx)` so that the OS scheduler, IPC queues, and clocks are fully running before any peripheral hardware initialisation occurs. These delays are staggered so threads initialise sequentially.
 
@@ -76,8 +80,14 @@ Each management thread begins with `os_thread_delay(TIME_OFFSET_xxx)` so that th
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                   Application Tasks                            │
-│   uart_mgmt_async_transmit()  iic_mgmt_sync_receive()          │
-│   spi_mgmt_sync_transfer()    gpio_mgmt_post()                 │
+│   uart_sync_transmit()  iic_sync_receive()  spi_sync_transfer()│
+│   gpio_async_toggle()   gpio_read()                            │
+└──────┬───────────────┬──────────────┬───────────────┬──────────┘
+       │               │              │               │
+       ▼               ▼              ▼               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               drv_app layer  (include/drv_app/)                │
+│   uart_app.c    iic_app.c    spi_app.c    gpio_app.c           │
 └──────┬───────────────┬──────────────┬───────────────┬──────────┘
        │ xQueueSend    │              │               │
        ▼               ▼              ▼               ▼
@@ -208,22 +218,29 @@ uart_mgmt_thread()
 
          UART_MGMT_CMD_DEINIT:
            h->ops->hw_deinit(h)
+
+       if msg.result_code != NULL:
+           *msg.result_code = err           // write result back to caller
+       if msg.result_notify != NULL:
+           xTaskNotifyGive(msg.result_notify)  // wake sync caller
 ```
 
 ### UART Message Protocol
 
 ```c
 typedef enum {
-    UART_MGMT_CMD_TRANSMIT = 0,  // post data for async TX
+    UART_MGMT_CMD_TRANSMIT = 0,  // post data for TX
     UART_MGMT_CMD_REINIT,        // force deinit + init
     UART_MGMT_CMD_DEINIT,        // shut down a UART
 } uart_mgmt_cmd_t;
 
 typedef struct {
     uart_mgmt_cmd_t  cmd;
-    uint8_t          dev_id;     // which UART (matches board_device_ids.h)
-    const uint8_t   *data;       // TX buffer pointer — must remain valid!
-    uint16_t         len;        // number of bytes to transmit
+    uint8_t          dev_id;        // which UART (matches board_device_ids.h)
+    const uint8_t   *data;          // TX buffer pointer — must remain valid!
+    uint16_t         len;           // number of bytes to transmit
+    TaskHandle_t     result_notify; // non-NULL → blocking (sync) transmit
+    int32_t         *result_code;   // non-NULL → write result here
 } uart_mgmt_msg_t;
 ```
 
@@ -277,6 +294,10 @@ QueueHandle_t uart_mgmt_get_queue(void);
 // Non-blocking transmit — returns OS_ERR_OP if queue full
 int32_t uart_mgmt_async_transmit(uint8_t dev_id,
                                   const uint8_t *data, uint16_t len);
+
+// Non-blocking RX byte — reads one byte from the ISR ring buffer.
+// Returns OS_ERR_NONE if a byte was available, OS_ERR_OP if empty.
+int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte);
 ```
 
 **RX path** — receive is not handled through the queue at all. The UART ISR dispatches directly:
@@ -458,16 +479,31 @@ ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
 int32_t       iic_mgmt_start(void);
 QueueHandle_t iic_mgmt_get_queue(void);
 
-// Non-blocking write (result ignored)
+// Non-blocking write (fire-and-forget)
 int32_t iic_mgmt_async_transmit(uint8_t bus_id, uint16_t dev_addr,
                                  uint8_t reg_addr, uint8_t use_reg,
                                  const uint8_t *data, uint16_t len);
 
-// Blocking read (suspends caller until management thread completes)
+// Non-blocking read — result ignored; use sync variant if result needed
+int32_t iic_mgmt_async_receive(uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                uint8_t *data, uint16_t len);
+
+// Blocking write — suspends caller until management thread completes
+int32_t iic_mgmt_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
+                                uint8_t reg_addr, uint8_t use_reg,
+                                const uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms);
+
+// Blocking read — suspends caller until management thread completes
 int32_t iic_mgmt_sync_receive(uint8_t bus_id, uint16_t dev_addr,
                                uint8_t reg_addr, uint8_t use_reg,
                                uint8_t *data, uint16_t len,
                                uint32_t timeout_ms);
+
+// Blocking probe — returns OS_ERR_NONE if device ACKs its address
+int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
+                             uint32_t timeout_ms);
 ```
 
 ### I2C Configuration Knobs
@@ -613,6 +649,21 @@ QueueHandle_t spi_mgmt_get_queue(void);
 // Non-blocking transmit (fire-and-forget)
 int32_t spi_mgmt_async_transmit(uint8_t bus_id,
                                  const uint8_t *data, uint16_t len);
+
+// Non-blocking full-duplex transfer (fire-and-forget)
+int32_t spi_mgmt_async_transfer(uint8_t bus_id,
+                                 const uint8_t *tx, uint8_t *rx,
+                                 uint16_t len);
+
+// Blocking TX-only — suspends caller until complete
+int32_t spi_mgmt_sync_transmit(uint8_t bus_id,
+                                const uint8_t *data, uint16_t len,
+                                uint32_t timeout_ms);
+
+// Blocking RX-only — suspends caller until complete
+int32_t spi_mgmt_sync_receive(uint8_t bus_id,
+                               uint8_t *data, uint16_t len,
+                               uint32_t timeout_ms);
 
 // Blocking full-duplex transfer — suspends caller until complete
 int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
@@ -782,6 +833,87 @@ This is safe as long as only one execution context accesses the same pin at a ti
 | `PROC_SERVICE_GPIO_MGMT_PRIORITY` | `1` | Task priority |
 | `TIME_OFFSET_GPIO_MANAGEMENT` | `3000` ms | Startup delay (runs first) |
 | `GPIO_MGMT_QUEUE_DEPTH` | `16` items | Max pending commands |
+
+---
+
+## Application Driver Layer — `drv_app`
+
+**Files:**
+- `drv_app/uart_app.c` / `include/drv_app/uart_app.h`
+- `drv_app/spi_app.c`  / `include/drv_app/spi_app.h`
+- `drv_app/iic_app.c`  / `include/drv_app/iic_app.h`
+- `drv_app/gpio_app.c` / `include/drv_app/gpio_app.h`
+
+The `drv_app` layer provides the **recommended application-facing API**. It wraps the management service queues and the task-notification sync pattern into simple function calls so application tasks do not need to know about `QueueHandle_t`, `TaskHandle_t`, or `xTaskNotifyTake`.
+
+### UART App API
+
+```c
+// Blocking TX — posts to uart_mgmt queue with result_notify set
+int32_t uart_sync_transmit(uint8_t dev_id, const uint8_t *data,
+                            uint16_t len, uint32_t timeout_ms);
+
+// Blocking RX — polls uart_mgmt_read_byte() in 1 ms ticks
+int32_t uart_sync_receive(uint8_t dev_id, uint8_t *buf,
+                           uint16_t len, uint32_t timeout_ms);
+
+// Non-blocking TX — wraps uart_mgmt_async_transmit()
+int32_t uart_async_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len);
+
+// Non-blocking single-byte RX from ISR ring buffer
+int32_t uart_async_read_byte(uint8_t dev_id, uint8_t *byte);
+```
+
+### SPI App API
+
+```c
+int32_t spi_sync_transmit(uint8_t bus_id, const uint8_t *data,
+                           uint16_t len, uint32_t timeout_ms);
+int32_t spi_sync_receive(uint8_t bus_id, uint8_t *data,
+                          uint16_t len, uint32_t timeout_ms);
+int32_t spi_sync_transfer(uint8_t bus_id, const uint8_t *tx, uint8_t *rx,
+                           uint16_t len, uint32_t timeout_ms);
+int32_t spi_async_transmit(uint8_t bus_id, const uint8_t *data, uint16_t len);
+int32_t spi_async_transfer(uint8_t bus_id, const uint8_t *tx, uint8_t *rx,
+                            uint16_t len);
+```
+
+### I2C App API
+
+```c
+int32_t iic_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
+                           uint8_t reg_addr, uint8_t use_reg,
+                           const uint8_t *data, uint16_t len,
+                           uint32_t timeout_ms);
+int32_t iic_sync_receive(uint8_t bus_id, uint16_t dev_addr,
+                          uint8_t reg_addr, uint8_t use_reg,
+                          uint8_t *data, uint16_t len,
+                          uint32_t timeout_ms);
+int32_t iic_sync_probe(uint8_t bus_id, uint16_t dev_addr, uint32_t timeout_ms);
+int32_t iic_async_transmit(uint8_t bus_id, uint16_t dev_addr,
+                            uint8_t reg_addr, uint8_t use_reg,
+                            const uint8_t *data, uint16_t len);
+int32_t iic_async_receive(uint8_t bus_id, uint16_t dev_addr,
+                           uint8_t reg_addr, uint8_t use_reg,
+                           uint8_t *data, uint16_t len);
+```
+
+### GPIO App API
+
+```c
+// Direct driver read — bypasses management queue for zero-latency reads
+uint8_t gpio_read(uint8_t gpio_id);
+
+// Async commands — post via gpio_mgmt_post()
+int32_t gpio_async_set(uint8_t gpio_id);
+int32_t gpio_async_clear(uint8_t gpio_id);
+int32_t gpio_async_toggle(uint8_t gpio_id);
+int32_t gpio_async_write(uint8_t gpio_id, uint8_t state);
+int32_t gpio_async_delayed(uint8_t gpio_id, gpio_mgmt_cmd_t cmd,
+                            uint8_t state, uint32_t delay_ms);
+```
+
+> **`gpio_read` note:** GPIO reads are instantaneous and non-serialisation-critical. `gpio_read()` calls `drv_gpio_get_handle(gpio_id)->ops->read(h)` directly without going through the management queue, giving zero-latency reads safe from any task (but not from an ISR — use the HAL directly from ISR context).
 
 ---
 
