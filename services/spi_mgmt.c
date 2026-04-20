@@ -27,7 +27,7 @@ static void spi_mgmt_thread(void *arg)
     /* Register all SPI buses described in the board configuration */
     {
         const drv_spi_hal_ops_t *ops =
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
             hal_spi_stm32_get_ops();
 #else
             NULL;
@@ -44,7 +44,7 @@ static void spi_mgmt_thread(void *arg)
                  * Populate the vendor hw context BEFORE drv_spi_register()
                  * calls hw_init(), which reads Instance and all Init fields.
                  */
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
                 hal_spi_stm32_set_config(h,
                                          d->instance,
                                          d->mode,

@@ -31,6 +31,8 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include <lib/ringbuffer.h>
 #include <drivers/timer/drv_time.h>
 #include <ipc/global_var.h>
+#include <FreeRTOS.h>
+#include <atomic.h>
 
 
 
