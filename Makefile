@@ -394,6 +394,66 @@ clean-docs:
 
 
 ##############################################################
+# Prerequisite installation
+#
+# Usage (run once after cloning):
+#   make install-prerequisites        →  everything below in order
+#   make install-toolchain            →  ARM GCC + GDB  (arm-none-eabi-*)
+#   make install-openocd              →  OpenOCD flash/debug server
+#   make install-kconfig              →  kconfig-frontends  (make menuconfig)
+#   make install-debug-tools          →  SVD file + VS Code extensions
+#   make install-doxygen              →  Doxygen + Graphviz  (optional, for docs)
+
+SCRIPTS_DIR := scripts
+
+.PHONY: install-prerequisites install-toolchain install-openocd \
+        install-kconfig install-debug-tools install-doxygen
+
+install-toolchain:
+	@echo '##############################################'
+	@echo ' Installing ARM GCC Toolchain (arm-none-eabi)'
+	@echo '##############################################'
+	@bash $(SCRIPTS_DIR)/install_arm_gcc.sh
+
+install-openocd:
+	@echo '##############################################'
+	@echo ' Installing OpenOCD'
+	@echo '##############################################'
+	@bash $(SCRIPTS_DIR)/install_openocd.sh
+
+install-kconfig:
+	@echo '##############################################'
+	@echo ' Installing kconfig-frontends (menuconfig)'
+	@echo '##############################################'
+	@bash $(SCRIPTS_DIR)/install_kconfig.sh
+
+install-debug-tools:
+	@echo '##############################################'
+	@echo ' Installing debug tools (SVD + VS Code extensions)'
+	@echo '##############################################'
+	@bash $(SCRIPTS_DIR)/install_debug_tools.sh
+
+install-doxygen:
+	@echo '##############################################'
+	@echo ' Installing Doxygen + Graphviz'
+	@echo '##############################################'
+	@bash $(SCRIPTS_DIR)/install_doxygen.sh
+
+install-prerequisites: install-toolchain install-openocd install-kconfig install-debug-tools
+	@echo ''
+	@echo '============================================='
+	@echo ' All prerequisites installed.'
+	@echo ''
+	@echo ' Next steps:'
+	@echo '   make menuconfig                       configure target MCU'
+	@echo '   make config-outputs                   generate autoconf.h / autoconf.mk'
+	@echo '   make all APP_DIR=../app               build firmware'
+	@echo '   make flash                            program the target'
+	@echo '============================================='
+##############################################################
+
+
+##############################################################
 .PHONY: print-interface print-target flash docs clean-docs
 
 print-interface:

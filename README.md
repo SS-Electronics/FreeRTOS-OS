@@ -131,14 +131,52 @@ See [docs/OS_THREAD.md](docs/OS_THREAD.md) for the full thread API and [docs/QUE
 
 ## Prerequisites
 
+### One-command install (recommended)
+
 ```bash
-sudo bash scripts/install_arm_gcc.sh     # arm-none-eabi-gcc
-sudo bash scripts/install_kconfig.sh     # ncurses Kconfig front-end
-sudo bash scripts/install_openocd.sh    # OpenOCD for flash / debug
-sudo bash scripts/install_doxygen.sh    # Doxygen (optional, for make docs)
+# From FreeRTOS-OS/ directory
+make install-prerequisites
 ```
 
-See [docs/DEBUG.md](docs/DEBUG.md) for VS Code integration and GDB setup.
+Installs in order: ARM GCC toolchain → OpenOCD → kconfig-frontends → debug tools (SVD + VS Code extensions).
+
+### Individual targets
+
+| Make target | What it installs |
+|---|---|
+| `make install-toolchain` | `arm-none-eabi-gcc`, `arm-none-eabi-gdb` (via `gdb-multiarch` + symlink on Debian/Ubuntu) |
+| `make install-openocd` | OpenOCD flash/debug server |
+| `make install-kconfig` | `kconfig-frontends` — provides `make menuconfig` |
+| `make install-debug-tools` | STM32F411 SVD file + Cortex-Debug VS Code extension |
+| `make install-doxygen` | Doxygen + Graphviz (optional, for `make docs`) |
+
+### Manual install (if make targets are not available yet)
+
+```bash
+sudo bash scripts/install_arm_gcc.sh     # ARM GCC + GDB
+sudo bash scripts/install_openocd.sh     # OpenOCD
+sudo bash scripts/install_kconfig.sh     # kconfig-frontends (menuconfig)
+bash scripts/install_debug_tools.sh      # SVD file + VS Code extensions (no sudo needed)
+sudo bash scripts/install_doxygen.sh     # Doxygen (optional)
+```
+
+### ST-Link udev rules (Linux — required for non-root USB access)
+
+```bash
+sudo cp /usr/share/openocd/contrib/60-openocd.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+# Disconnect and reconnect ST-Link USB after this step.
+```
+
+### VS Code debug setup
+
+1. Open the repo root (`FreeRTOS-OS-App/`) in VS Code.
+2. Run the task **install-debug-tools** (Terminal → Run Task) to download the SVD file.
+3. Connect your ST-Link to the board (SWDIO, SWDCLK, GND — NRST optional).
+4. Press **F5** → select **Auto — Build, Flash & Debug**.
+
+See [docs/DEBUG.md](docs/DEBUG.md) for full GDB, ITM/SWO, and peripheral register viewer setup.
 
 ---
 
