@@ -11,7 +11,7 @@
  * declared in hal_timebase_stm32.h.
  */
 
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 

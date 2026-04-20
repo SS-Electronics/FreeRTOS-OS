@@ -9,7 +9,7 @@
  */
 
 #include <drivers/drv_handle.h>
-#include <config/mcu_config.h>   /* pulls board_device_ids.h → BOARD_SPI_COUNT */
+#include <board/mcu_config.h>   /* pulls board_device_ids.h → BOARD_SPI_COUNT */
 #include <def_err.h>
 
 #if (BOARD_SPI_COUNT > 0)

@@ -18,7 +18,7 @@
 
 #include <def_std.h>
 #include <conf_os.h>
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 
 /* External variables declaration */
 /* Driver mqueue ids */

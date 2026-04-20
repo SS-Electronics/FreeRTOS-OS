@@ -8,7 +8,7 @@
  */
 
 #include <drivers/drv_handle.h>
-#include <config/mcu_config.h>   /* pulls board_device_ids.h → BOARD_IIC_COUNT */
+#include <board/mcu_config.h>   /* pulls board_device_ids.h → BOARD_IIC_COUNT */
 #include <conf_os.h>
 #include <def_err.h>
 

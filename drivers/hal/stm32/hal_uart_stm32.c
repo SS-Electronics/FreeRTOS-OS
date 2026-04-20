@@ -9,7 +9,7 @@
  * layer (drv_uart.c) and higher layers never call HAL functions directly.
  */
 
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 

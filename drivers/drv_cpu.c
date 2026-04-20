@@ -12,7 +12,7 @@
  */
 
 #include <drivers/drv_handle.h>
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 #include <def_err.h>
 
 /* ── CPU / NVIC utilities ─────────────────────────────────────────────── */

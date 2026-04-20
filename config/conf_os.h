@@ -1,150 +1,110 @@
 /*
- * os_config.h
+ * conf_os.h — OS and service configuration
  *
- *  Created on: Aug 23, 2023
- *      Author: subhajit-roy
+ * Fields that have a Kconfig counterpart are driven by autoconf.h.
+ * Edit them with:  make menuconfig
+ * Regenerate:      make config-outputs
+ *
+ * Fields without a Kconfig entry (protocol stacks, module drivers,
+ * fixed IPC sizes) remain as compile-time constants here.
  */
 
 #ifndef OS_CONFIG_OS_CONF_OS_CONFIG_H_
 #define OS_CONFIG_OS_CONF_OS_CONFIG_H_
-/* All OS related configuration */
-/* System related configuration */
 
-/* Kernel types */
-#define OS_KERNEL_FREERTOS	1
+/* Pull in CONFIG_* symbols from menuconfig */
+#include "autoconf.h"
 
+/* ── Kernel selection ────────────────────────────────────────────────── */
+#define OS_KERNEL_FREERTOS      1
+#define OS_KERNEL_SELECT        OS_KERNEL_FREERTOS
 
-#define OS_KERNEL_SELECT  						OS_KERNEL_FREERTOS
+/* ── Service layer activation — driven by Kconfig ────────────────────── */
+#define INC_SERVICE_UART_MGMT           CONFIG_INC_SERVICE_UART_MGMT
+#define INC_SERVICE_OS_SHELL_MGMT       CONFIG_INC_SERVICE_OS_SHELL_MGMT
+/* Not yet in Kconfig — keep as compile-time constants */
+#define INC_SERVICE_CAN_MGMT            (0)
+#define INC_SERVICE_IIC_MGMT            (0)
+#define INC_SERVICE_ETH_MGMT            (0)
+#define INC_SERVICE_DIAGNOSTIC_MGMT     (0)
 
-/* ***************************************************
- *
- *    Service Layer Activation
- * 
- * ***************************************************/
-#define INC_SERVICE_CAN_MGMT					(0)
-#define INC_SERVICE_UART_MGMT					(1)
-#define INC_SERVICE_IIC_MGMT					(0)
-#define INC_SERVICE_OS_SHELL_MGMT				(1)
-#define INC_SERVICE_ETH_MGMT					(0)
-#define INC_SERVICE_DIAGNOSTIC_MGMT             (0)
+/* ── Protocol stack configuration ───────────────────────────────────── */
+#define ISOBUS_STACK_EN                 (1)
+#define CANOPEN_STACK_EN                (0)
 
+/* ── Module driver activation ───────────────────────────────────────── */
+#define INC_DRIVER_PCA9685              (0)
+#define INC_DRIVER_MC23017              (0)
+#define INC_DRIVER_DS3502               (0)
+#define INC_DRIVER_INA230               (0)
+#define INC_DRIVER_MCP3427              (0)
+#define INC_DRIVER_M95M02               (0)
+#define INC_DRIVER_MCP4441              (0)
+#define INC_DRIVER_MCP45HVX1            (0)
 
+/* ── IPC / pipe sizes — driven by Kconfig where available ───────────── */
+#define PIPE_USB_1_DRV_RX_SIZE          (4096)
+#define PIPE_UART_1_DRV_RX_SIZE         CONFIG_PIPE_UART_1_DRV_RX_SIZE
+#define PIPE_UART_1_DRV_TX_SIZE         CONFIG_PIPE_UART_1_DRV_TX_SIZE
+#define PIPE_CAN_1_DRV_RX_SIZE          (128)
+#define PIPE_CAN_2_DRV_RX_SIZE          (128)
+#define PIPE_CAN_3_DRV_RX_SIZE          (128)
+#define PIPE_CAN_PDU_TX_SIZE            (20)
+#define PIPE_CAN_PDU_RX_SIZE            (100)
+#define PIPE_CAN_APP_TX_SIZE            (128)
+#define PIPE_CAN_APP_RX_SIZE            (128)
+#define PIPE_IIC_PDU_TX_SIZE            (20)
+#define PIPE_IIC_PDU_RX_SIZE            (100)
+#define PIPE_DIAGNOSTICS_SIZE           (1)
 
-/* ***************************************************
- *
- *    Protocol Stack configuration
- * 
- * ***************************************************/
-#define ISOBUS_STACK_EN							(1)
-#define CANOPEN_STACK_EN						(0)
+#define ITM_PRINT_BUFF_LENGTH           CONFIG_ITM_PRINT_BUFF_LENGTH
+#define CONF_MAX_CHAR_IN_PRINTK         ITM_PRINT_BUFF_LENGTH
 
+/* UART hardware index used by printk() — must be < NO_OF_UART */
+#define COMM_PRINTK_HW_ID               (0)
 
+/* ── Debug activation — driven by Kconfig ───────────────────────────── */
+#define DRV_DEBUG_EN                    CONFIG_DRV_DEBUG_EN
+#define DEFAULT_DEBUG_EN                CONFIG_DEFAULT_DEBUG_EN
+/* Not yet in Kconfig — keep as compile-time constants */
+#define DRV_DETAIL_DEBUG_EN             (0)
+#define GW_DEBUG_EN                     (0)
+#define ITM_DEBUG_EN                    (0)
 
+/* ── Service thread properties ──────────────────────────────────────── */
+#define PROC_SERVICE_SERIAL_MGMT_STACK_SIZE     (512)
+#define PROC_SERVICE_SERIAL_MGMT_PRIORITY       (1)
 
-/* ***************************************************
- *
- *    Module drivers activation
- * 
- * ***************************************************/
-#define INC_DRIVER_PCA9685						(0)
-#define INC_DRIVER_MC23017						(0)
-#define INC_DRIVER_DS3502						(0)
-#define INC_DRIVER_INA230						(0)
-#define INC_DRIVER_MCP3427                      (0)
-#define INC_DRIVER_M95M02                       (0)
-#define INC_DRIVER_MCP4441                      (0)
-#define INC_DRIVER_MCP45HVX1                    (0)
+#define PROC_SERVICE_CAN_MGMT_STACK_SIZE        (1024)
+#define PROC_SERVICE_CAN_MGMT_PRIORITY          (1)
 
+#define PROC_SERVICE_IIC_MGMT_STACK_SIZE        (1024)
+#define PROC_SERVICE_IIC_MGMT_PRIORITY          (1)
 
-/* ***************************************************
- *
- *    Memory Properties
- * 
- * ***************************************************/
-/* IPC configuration */
-/* Driver IPC configuration */
-#define PIPE_USB_1_DRV_RX_SIZE					(4096)
-#define PIPE_UART_1_DRV_RX_SIZE					(30)
-#define PIPE_UART_1_DRV_TX_SIZE					(2048)
-#define PIPE_CAN_1_DRV_RX_SIZE					(128)
-#define PIPE_CAN_2_DRV_RX_SIZE					(128)
-#define PIPE_CAN_3_DRV_RX_SIZE					(128)
-/* Driver IPC application configuration */
-#define PIPE_CAN_PDU_TX_SIZE					(20)
-#define PIPE_CAN_PDU_RX_SIZE					(100)
-#define PIPE_CAN_APP_TX_SIZE					(128)
-#define PIPE_CAN_APP_RX_SIZE					(128)
-#define PIPE_IIC_PDU_TX_SIZE					(20)
-#define PIPE_IIC_PDU_RX_SIZE					(100)
-#define PIPE_DIAGNOSTICS_SIZE					(1)
-#define ITM_PRINT_BUFF_LENGTH                   (50)
-#define CONF_MAX_CHAR_IN_PRINTK                 ITM_PRINT_BUFF_LENGTH
+#define PROC_SERVICE_OS_SHELL_MGMT_STACK_SIZE   (1024)
+#define PROC_SERVICE_OS_SHELL_MGMT_PRIORITY     (1)
 
-/* UART hardware index used by printk() — must be < NO_OF_UART.
- * 0 = first UART (UART_DEBUG / USART1 on the default devboard). */
-#define COMM_PRINTK_HW_ID                       (0)
+#define TEST_SUITE_STACK_SIZE                   (512)
+#define TEST_SUITE_PRIORITY                     (1)
 
+/* ── Startup timing offsets (ms) ────────────────────────────────────── */
+#define TIME_OFFSET_GPIO_MANAGEMENT     (3000)
+#define TIME_OFFSET_SERIAL_MANAGEMENT   (4000)
+#define TIME_OFFSET_OS_SHELL_MGMT       (5000)
+#define TIME_OFFSET_SPI_MANAGEMENT      (5500)
+#define TIME_OFFSET_IIC_MANAGEMENT      (6500)
+#define TIME_OFFSET_ETH_MANAGEMENT      (7000)
+#define TIME_OFFSET_CAN_MANAGEMENT      (10000)
+#define TIME_OFFSET_TEST_SUITE          (11000)
 
+/* ── Timeout constants ──────────────────────────────────────────────── */
+#define TIMEOUT_IIC_PIPE_OP             (2)
+#define IIC_ACK_TIMEOUT_MS              (100)
 
-
-
-
-/* ***************************************************
- *
- *    Debug activation
- * 
- * ***************************************************/
-/* Debug activation */
-#define DRV_DEBUG_EN							(1) // Print fail cases of driver
-#define DRV_DETAIL_DEBUG_EN						(0) // All driver level TXN details
-#define DEFAULT_DEBUG_EN						(1) // Default UART related debug app level
-#define GW_DEBUG_EN								(0) // CAN Gateway debug en/dis
-#define ITM_DEBUG_EN							(0) // Debug through ITM
-
-
-
-
-/* ***************************************************
- *
- *   Service properties
- * 
- * ***************************************************/
-#define PROC_SERVICE_SERIAL_MGMT_STACK_SIZE  	(512)
-#define PROC_SERVICE_SERIAL_MGMT_PRIORITY    	(1)
-
-#define PROC_SERVICE_CAN_MGMT_STACK_SIZE		(1024)
-#define PROC_SERVICE_CAN_MGMT_PRIORITY			(1)
-
-#define PROC_SERVICE_IIC_MGMT_STACK_SIZE		(1024)
-#define PROC_SERVICE_IIC_MGMT_PRIORITY			(1)
-
-#define PROC_SERVICE_OS_SHELL_MGMT_STACK_SIZE  	(1024)
-#define PROC_SERVICE_OS_SHELL_MGMT_PRIORITY    	(1)
-
-#define TEST_SUITE_STACK_SIZE					(512)
-#define TEST_SUITE_PRIORITY						(1)
-
-
-/* ***************************************************
- *
- *   Timing related properties
- * 
- * ***************************************************/
-#define TIME_OFFSET_SERIAL_MANAGEMENT			(4000)
-#define TIME_OFFSET_OS_SHELL_MGMT				(5000)
-#define TIME_OFFSET_IIC_MANAGEMENT				(6500)
-#define TIME_OFFSET_ETH_MANAGEMENT				(7000)
-#define	TIME_OFFSET_CAN_MANAGEMENT				(10000)
-#define TIME_OFFSET_TEST_SUITE					(11000)
-
-
-
-#define TIMEOUT_IIC_PIPE_OP						(2)
-#define IIC_ACK_TIMEOUT_MS						(100)
-
-
-
-
-
+/* ── Management queue depths ────────────────────────────────────────── */
+#define UART_MGMT_QUEUE_DEPTH           (16)
+#define SPI_MGMT_QUEUE_DEPTH            (8)
+#define IIC_MGMT_QUEUE_DEPTH            (8)
+#define GPIO_MGMT_QUEUE_DEPTH           (16)
 
 #endif /* OS_CONFIG_OS_CONF_OS_CONFIG_H_ */

@@ -20,8 +20,8 @@
 
 #include <def_std.h>
 #include <def_err.h>
-#include <config/mcu_config.h>
-#include <config/os_config.h>
+#include <board/mcu_config.h>
+#include <config/conf_os.h>
 #include <drivers/drv_handle.h>
 
 #include "FreeRTOS.h"

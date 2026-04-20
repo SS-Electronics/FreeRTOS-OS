@@ -14,7 +14,7 @@
 #ifndef DRIVERS_HAL_STM32_HAL_UART_STM32_H_
 #define DRIVERS_HAL_STM32_HAL_UART_STM32_H_
 
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 

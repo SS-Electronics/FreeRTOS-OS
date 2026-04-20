@@ -38,7 +38,7 @@
 
 #include <def_std.h>
 #include <def_err.h>
-#include <config/mcu_config.h>  /* CONFIG_DEVICE_VARIANT, MCU_VAR_* */
+#include <board/mcu_config.h>  /* CONFIG_DEVICE_VARIANT, MCU_VAR_* */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1.  Forward declarations (break circular dependency with hal_ops structs)

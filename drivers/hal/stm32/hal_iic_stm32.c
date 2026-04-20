@@ -4,7 +4,7 @@
  * This file is part of FreeRTOS-OS Project.
  */
 
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_I2C_MODULE_ENABLED)
 

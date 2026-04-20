@@ -45,16 +45,18 @@ CONFIG_BOARD    ?= stm32f411_devboard
 export CONFIG_BOARD
 
 ifdef APP_DIR
-BOARD_XML       := $(APP_DIR)/board/$(CONFIG_BOARD).xml
-BOARD_BSP_C     := $(APP_DIR)/board/board_config.c
-BOARD_BSP_H     := $(APP_DIR)/board/board_device_ids.h
-BOARD_HANDLES_H := $(APP_DIR)/board/board_handles.h
+BOARD_XML          := $(APP_DIR)/board/$(CONFIG_BOARD).xml
+BOARD_BSP_C        := $(APP_DIR)/board/board_config.c
+BOARD_BSP_H        := $(APP_DIR)/board/board_device_ids.h
+BOARD_HANDLES_H    := $(APP_DIR)/board/board_handles.h
+BOARD_MCU_CONFIG_H := $(APP_DIR)/board/mcu_config.h
 else
 # Standalone kernel build — no board config; stubs in include/board/ are used.
-BOARD_XML       :=
-BOARD_BSP_C     :=
-BOARD_BSP_H     :=
-BOARD_HANDLES_H :=
+BOARD_XML          :=
+BOARD_BSP_C        :=
+BOARD_BSP_H        :=
+BOARD_HANDLES_H    :=
+BOARD_MCU_CONFIG_H :=
 endif
 ##############################################################
 
@@ -251,7 +253,7 @@ endif
 # Board files live in APP_DIR/board/. Requires APP_DIR to be set.
 # Run: make board-gen APP_DIR=../app
 ifdef APP_DIR
-$(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H): $(BOARD_XML)
+$(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H): $(BOARD_XML)
 	@echo "### Generating BSP from $< ..."
 	@python3 scripts/gen_board_config.py $< \
 		--outdir $(APP_DIR)/board \
@@ -259,7 +261,7 @@ $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H): $(BOARD_XML)
 	@echo "### BSP generation done"
 
 .PHONY: board-gen
-board-gen: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H)
+board-gen: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H)
 	@echo "### Board: $(CONFIG_BOARD)  XML: $(BOARD_XML)"
 else
 .PHONY: board-gen
@@ -274,7 +276,7 @@ endif
 # build stages
 # BSP files are generated before compiling any C source (when APP_DIR is set).
 ifdef APP_DIR
-BOARD_PREREQS := $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H)
+BOARD_PREREQS := $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H)
 else
 BOARD_PREREQS :=
 endif
@@ -353,7 +355,7 @@ $(BUILD):
 clean:
 	@rm -rf $(BUILD)
 ifdef APP_DIR
-	@rm -f $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H)
+	@rm -f $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H)
 endif
 	@echo '##############################################'
 	@echo ' '

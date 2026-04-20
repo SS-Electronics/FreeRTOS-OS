@@ -14,7 +14,7 @@
 */
 
 #include <device.h>
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 #include <ipc/mqueue.h>
 #include <ipc/global_var.h>
 #include <os/kernel.h>

@@ -398,6 +398,46 @@ _VENDOR_MAP = {
     'MICROCHIP': MicrochipCodegen,
 }
 
+# MCU → hardware-fixed peripheral counts and UART port mapping.
+# Extend this table when adding support for new MCU variants.
+_MCU_PERIPH_MAP = {
+    'STM32F411VET6': {
+        'vendor_var':    'MCU_VAR_STM',
+        'max_uart':      3,
+        'max_iic':       3,
+        'max_spi':       5,
+        'max_tim':       8,
+        'note':          'No CAN, No DAC, No FMC, No ETH on STM32F411',
+        # Ordered list of UART_N identifiers that map to physical USART instances
+        # (activation order: 1st entry enabled when NO_OF_UART>=1, etc.)
+        'uart_en_order': ['UART_1', 'UART_2', 'UART_6'],
+        'uart_ports':    [('UART_1', 'USART1'), ('UART_2', 'USART2'),
+                          ('UART_3', 'not on F411, placeholder'),
+                          ('UART_4', 'not on F411, placeholder'),
+                          ('UART_5', 'not on F411, placeholder'),
+                          ('UART_6', 'USART6'), ('UART_7', ''), ('UART_8', '')],
+        'iic_ports':     [('IIC_1', ''), ('IIC_2', ''), ('IIC_3', '')],
+        'tim_ports':     [('TIMER_1', ''), ('TIMER_2', ''),
+                          ('TIMER_3', ''), ('TIMER_4', ''), ('INVALID_TIMER_ID', '')],
+    },
+    'STM32F407VGTx': {
+        'vendor_var':    'MCU_VAR_STM',
+        'max_uart':      6,
+        'max_iic':       3,
+        'max_spi':       3,
+        'max_tim':       14,
+        'note':          'CAN1/CAN2, No ETH variant',
+        'uart_en_order': ['UART_1', 'UART_2', 'UART_3', 'UART_4', 'UART_5', 'UART_6'],
+        'uart_ports':    [('UART_1', 'USART1'), ('UART_2', 'USART2'),
+                          ('UART_3', 'USART3'), ('UART_4', 'UART4'),
+                          ('UART_5', 'UART5'),  ('UART_6', 'USART6'),
+                          ('UART_7', ''), ('UART_8', '')],
+        'iic_ports':     [('IIC_1', ''), ('IIC_2', ''), ('IIC_3', '')],
+        'tim_ports':     [('TIMER_1', ''), ('TIMER_2', ''),
+                          ('TIMER_3', ''), ('TIMER_4', ''), ('INVALID_TIMER_ID', '')],
+    },
+}
+
 
 class BoardConfigGenerator:
 
@@ -428,13 +468,15 @@ class BoardConfigGenerator:
         Path(c_outdir).mkdir(parents=True, exist_ok=True)
         Path(h_outdir).mkdir(parents=True, exist_ok=True)
 
-        c_path  = Path(c_outdir) / 'board_config.c'
-        h_path  = Path(h_outdir) / 'board_device_ids.h'
-        bh_path = Path(h_outdir) / 'board_handles.h'
+        c_path   = Path(c_outdir) / 'board_config.c'
+        h_path   = Path(h_outdir) / 'board_device_ids.h'
+        bh_path  = Path(h_outdir) / 'board_handles.h'
+        mcu_path = Path(h_outdir) / 'mcu_config.h'
 
         c_path.write_text(self._gen_board_config_c())
         h_path.write_text(self._gen_device_ids_h())
         bh_path.write_text(self._gen_board_handles_h())
+        mcu_path.write_text(self._gen_mcu_config_h())
 
         print(f'[gen_board_config] Board   : {self.board_name}')
         print(f'[gen_board_config] Vendor  : {self.vendor}  MCU: {self.mcu}')
@@ -443,6 +485,7 @@ class BoardConfigGenerator:
         print(f'[gen_board_config] -> {c_path}')
         print(f'[gen_board_config] -> {h_path}')
         print(f'[gen_board_config] -> {bh_path}')
+        print(f'[gen_board_config] -> {mcu_path}')
 
     # ── board_device_ids.h ────────────────────────────────────────────────────
 
@@ -505,6 +548,135 @@ class BoardConfigGenerator:
         L.append(_INC_GUARD_CLOSE.format(guard=guard))
         return '\n'.join(L)
 
+    # ── mcu_config.h ──────────────────────────────────────────────────────────
+
+    def _gen_mcu_config_h(self) -> str:
+        guard = 'BOARD_MCU_CONFIG_H_'
+        info  = _MCU_PERIPH_MAP.get(self.mcu, {})
+        vendor_var    = info.get('vendor_var',    'MCU_VAR_STM')
+        max_uart      = info.get('max_uart',      1)
+        max_iic       = info.get('max_iic',       0)
+        max_spi       = info.get('max_spi',       0)
+        max_tim       = info.get('max_tim',       0)
+        note          = info.get('note',          '')
+        uart_ports    = info.get('uart_ports',    [('UART_1', '')])
+        iic_ports     = info.get('iic_ports',     [('IIC_1', '')])
+        tim_ports     = info.get('tim_ports',     [('TIMER_1', ''), ('INVALID_TIMER_ID', '')])
+        # Build enable map: port_name → minimum NO_OF_UART value (or None = disabled)
+        _en_order     = info.get('uart_en_order', [p[0] for p in uart_ports[:max_uart]])
+        uart_en_map   = {name: (i + 1) for i, name in enumerate(_en_order)}
+
+        L = []
+        L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
+        L.append(_INC_GUARD_OPEN.format(guard=guard))
+        L.append(f'/* Board: {self.board_name}  MCU: {self.mcu} */')
+        L.append('')
+        L.append('#include "autoconf.h"')
+        L.append('')
+
+        L.append('/* ── MCU Vendor / Variant Selection ──────────────────────────────────────── */')
+        L.append('#define MCU_VAR_MICROCHIP   1')
+        L.append('#define MCU_VAR_STM         2')
+        L.append('')
+        L.append(f'#define CONFIG_DEVICE_VARIANT    {vendor_var}   /* {self.mcu} */')
+        L.append('')
+
+        L.append('/* ── Hardware-fixed peripheral instance counts ───────────────────────────── */')
+        L.append(f'#define MCU_MAX_UART_PERIPHERAL     {max_uart}')
+        L.append(f'#define MCU_MAX_IIC_PERIPHERAL      {max_iic}')
+        L.append(f'#define MCU_MAX_SPI_PERIPHERAL      {max_spi}')
+        L.append(f'#define MCU_MAX_TIM_PERIPHERAL      {max_tim}')
+        if note:
+            L.append(f'/* {note} */')
+        L.append('')
+
+        L.append('/* ── Board device IDs — generated from XML by gen_board_config.py ─────────── */')
+        L.append('/* Defines BOARD_UART_COUNT, BOARD_IIC_COUNT, BOARD_SPI_COUNT, BOARD_GPIO_COUNT */')
+        L.append('#include <board/board_device_ids.h>')
+        L.append('')
+
+        L.append('/* ── OS-managed peripheral counts — sourced from board config ────────────── */')
+        for macro, board_macro, fallback in [
+            ('NO_OF_UART', 'BOARD_UART_COUNT', '1'),
+            ('NO_OF_IIC',  'BOARD_IIC_COUNT',  '0'),
+            ('NO_OF_SPI',  'BOARD_SPI_COUNT',  '0'),
+            ('NO_OF_GPIO', 'BOARD_GPIO_COUNT', '0'),
+        ]:
+            L.append(f'#ifdef {board_macro}')
+            L.append(f'  #define {macro:<12}  {board_macro}')
+            L.append(f'#else')
+            L.append(f"  #define {macro:<12}  {fallback}   /* fallback — run 'make board-gen' */")
+            L.append(f'#endif')
+            L.append('')
+
+        L.append('/* ── Peripheral enable flags ─────────────────────────────────────────────── */')
+        L.append('#ifdef CONFIG_HAL_IWDG_MODULE_ENABLED')
+        L.append('  #define CONFIG_MCU_WDG_EN               (1)')
+        L.append('#else')
+        L.append('  #define CONFIG_MCU_WDG_EN               (0)')
+        L.append('#endif')
+        L.append('')
+        L.append('#define CONFIG_MCU_FLASH_DRV_EN           (1)   /* Always available */')
+        L.append('')
+        L.append('#define CONFIG_MCU_NO_OF_UART_PERIPHERAL  NO_OF_UART')
+        L.append('#define CONFIG_MCU_NO_OF_IIC_PERIPHERAL   NO_OF_IIC')
+        L.append('#define CONFIG_MCU_NO_OF_SPI_PERIPHERAL   NO_OF_SPI')
+        L.append('#define CONFIG_MCU_NO_OF_GPIO_PERIPHERAL  NO_OF_GPIO')
+        L.append('')
+        L.append('#define CONFIG_MCU_NO_OF_RS485_PERIPHERAL (0)')
+        L.append('#define CONFIG_MCU_NO_OF_CAN_PERIPHERAL   (0)')
+        L.append('#define CONFIG_MCU_NO_OF_USB_PERIPHERAL   (0)')
+        L.append('#define CONFIG_MCU_NO_OF_ETH_PERIPHERAL   (0)')
+        L.append('')
+        L.append('#ifdef CONFIG_HAL_TIM_MODULE_ENABLED')
+        L.append(f'  #define CONFIG_MCU_NO_OF_TIMER_PERIPHERAL ({min(max_tim, 2)})')
+        L.append('#else')
+        L.append('  #define CONFIG_MCU_NO_OF_TIMER_PERIPHERAL (0)')
+        L.append('#endif')
+        L.append('')
+        L.append('#define NO_OF_TIMER   CONFIG_MCU_NO_OF_TIMER_PERIPHERAL')
+        L.append('')
+
+        L.append('/* ── Individual UART instance enable — derived from board UART count ─────── */')
+        for port_name, _ in uart_ports:
+            pos = uart_en_map.get(port_name)
+            if pos is not None:
+                L.append(f'#define {port_name}_EN    (NO_OF_UART >= {pos} ? 1 : 0)')
+            else:
+                L.append(f'#define {port_name}_EN    (0)')
+        L.append('')
+
+        L.append('/* ── Peripheral identifier enumerations ─────────────────────────────────── */')
+        L.append('typedef enum')
+        L.append('{')
+        for i, (port_name, comment) in enumerate(uart_ports):
+            comma = ',' if i < len(uart_ports) - 1 else ''
+            suffix = f'  /* {comment} */' if comment else ''
+            assign = ' = 0' if i == 0 else ''
+            L.append(f'    {port_name}{assign}{comma}{suffix}')
+        L.append('} UART_PORTS;')
+        L.append('')
+        L.append('typedef enum')
+        L.append('{')
+        for i, (port_name, comment) in enumerate(iic_ports):
+            comma = ',' if i < len(iic_ports) - 1 else ''
+            suffix = f'  /* {comment} */' if comment else ''
+            assign = ' = 0' if i == 0 else ''
+            L.append(f'    {port_name}{assign}{comma}{suffix}')
+        L.append('} IIC_PORTS;')
+        L.append('')
+        L.append('typedef enum')
+        L.append('{')
+        for i, (port_name, comment) in enumerate(tim_ports):
+            comma = ',' if i < len(tim_ports) - 1 else ''
+            suffix = f'  /* {comment} */' if comment else ''
+            L.append(f'    {port_name}{comma}{suffix}')
+        L.append('} TIMER_PORTS;')
+        L.append('')
+
+        L.append(_INC_GUARD_CLOSE.format(guard=guard))
+        return '\n'.join(L)
+
     # ── board_config.c ────────────────────────────────────────────────────────
 
     def _gen_board_config_c(self) -> str:
@@ -515,7 +687,7 @@ class BoardConfigGenerator:
         L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
         L.append('#include <board/board_config.h>')
         L.append('#include <board/board_device_ids.h>')
-        L.append('#include <config/mcu_config.h>')
+        L.append('#include <board/mcu_config.h>')
         for inc in cg.device_includes():
             L.append(inc)
         L.append('')

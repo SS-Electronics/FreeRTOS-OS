@@ -8,7 +8,7 @@
 #define OS_DRIVERS_DEVICE_CPU_DRV_CPU_H_
 
 #include <drivers/drv_handle.h>
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -11,7 +11,7 @@
  *   XMC4500 Reference Manual, Chapter 16 – Universal Serial Interface Channel
  */
 
-#include <config/mcu_config.h>
+#include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
 
