@@ -1,6 +1,8 @@
 #include <stdint.h>
-#include "../system_stm32f4xx.h"
 #include "def_attributes.h"
+
+/* SystemInit is implemented in drivers/hal/stm32/hal_rcc_stm32.c */
+void SystemInit(void);
 
 
 /* Symbols from linker script */

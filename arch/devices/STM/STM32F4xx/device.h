@@ -47,18 +47,18 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 /* Generic device specifc include  */
 #include "stm32f4xx.h"
 #include "STM32F411/stm32_f411xe.h"
-#include "system_stm32f4xx.h"
 
 /* HAL Driver level include — stm32f4xx_hal.h includes all enabled modules
  * in the correct dependency order (DMA before TIM, etc.) based on hal_conf.h */
 #include "stm32f4xx_hal_conf.h"
 #include <stm32f4xx_hal.h>
 
-
-/*  Exported system variables */
-extern uint32_t             SystemCoreClock;      /*!< System Clock Frequency (Core Clock) */
-extern const uint8_t        AHBPrescTable[16];    /*!< AHB prescalers table values */
-extern const uint8_t        APBPrescTable[8];     /*!< APB prescalers table values */
+/* CMSIS system symbols — defined in hal_rcc_stm32.c (replaces system_stm32f4xx.c) */
+extern uint32_t      SystemCoreClock;   /*!< System Clock Frequency (Core Clock) */
+extern const uint8_t AHBPrescTable[16]; /*!< AHB prescalers table values         */
+extern const uint8_t APBPrescTable[8];  /*!< APB prescalers table values         */
+void SystemInit(void);
+void SystemCoreClockUpdate(void);
 
 
 

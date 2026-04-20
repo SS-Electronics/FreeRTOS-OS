@@ -78,9 +78,8 @@ INCLUDES += -I$(CURDIR)/arch/devices/STM/stm32f4xx-hal-driver/Inc
 #---------- Symbol Definition to compiler -------------- 
 SYMBOL_DEF += -DUSE_HAL_DRIVER
 
-#---------- Device-level files (startup + CMSIS system init only) ------
+#---------- Device-level files (startup only — CMSIS system init is in hal_rcc_stm32.c) ------
 obj-y += arch/devices/STM/STM32F4xx/STM32F411/startup_stm32f411vetx.o
-obj-y += arch/devices/STM/STM32F4xx/system_stm32f4xx.o
 
 
 #---------- Driver files -------------- 

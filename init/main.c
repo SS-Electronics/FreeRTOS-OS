@@ -20,48 +20,13 @@
 #include <os/kernel.h>
 #include <os/kernel_syscall.h>
 #include <drivers/cpu/drv_cpu.h>
+#include <drivers/drv_rcc.h>
 #include <services/uart_mgmt.h>
 
 
 /* ── Weak application entry point ─────────────────────────────────────── */
 
 __attribute__((weak)) int app_main(void) { return 0; }
-
-
-/* ── STM32F411 system clock: HSI PLL → 100 MHz ────────────────────────── */
-
-static void system_clock_config(void)
-{
-    RCC_OscInitTypeDef osc = {0};
-    RCC_ClkInitTypeDef clk = {0};
-
-    /* Enable PWR clock and set core voltage for 100 MHz operation */
-    __HAL_RCC_PWR_CLK_ENABLE();
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-
-    /* HSI on, drive PLL: VCO_in = 16/16 = 1 MHz, VCO_out = 200 MHz,
-     * SYSCLK = 200/2 = 100 MHz */
-    osc.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
-    osc.HSIState            = RCC_HSI_ON;
-    osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    osc.PLL.PLLState        = RCC_PLL_ON;
-    osc.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
-    osc.PLL.PLLM            = 16;
-    osc.PLL.PLLN            = 200;
-    osc.PLL.PLLP            = RCC_PLLP_DIV2;
-    osc.PLL.PLLQ            = 4;
-    HAL_RCC_OscConfig(&osc);
-
-    /* SYSCLK = PLL (100 MHz), AHB = 100 MHz,
-     * APB1 = 50 MHz (max), APB2 = 100 MHz, 3 flash wait-states */
-    clk.ClockType      = RCC_CLOCKTYPE_HCLK  | RCC_CLOCKTYPE_SYSCLK |
-                         RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    clk.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
-    clk.AHBCLKDivider  = RCC_SYSCLK_DIV1;
-    clk.APB1CLKDivider = RCC_HCLK_DIV2;
-    clk.APB2CLKDivider = RCC_HCLK_DIV1;
-    HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_3);
-}
 
 
 /* ── IPC message-queue registration for all enabled peripherals ────────── */
@@ -99,7 +64,8 @@ __SECTION_BOOT __USED void main(void)
     /* 1. Bring up HAL and configure the system clock first so all
      *    peripheral clocks derived from SYSCLK are at their final rates. */
     HAL_Init();
-    system_clock_config();
+    
+    drv_rcc_clock_init();
 
     /* 2. Set NVIC interrupt priorities required by FreeRTOS before any
      *    interrupt-driven peripheral is initialised. */
