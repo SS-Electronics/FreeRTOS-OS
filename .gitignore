@@ -57,6 +57,9 @@
 
 autoconf.mk
 
+# Generated device configuration headers (make config-outputs)
+arch/devices/device_conf/
+
 modules.order
 Module.symvers
 Mkfile.old

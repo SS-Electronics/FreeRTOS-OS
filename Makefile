@@ -150,11 +150,13 @@ export SYMBOL_DEF
 # File generation based on the input targets 
 TARGET_SYSMBOL_DEF += -D$(patsubst "%",%,$(CONFIG_TARGET_MCU))
 
+STM32_HAL_CONF_H :=
+
 ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
-	AUTOCONF_H += arch/devices/STM/stm32f4xx_hal_conf.h
-	OPENOCD_TARGET += arch/debug_cfg/stm32_f411xx_debug.cfg
-	OPENOCD_INTERFACE += interface/stlink.cfg 
-	CC_TARGET_PROP	+= -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard 
+	STM32_HAL_CONF_H   := arch/devices/device_conf/stm32f4xx_hal_conf.h
+	OPENOCD_TARGET     += arch/debug_cfg/stm32_f411xx_debug.cfg
+	OPENOCD_INTERFACE  += interface/stlink.cfg
+	CC_TARGET_PROP     += -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 endif
 
 export OPENOCD_INTERFACE
@@ -185,7 +187,7 @@ oldconfig:
 
 
 
-config-outputs: $(AUTOCONF_MK) $(AUTOCONF_H)
+config-outputs: $(AUTOCONF_MK) $(AUTOCONF_H) $(STM32_HAL_CONF_H)
 
 # ── autoconf.mk / autoconf.h — only generated when .config exists ────────────
 # Without a .config (i.e. before menuconfig has been run) the build still
@@ -225,6 +227,15 @@ $(AUTOCONF_H):
 	@mkdir -p $(dir $@)
 	@touch $@
 
+endif
+
+# ── STM32 HAL conf — generated from a static template (not from .config) ─────
+# Content is fixed; all CONFIG_* logic is resolved by the C preprocessor.
+# Depends on autoconf.h so it is refreshed whenever Kconfig changes.
+ifneq ($(STM32_HAL_CONF_H),)
+$(STM32_HAL_CONF_H): $(AUTOCONF_H)
+	@echo "### Generating $@ from $(AUTOCONF_H) ..."
+	@python3 scripts/gen_stm32_hal_conf.py $(AUTOCONF_H) $@
 endif
 ##############################################################
 

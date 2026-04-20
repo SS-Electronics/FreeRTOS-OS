@@ -70,6 +70,7 @@ endif
 ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
 
 #---------- Include paths -------------- 
+INCLUDES += -I$(CURDIR)/arch/devices/device_conf
 INCLUDES += -I$(CURDIR)/arch/devices/STM/STM32F4xx
 INCLUDES += -I$(CURDIR)/arch/devices/STM/stm32f4xx-hal-driver/Inc
 
