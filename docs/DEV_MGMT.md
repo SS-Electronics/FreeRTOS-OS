@@ -61,7 +61,7 @@ Each management thread holds exclusive ownership of its driver handles. No appli
 At startup, each thread reads `board_get_config()` and iterates the board peripheral table. It calls `hal_xxx_set_config()` (stores parameters in the handle's `hw` context) then `drv_xxx_register()` (calls `hw_init()`). No application code is needed to bring up peripherals.
 
 **3. Vendor selection at compile time, not runtime.**
-`CONFIG_DEVICE_VARIANT` (set in `include/config/mcu_config.h`) selects which HAL backend's ops table is bound. The management threads contain `#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)` guards — unused vendor branches are dead-code eliminated.
+`CONFIG_DEVICE_VARIANT` (set in `app/board/mcu_config.h`) selects which HAL backend's ops table is bound. The management threads contain `#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)` guards — unused vendor branches are dead-code eliminated.
 
 **4. Callers never block on the bus.**
 - **Async** path: post a message and return immediately (`xQueueSend` with timeout 0).
@@ -169,7 +169,7 @@ main() / app_main()
 - [services/uart_mgmt.c](services/uart_mgmt.c)
 - [include/services/uart_mgmt.h](include/services/uart_mgmt.h)
 
-**Compile guard:** `INC_SERVICE_UART_MGMT == 1` (set in `include/config/os_config.h`)
+**Compile guard:** `INC_SERVICE_UART_MGMT == 1` (set in `config/conf_os.h` via `make menuconfig`)
 
 ### UART State
 
@@ -311,7 +311,7 @@ HAL_UART_RxCpltCallback(huart)
 
 ### UART Configuration Knobs
 
-All in `include/config/os_config.h`:
+All in `config/conf_os.h` (editable via `make menuconfig`):
 
 | Macro | Default | Effect |
 |-------|---------|--------|
@@ -510,7 +510,7 @@ int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
 
 | Macro | Default | Effect |
 |-------|---------|--------|
-| `INC_SERVICE_IIC_MGMT` | `0` | Enable/disable the thread |
+| `INC_SERVICE_IIC_MGMT` | `1` | Enable/disable the thread |
 | `PROC_SERVICE_IIC_MGMT_STACK_SIZE` | `1024` words | Stack depth |
 | `PROC_SERVICE_IIC_MGMT_PRIORITY` | `1` | Task priority |
 | `TIME_OFFSET_IIC_MANAGEMENT` | `6500` ms | Startup delay |
@@ -919,12 +919,12 @@ int32_t gpio_async_delayed(uint8_t gpio_id, gpio_mgmt_cmd_t cmd,
 
 ## Compile-Time Activation
 
-Management threads are enabled/disabled in `include/config/os_config.h`:
+Management threads are enabled/disabled in `config/conf_os.h` (set via `make menuconfig`):
 
 | Service | Guard macro | Default |
 |---------|-------------|---------|
 | UART management | `INC_SERVICE_UART_MGMT == 1` | `1` (enabled) |
-| I2C management | `INC_SERVICE_IIC_MGMT == 1` | `0` (disabled) |
+| I2C management | `INC_SERVICE_IIC_MGMT == 1` | `1` (enabled) |
 | SPI management | `BOARD_SPI_COUNT > 0` | depends on board XML |
 | GPIO management | always compiled | always active |
 
@@ -1023,7 +1023,7 @@ int32_t can_mgmt_start(void) {
 }
 ```
 
-**3. Add activation flag in `os_config.h`:**
+**3. Add activation flag in `config/conf_os.h` (or add a Kconfig entry in `kernel/Kconfig`):**
 
 ```c
 #define INC_SERVICE_CAN_MGMT   (1)

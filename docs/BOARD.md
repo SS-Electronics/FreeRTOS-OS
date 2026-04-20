@@ -54,7 +54,8 @@ FreeRTOS-OS-App/
 │       ├── stm32f411_devboard.xml     ← user-authored board description
 │       ├── board_config.c             ← generated — do not edit
 │       ├── board_device_ids.h         ← generated — do not edit
-│       └── board_handles.h            ← generated — do not edit
+│       ├── board_handles.h            ← generated — do not edit
+│       └── mcu_config.h               ← generated — do not edit
 │
 └── FreeRTOS-OS/
     ├── include/
@@ -84,25 +85,28 @@ app/board/<board>.xml          (user authors / edits)
 │  ├── Parses XML with ElementTree                      │
 │  ├── Selects VendorCodegen backend (STM / Infineon …) │
 │  ├── Translates XML attributes → HAL constants        │
-│  └── Emits three files ────────────────────────────── │
+│  └── Emits four files ─────────────────────────────── │
 └───────────────────────────────────────────────────────┘
-        │                │                │
-        ▼                ▼                ▼
-app/board/          app/board/       app/board/
-board_device_ids.h  board_handles.h  board_config.c
-  #define UART_DEBUG 0  extern huart1   _uart_table[]
-  #define BOARD_UART_COUNT 2            _gpio_table[]
-  …                                     board_get_config()
-                                        board_uart_register_rx_cb()
-                                        …
-        │                │                │
-        └────────────────┴────────────────┘
+        │          │              │             │
+        ▼          ▼              ▼             ▼
+app/board/    app/board/    app/board/    app/board/
+board_        board_        board_        mcu_config.h
+device_ids.h  handles.h     config.c        CONFIG_DEVICE_VARIANT
+#define         extern        _uart_table[]   MCU_VAR_STM
+UART_DEBUG 0    huart1        _gpio_table[]   UART_1_EN …
+BOARD_UART_     …             board_get_      NO_OF_UART
+COUNT 2                       config()        UART_PORTS enum
+…                             board_uart_     …
+                              register_rx_cb()
+        │          │              │             │
+        └──────────┴──────────────┴─────────────┘
                          │  #include <board/board_device_ids.h>
                          │  #include <board/board_config.h>
+                         │  #include <board/mcu_config.h>
                          ▼
-              include/config/mcu_config.h
+              app/board/mcu_config.h
                 #define NO_OF_UART  BOARD_UART_COUNT
-                (re-exports counts for backward compatibility)
+                (re-exports counts, enables per-UART macros)
                          │
                          ▼
            drivers/drv_uart.c   drv_iic.c   drv_spi.c   drv_gpio.c
@@ -304,13 +308,14 @@ All `<tx>`, `<rx>`, `<scl>`, `<sda>`, `<sck>`, `<miso>`, `<mosi>`, `<nss_pin>` e
 ```
 gen_board_config.py
 ├── _BANNER / _INC_GUARD_OPEN/_CLOSE   — file header templates
+├── _MCU_PERIPH_MAP                    — per-MCU capability dict (uart_en_order, counts…)
 ├── VendorCodegen (abstract base class)
 │   ├── STM32Codegen                   — STM32 HAL constant translation
 │   ├── InfineonCodegen                — XMC baremetal stubs
 │   └── MicrochipCodegen               — SERCOM/USART stubs
-└── BoardConfigGen
-    ├── generate(c_outdir, h_outdir)   — top-level entry point
-    ├── _gen_board_config_c()
+└── BoardConfigGenerator
+    ├── generate(c_outdir, h_outdir)   — top-level entry point (writes 4 files)
+    ├── _gen_board_config_c()          — variant-gated device.h include + tables
     │   ├── _emit_uart_table()
     │   ├── _emit_iic_table()
     │   ├── _emit_spi_table()
@@ -319,7 +324,8 @@ gen_board_config.py
     │   ├── _emit_callback_tables()
     │   └── _emit_board_api()
     ├── _gen_device_ids_h()
-    └── _gen_board_handles_h()
+    ├── _gen_board_handles_h()
+    └── _gen_mcu_config_h()            — CONFIG_DEVICE_VARIANT, UART_N_EN, enums
 ```
 
 **CLI:**
@@ -415,7 +421,7 @@ static void _usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
 
 ## Generated Files
 
-All three generated files are placed in `app/board/` and are regenerated on every `make board-gen`. **Do not edit them** — edit the XML instead.
+All four generated files are placed in `app/board/` and are regenerated on every `make board-gen`. **Do not edit them** — edit the XML instead.
 
 ### board_device_ids.h
 
@@ -442,7 +448,7 @@ All three generated files are placed in `app/board/` and are regenerated on ever
 #define BOARD_GPIO_COUNT     3
 ```
 
-`BOARD_*_COUNT` constants drive static array sizes in the driver layer. `include/config/mcu_config.h` re-exports them as `NO_OF_UART`, `NO_OF_IIC`, `NO_OF_SPI`, `NO_OF_GPIO` for driver source compatibility.
+`BOARD_*_COUNT` constants drive static array sizes in the driver layer. `app/board/mcu_config.h` re-exports them as `NO_OF_UART`, `NO_OF_IIC`, `NO_OF_SPI`, `NO_OF_GPIO` for driver source compatibility, and also defines `CONFIG_DEVICE_VARIANT`, per-UART enable macros (`UART_1_EN` … `UART_6_EN`), and port enumerations.
 
 ### board_handles.h
 
@@ -514,6 +520,37 @@ static const board_uart_desc_t _uart_table[BOARD_UART_COUNT] = {
 };
 ```
 
+### mcu_config.h
+
+`app/board/mcu_config.h`
+
+Generated from the `mcu` attribute in the board XML and the `_MCU_PERIPH_MAP` table inside the generator. Contains:
+
+1. **Vendor variant constant** — `MCU_VAR_STM`, `MCU_VAR_MICROCHIP`, `MCU_VAR_INFINEON` values and `CONFIG_DEVICE_VARIANT` set to the correct one.
+2. **MCU peripheral maximums** — `MCU_MAX_UART_PERIPHERAL`, `MCU_MAX_IIC_PERIPHERAL`, etc.
+3. **Board peripheral counts** — `NO_OF_UART`, `NO_OF_IIC`, etc. mapped from `BOARD_*_COUNT`.
+4. **Per-UART enable macros** — `UART_1_EN` … `UART_6_EN` mapped to `NO_OF_UART` with the correct physical UART ordering for the MCU (e.g. STM32F411 uses USART6 as the 3rd UART, not USART3).
+5. **Port enumerations** — `UART_PORTS`, `IIC_PORTS`, `TIMER_PORTS` typedefs.
+
+Example for STM32F411VET6 with 2 UARTs configured in the board XML:
+
+```c
+#define MCU_VAR_STM              2
+#define CONFIG_DEVICE_VARIANT    MCU_VAR_STM
+#define MCU_MAX_UART_PERIPHERAL  3
+
+#define NO_OF_UART               BOARD_UART_COUNT    /* 2 */
+#define UART_1_EN    (NO_OF_UART >= 1 ? 1 : 0)      /* 1 */
+#define UART_2_EN    (NO_OF_UART >= 2 ? 1 : 0)      /* 1 */
+#define UART_3_EN    (0)     /* not a physical USART on STM32F411 */
+#define UART_6_EN    (NO_OF_UART >= 3 ? 1 : 0)      /* 0 — 3rd UART is USART6 */
+
+typedef enum { UART_1=0, UART_2, UART_3, UART_4, UART_5, UART_6 } UART_PORTS;
+typedef enum { IIC_1=0, IIC_2, IIC_3 } IIC_PORTS;
+```
+
+This file is the canonical source for vendor variant and peripheral capability information across the entire driver stack.
+
 ---
 
 ## Makefile Integration
@@ -526,19 +563,20 @@ Board files live in the application tree. The build system wires them in automat
 CONFIG_BOARD    ?= stm32f411_devboard
 
 ifdef APP_DIR
-BOARD_XML       := $(APP_DIR)/board/$(CONFIG_BOARD).xml
-BOARD_BSP_C     := $(APP_DIR)/board/board_config.c
-BOARD_BSP_H     := $(APP_DIR)/board/board_device_ids.h
-BOARD_HANDLES_H := $(APP_DIR)/board/board_handles.h
+BOARD_XML          := $(APP_DIR)/board/$(CONFIG_BOARD).xml
+BOARD_BSP_C        := $(APP_DIR)/board/board_config.c
+BOARD_BSP_H        := $(APP_DIR)/board/board_device_ids.h
+BOARD_HANDLES_H    := $(APP_DIR)/board/board_handles.h
+BOARD_MCU_CONFIG_H := $(APP_DIR)/board/mcu_config.h
 # Prepend so app/board/ headers shadow the include/board/ stubs
-INCLUDES        += -I$(APP_DIR)    # added first, before arch and OS includes
+INCLUDES           += -I$(APP_DIR)    # added first, before arch and OS includes
 endif
 ```
 
 ### board-gen recipe
 
 ```makefile
-$(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H): $(BOARD_XML)
+$(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H): $(BOARD_XML)
     python3 scripts/gen_board_config.py $< \
         --outdir $(APP_DIR)/board \
         --incdir $(APP_DIR)/board
