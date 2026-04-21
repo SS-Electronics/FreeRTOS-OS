@@ -179,6 +179,32 @@ Board XML files live in `app/board/<board_name>.xml`. The filename (without `.xm
 | `stop_bits`  | `1`, `2`                         | |
 | `parity`     | `none`, `even`, `odd`            | |
 | `mode`       | `tx_rx`, `tx`, `rx`              | |
+| `role`       | `shell` (optional)               | Marks this UART as the OS shell CLI port; generator emits `BOARD_UART_SHELL_ID` and `.uart_shell_id` |
+
+**Shell role example:**
+
+```xml
+<uart id="UART_APP"
+      dev_id="1"
+      instance="USART2"
+      baudrate="115200"
+      word_len="8"
+      stop_bits="1"
+      parity="none"
+      mode="tx_rx"
+      role="shell">
+  …
+</uart>
+```
+
+Exactly one UART should carry `role="shell"`. The generator emits:
+
+```c
+/* UART role assignments */
+#define BOARD_UART_SHELL_ID   UART_APP   /* role="shell" */
+```
+
+and sets `.uart_shell_id = UART_APP` in `g_board_config`. `board_get_shell_uart_id()` returns this value at runtime. `UART_SHELL_HW_ID` in `config/conf_os.h` must match.
 
 Child `<tx>` / `<rx>` pin attributes — see [Pin Attribute Reference](#pin-attribute-reference).
 
@@ -446,6 +472,9 @@ All four generated files are placed in `app/board/` and are regenerated on every
 #define BTN_USER             1
 #define LED_STATUS           2
 #define BOARD_GPIO_COUNT     3
+
+/* UART role assignments (emitted when role="shell" is set in the XML) */
+#define BOARD_UART_SHELL_ID  UART_APP   /* role="shell" */
 ```
 
 `BOARD_*_COUNT` constants drive static array sizes in the driver layer. `app/board/mcu_config.h` re-exports them as `NO_OF_UART`, `NO_OF_IIC`, `NO_OF_SPI`, `NO_OF_GPIO` for driver source compatibility, and also defines `CONFIG_DEVICE_VARIANT`, per-UART enable macros (`UART_1_EN` … `UART_6_EN`), and port enumerations.
@@ -484,15 +513,30 @@ The actual definitions (`UART_HandleTypeDef huart1;` etc.) live in `board_config
 
 Compiled as an **application source** (via `app-obj-y += board/board_config.o` in `app/Makefile`). Contains:
 
-1. **HAL handle definitions** — `UART_HandleTypeDef huart1;` etc., guarded by `HAL_xxx_MODULE_ENABLED`
-2. **Peripheral clock-enable wrappers** — one static function per peripheral instance
-3. **Peripheral descriptor tables** — `_uart_table[]`, `_iic_table[]`, `_spi_table[]`, `_gpio_table[]`; each entry is a fully initialised descriptor struct with all HAL constants filled in; each table is wrapped in `#ifdef HAL_xxx_MODULE_ENABLED`
-4. **Top-level `g_board_config`** — the one `board_config_t` instance returned by `board_get_config()`
-5. **`board_get_config()`** — returns `&g_board_config`
-6. **`board_find_uart/iic/spi()`** — linear search helpers returning a descriptor by peripheral instance pointer
-7. **`board_gpio_clk_enable()`** — if/else chain enabling the RCC clock for a given GPIO port
-8. **Mutable callback tables** — `board_uart_cbs_t _uart_cbs[BOARD_UART_COUNT]` etc., zero-initialised
-9. **Callback registration and getter functions** — `board_uart_register_rx_cb()`, `board_get_uart_cbs()`, etc.
+1. **CMSIS system variables** (STM32 only) — `SystemCoreClock`, `AHBPrescTable[16]`, `APBPrescTable[8]`; placed in `.boot_data` so they are valid before the `.data` copy runs (CMSIS `SystemInit` / `SystemCoreClockUpdate` run before `.data` initialisation)
+2. **HAL handle definitions** — `UART_HandleTypeDef huart1;` etc., guarded by `HAL_xxx_MODULE_ENABLED`
+3. **Peripheral clock-enable wrappers** — one static function per peripheral instance
+4. **Peripheral descriptor tables** — `_uart_table[]`, `_iic_table[]`, `_spi_table[]`, `_gpio_table[]`; each entry is a fully initialised descriptor struct with all HAL constants filled in; each table is wrapped in `#ifdef HAL_xxx_MODULE_ENABLED`
+5. **Top-level `g_board_config`** — the one `board_config_t` instance returned by `board_get_config()`; the `.uart_shell_id` field is set from `BOARD_UART_SHELL_ID` when a `role="shell"` UART is defined
+6. **`board_get_config()`** — returns `&g_board_config`
+7. **`board_get_shell_uart_id()`** — returns `g_board_config.uart_shell_id`
+8. **`board_find_uart/iic/spi()`** — linear search helpers returning a descriptor by peripheral instance pointer
+9. **`board_gpio_clk_enable()`** — if/else chain enabling the RCC clock for a given GPIO port
+10. **Mutable callback tables** — `board_uart_cbs_t _uart_cbs[BOARD_UART_COUNT]` etc., zero-initialised
+11. **Callback registration and getter functions** — `board_uart_register_rx_cb()`, `board_get_uart_cbs()`, etc.
+
+**CMSIS variable block (emitted for `vendor="STM"`):**
+
+```c
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+#include <def_attributes.h>
+__SECTION_BOOT_DATA uint32_t SystemCoreClock = BOARD_SYSCLK_HZ;
+const uint8_t AHBPrescTable[16] = {0,0,0,0,0,0,0,0,1,2,3,4,6,7,8,9};
+const uint8_t APBPrescTable[8]  = {0,0,0,0,1,2,3,4};
+#endif
+```
+
+These were formerly provided by the vendor's `system_stm32f4xx.c`. Placing them here means regenerating the BSP never loses these symbols — a linker error appears immediately if the XML is regenerated with a generator that lacks the STM CMSIS block.
 
 Example UART table entry:
 

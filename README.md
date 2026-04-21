@@ -15,6 +15,7 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
 | [docs/DRIVERS.md](docs/DRIVERS.md) | 3-layer driver architecture, HAL ops vtables, vendor backends |
 | [docs/BOARD.md](docs/BOARD.md) | Board XML schema, BSP code generator, adding boards/vendors |
 | [docs/DEV_MGMT.md](docs/DEV_MGMT.md) | UART / I2C / SPI / GPIO management service threads |
+| [docs/SHELL_CLI.md](docs/SHELL_CLI.md) | OS shell CLI, FreeRTOS+CLI, printk, registering commands |
 | [docs/DEBUG.md](docs/DEBUG.md) | VSCode debug setup, OpenOCD, GDB, ITM/SWO |
 
 ---
@@ -30,6 +31,7 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
 ┌────────────────────────────▼─────────────────────────────────────┐
 │                      Service Layer                               │
 │     UART Mgmt · I2C Mgmt · SPI Mgmt · GPIO Mgmt                │
+│     OS Shell (FreeRTOS+CLI, ring-buffer I/O over shell UART)    │
 │     (FreeRTOS tasks; self-register from board config at boot)   │
 └───────────┬──────────────────────────────┬───────────────────────┘
             │                              │
@@ -107,25 +109,33 @@ Implement `app_main()` in `app/app_main.c`. The OS calls it after the scheduler 
 
 ```c
 #include <os/kernel.h>
+#include <os/kernel_syscall.h>
 #include <services/uart_mgmt.h>
 #include <services/gpio_mgmt.h>
+#include <services/os_shell_management.h>
+#include <board/board_device_ids.h>
 
 static void heartbeat(void *arg)
 {
+    uint32_t count = 0;
     for (;;) {
-        gpio_mgmt_post(0, GPIO_MGMT_CMD_TOGGLE, 0, 0);   /* toggle LED_BOARD */
+        gpio_mgmt_post(LED_BOARD, GPIO_MGMT_CMD_TOGGLE, 0, 0);
+        printk("heartbeat: tick %lu\n", (unsigned long)count++);
         os_thread_delay(500);
     }
 }
 
 int app_main(void)
 {
+    os_shell_mgmt_start();                                     /* start shell CLI */
     os_thread_create(heartbeat, "heartbeat", 256, 2, NULL);
     return 0;
 }
 ```
 
-See [docs/OS_THREAD.md](docs/OS_THREAD.md) for the full thread API and [docs/QUEUE.md](docs/QUEUE.md) for IPC patterns.
+`printk()` accepts `printf`-style variadic format arguments. Output goes to `COMM_PRINTK_HW_ID` (UART_DEBUG by default); the shell CLI runs independently on `UART_SHELL_HW_ID` (UART_APP). Both use interrupt-driven ring-buffer TX.
+
+See [docs/OS_THREAD.md](docs/OS_THREAD.md) for the full thread API, [docs/QUEUE.md](docs/QUEUE.md) for IPC patterns, and [docs/SHELL_CLI.md](docs/SHELL_CLI.md) for the shell system.
 
 ---
 

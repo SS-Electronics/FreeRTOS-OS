@@ -360,6 +360,7 @@ See [DEBUG.md](DEBUG.md) for the complete setup, configuration, and troubleshoot
 | [BOARD.md](BOARD.md) | XML board description, code generator, generated files, Makefile integration |
 | [DRIVERS.md](DRIVERS.md) | Full driver architecture, Layer 0–3 details, vendor porting, include paths |
 | [DEV_MGMT.md](DEV_MGMT.md) | Management service threads, message protocols, sync/async patterns |
+| [SHELL_CLI.md](SHELL_CLI.md) | OS shell CLI over UART, FreeRTOS+CLI integration, printk, registering commands |
 | [DEBUG.md](DEBUG.md) | VSCode debug setup, OpenOCD config, FreeRTOS task awareness, SWO |
 | [OS_THREAD.md](OS_THREAD.md) | OS thread creation, priorities, scheduling |
 | [QUEUE.md](QUEUE.md) | IPC queues and ring buffers |

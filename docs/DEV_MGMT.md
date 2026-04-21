@@ -45,6 +45,7 @@ For the board configuration system that drives peripheral registration, see [BOA
   - [Delayed Command Flow](#delayed-command-flow)
   - [Public API](#gpio-public-api)
   - [Configuration Knobs](#gpio-configuration-knobs)
+- [OS Shell Management — `os_shell_mgmt`](#os-shell-management--os_shell_mgmt)
 - [Application Driver Layer — `drv_app`](#application-driver-layer--drv_app)
 - [Compile-Time Activation](#compile-time-activation)
 - [Thread Timing Summary](#thread-timing-summary)
@@ -833,6 +834,122 @@ This is safe as long as only one execution context accesses the same pin at a ti
 | `PROC_SERVICE_GPIO_MGMT_PRIORITY` | `1` | Task priority |
 | `TIME_OFFSET_GPIO_MANAGEMENT` | `3000` ms | Startup delay (runs first) |
 | `GPIO_MGMT_QUEUE_DEPTH` | `16` items | Max pending commands |
+
+---
+
+## OS Shell Management — `os_shell_mgmt`
+
+**Files:**
+- [services/os_shell_management.c](services/os_shell_management.c)
+- [include/services/os_shell_management.h](include/services/os_shell_management.h)
+
+**Compile guard:** `INC_SERVICE_OS_SHELL_MGMT == 1` (set in `config/conf_os.h`)
+
+The OS shell is a FreeRTOS+CLI-backed interactive console accessed over the designated shell UART (`UART_SHELL_HW_ID`). It is a consumer of the UART ring-buffer infrastructure rather than a management owner — it reads from `global_uart_rx_mqueue_list[UART_SHELL_HW_ID]` (filled by the UART ISR via the IRQ desc chain) and writes into `global_uart_tx_mqueue_list[UART_SHELL_HW_ID]` (drained by the TXEIE interrupt path).
+
+### Shell I/O Path
+
+```
+USART2_IRQHandler()
+  └─ hal_uart_stm32_irq_handler()
+       ├─ RXNE: ringbuffer_putchar(global_uart_rx_mqueue_list[1], byte)
+       │         drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(1), ...)
+       └─ TXE:  drv_uart_tx_get_next_byte(1, &b)
+                 WRITE_REG(USART2->DR, b)
+                 (TXEIE disabled when ring buffer empties)
+
+_os_shell_task()
+  ├─ reads bytes from global_uart_rx_mqueue_list[UART_SHELL_HW_ID]
+  ├─ assembles lines (backspace/DEL, Ctrl-C clear, CR/LF submit)
+  └─ FreeRTOS_CLIProcessCommand() → _shell_write() → ring buffer + drv_uart_tx_kick()
+```
+
+The shell task never calls `uart_mgmt_async_transmit()`. It writes directly to the TX ring buffer and calls `drv_uart_tx_kick()` to enable TXEIE, so the shell works independently of the `uart_mgmt` queue depth.
+
+### Thread Body
+
+```
+_os_shell_task()
+│
+├─ os_thread_delay(TIME_OFFSET_OS_SHELL_MGMT)   // starts after uart_mgmt is ready
+│
+├─ FreeRTOS_CLIRegisterCommand(&help_cmd)
+├─ FreeRTOS_CLIRegisterCommand(&version_cmd)
+├─ FreeRTOS_CLIRegisterCommand(&uptime_cmd)
+├─ FreeRTOS_CLIRegisterCommand(&reboot_cmd)
+│
+└─ for (;;):
+       byte = ringbuffer_getchar(rx_rb)
+       if no byte:
+           vTaskDelay(pdMS_TO_TICKS(5))    // yield — no busy-poll
+           continue
+       accumulate into _line_buf[]
+       on CR or LF:
+           _shell_process_line()
+               do {
+                   more = FreeRTOS_CLIProcessCommand(
+                               _line_buf, _out_buf, SHELL_OUT_BUF_LEN)
+                   _shell_write(_out_buf, strlen(_out_buf))
+               } while (more == pdTRUE)
+           emit prompt "> "
+```
+
+### Built-in Commands
+
+| Command   | Description |
+|-----------|-------------|
+| `help`    | Lists all registered commands with their help strings |
+| `version` | Prints the firmware version string |
+| `uptime`  | Prints scheduler tick count and elapsed time |
+| `reboot`  | Calls `NVIC_SystemReset()` — immediate MCU reset |
+
+### Registering Application Commands
+
+```c
+#include <services/os_shell_management.h>
+
+static BaseType_t my_cmd_handler(char *out, size_t out_len,
+                                  const char *args)
+{
+    snprintf(out, out_len, "hello from my_cmd\r\n");
+    return pdFALSE;   /* pdTRUE = more output pending, pdFALSE = done */
+}
+
+static const CLI_Command_Definition_t my_cmd = {
+    "my_cmd",
+    "my_cmd: prints a greeting\r\n",
+    my_cmd_handler,
+    0   /* expected parameter count */
+};
+
+/* Call before os_shell_mgmt_start(), or from any task before the shell task runs */
+os_shell_register_command(&my_cmd);
+```
+
+### Public API
+
+```c
+/* Start the shell task — call before vTaskStartScheduler() */
+int32_t os_shell_mgmt_start(void);
+
+/* Register a FreeRTOS+CLI command definition */
+static inline BaseType_t os_shell_register_command(
+        const CLI_Command_Definition_t *cmd);
+```
+
+### Configuration Knobs
+
+All in `config/conf_os.h`:
+
+| Macro | Default | Effect |
+|-------|---------|--------|
+| `INC_SERVICE_OS_SHELL_MGMT` | `1` | Compile and start the shell task |
+| `UART_SHELL_HW_ID` | `1` | `dev_id` of the shell UART (must match `BOARD_UART_SHELL_ID`) |
+| `SHELL_LINE_BUF_LEN` | `128` | Max input line length in bytes |
+| `SHELL_OUT_BUF_LEN` | `512` | Output scratch buffer per CLI call |
+| `TIME_OFFSET_OS_SHELL_MGMT` | `4500` ms | Startup delay — must be > `TIME_OFFSET_SERIAL_MANAGEMENT` |
+
+See [SHELL_CLI.md](SHELL_CLI.md) for the full shell system architecture and guide.
 
 ---
 
