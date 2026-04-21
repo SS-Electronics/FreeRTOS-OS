@@ -13,9 +13,8 @@ include autoconf.mk
 INCLUDES += -I$(CURDIR)/include/services
 
 # ── Kernel / core services ─────────────────────────────────────────────────
-# kernel_service_core.o removed: replaced by uart_mgmt_start() / gpio_mgmt_start()
+obj-y += services/kernel_service_core.o
 obj-y += services/kernel_service_task_manager.o
-obj-y += services/kernel_syscall.o
 
 # ── Driver management service threads ──────────────────────────────────────
 

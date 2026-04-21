@@ -225,6 +225,14 @@ typedef struct drv_uart_hal_ops {
     void    (*rx_isr_cb)(drv_uart_handle_t *h,
                          uint8_t            rx_byte,
                          void              *rb);
+
+    /**
+     * @brief  Kick interrupt-driven TX from the TX ring buffer.
+     *         Enables the TXE interrupt so the ISR drains the ring buffer.
+     *         Safe to call from task context while TX is already in progress
+     *         (re-enabling an already-set interrupt enable bit is a no-op).
+     */
+    void    (*tx_start)(drv_uart_handle_t *h);
 } drv_uart_hal_ops_t;
 
 
@@ -472,6 +480,20 @@ int32_t drv_timer_register(uint8_t dev_id, const drv_timer_hal_ops_t *ops);
 int32_t drv_wdg_register  (const drv_wdg_hal_ops_t *ops);
 
 drv_uart_handle_t  *drv_uart_get_handle (uint8_t dev_id);
+
+/**
+ * drv_uart_tx_kick — enable the TXE interrupt to start draining the TX ring
+ *                    buffer for @p dev_id.  Call after writing to the TX queue
+ *                    (e.g. from printk).  Safe to call when TX is already active.
+ */
+int32_t drv_uart_tx_kick(uint8_t dev_id);
+
+/**
+ * drv_uart_tx_get_next_byte — pull the next byte from the TX ring buffer.
+ *                              Called from the UART TXE ISR.
+ * @return OS_ERR_NONE if @p byte was filled, OS_ERR_OP if the buffer is empty.
+ */
+int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte);
 drv_iic_handle_t   *drv_iic_get_handle  (uint8_t dev_id);
 drv_spi_handle_t   *drv_spi_get_handle  (uint8_t dev_id);
 drv_gpio_handle_t  *drv_gpio_get_handle (uint8_t dev_id);

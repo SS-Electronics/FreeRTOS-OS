@@ -13,7 +13,7 @@
  * Call chain (from hardware to driver):
  *
  *   CPU vector (startup)
- *     → hal_it_stm32.c (USART1_IRQHandler etc.)
+ *     → irq_periph_dispatch_generated.c (USART1_IRQHandler etc.)
  *        → hal_xxx_stm32_irq_handler()
  *           → drv_irq_dispatch_from_isr(irq_id, data, pxHPT)
  *              → __do_IRQ_from_isr(irq_id, data, pxHPT)
@@ -32,6 +32,7 @@
 #include <def_std.h>
 #include <FreeRTOS.h>
 #include <irq/irq_notify.h>   /* irq_id_t, IRQ_ID_TOTAL, IRQ_NOTIFY_MAX_SUBS */
+#include <mm/list.h>          /* struct list_node, list_for_each_entry, ... */
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,7 +109,7 @@ struct irqaction {
     irq_handler_t      handler;  /* driver ISR                        */
     void              *dev_id;   /* caller context                    */
     const char        *name;     /* device name (for debug/irq_table) */
-    struct irqaction  *next;     /* next handler in chain             */
+    struct list_node   node;     /* linkage in desc->action_list      */
 };
 
 /* ── irq_flow_handler_t — chip-level flow handler ────────────────────────── */
@@ -124,7 +125,7 @@ struct irq_desc {
     struct irq_data         irq_data;
 
     irq_flow_handler_t      handle_irq;         /* chip flow handler          */
-    struct irqaction       *action;             /* driver ISR chain           */
+    struct list_node        action_list;        /* head sentinel of irqaction chain */
 
     unsigned int            status_use_accessors;
     unsigned int            depth;              /* nested disable nesting     */

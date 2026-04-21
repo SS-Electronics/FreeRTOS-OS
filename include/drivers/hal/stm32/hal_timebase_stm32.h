@@ -18,9 +18,7 @@
 extern "C" {
 #endif
 
-/**
- * @brief  Called from TIM1_UP_TIM10_IRQHandler to advance the HAL tick.
- */
+/** Called from TIM1_UP_TIM10_IRQHandler to advance the HAL tick. */
 void hal_timebase_stm32_irq_handler(void);
 
 #ifdef __cplusplus

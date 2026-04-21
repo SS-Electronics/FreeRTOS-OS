@@ -12,19 +12,25 @@
  */
 
 #include <drivers/drv_handle.h>
+#include <drivers/timer/drv_time.h>
 #include <board/mcu_config.h>
 #include <def_err.h>
+
+/* ── Global millisecond tick counter ──────────────────────────────────── */
+
+volatile uint32_t g_ms_ticks = 0;
 
 /* ── Systick-based utilities (always available) ───────────────────────── */
 
 uint32_t drv_time_get_ticks(void)
 {
-    return HAL_GetTick();
+    return g_ms_ticks;
 }
 
 void drv_time_delay_ms(uint32_t ms)
 {
-    HAL_Delay(ms);
+    uint32_t start = g_ms_ticks;
+    while ((g_ms_ticks - start) < ms) {}
 }
 
 /* ── Per-instance timer driver ────────────────────────────────────────── */

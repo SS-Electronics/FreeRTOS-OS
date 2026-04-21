@@ -61,7 +61,15 @@
 #define CONF_MAX_CHAR_IN_PRINTK         ITM_PRINT_BUFF_LENGTH
 
 /* UART hardware index used by printk() — must be < NO_OF_UART */
-#define COMM_PRINTK_HW_ID               (0)
+#define COMM_PRINTK_HW_ID               (0)   /* UART_DEBUG (USART1) */
+
+/* UART hardware index used by the OS shell CLI — must be < NO_OF_UART.
+ * Matches UART_APP (dev_id=1) from board_device_ids.h. */
+#define UART_SHELL_HW_ID                (1)   /* UART_APP  (USART2) */
+
+/* Shell line-editing and output buffer sizes */
+#define SHELL_LINE_BUF_LEN              (128)
+#define SHELL_OUT_BUF_LEN               (512)
 
 /* ── Debug activation — driven by Kconfig ───────────────────────────── */
 #define DRV_DEBUG_EN                    CONFIG_DRV_DEBUG_EN
@@ -83,6 +91,9 @@
 
 #define PROC_SERVICE_OS_SHELL_MGMT_STACK_SIZE   (1024)
 #define PROC_SERVICE_OS_SHELL_MGMT_PRIORITY     (1)
+
+#define PROC_SERVICE_TASK_MGMT_STACK_SIZE       (512)
+#define PROC_SERVICE_TASK_MGMT_PRIORITY         (1)
 
 #define TEST_SUITE_STACK_SIZE                   (512)
 #define TEST_SUITE_PRIORITY                     (1)

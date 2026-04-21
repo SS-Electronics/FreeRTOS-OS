@@ -9,37 +9,20 @@
  *   - hal_rcc_stm32.c          (implementation)
  *   - drv_rcc.c                (forward-declares _hal_rcc_stm32_register)
  *
- * Clock tree (HSI source, STM32F411xE @ 100 MHz):
- *
- *   HSI (CONFIG_HSI_VALUE = 16 MHz)
- *     └─ /PLLM (16) ──→ 1 MHz VCO input
- *          └─ ×PLLN (200) ──→ 200 MHz VCO output
- *               ├─ /PLLP (2)  ──→ SYSCLK = 100 MHz
- *               └─ /PLLQ (4)  ──→ USB/SDIO =  50 MHz
- *   AHB  = SYSCLK / 1 = 100 MHz
- *   APB1 = HCLK   / 2 =  50 MHz  (F411 max)
- *   APB2 = HCLK   / 1 = 100 MHz
- *   Flash latency = 3 wait-states
- *
- * All PLL constants are derived from CONFIG_HSI_VALUE (autoconf.h via
- * board/mcu_config.h).  To retarget, adjust the three _VAL macros and
- * RCC_FLASH_LATENCY below.
+ * Clock tree parameters and CMSIS variable declarations live in
+ * app/board/board_config.h (BOARD_RCC_* macros) and board_config.c
+ * (SystemCoreClock / AHBPrescTable / APBPrescTable definitions).
  */
 
 #ifndef OS_DRIVERS_HAL_STM32_HAL_RCC_STM32_H_
 #define OS_DRIVERS_HAL_STM32_HAL_RCC_STM32_H_
 
 #include <stdint.h>
+#include <board/board_config.h>   /* BOARD_RCC_*, BOARD_SYSCLK_HZ, BOARD_FLASH_LATENCY */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* ── CMSIS system symbols — defined in hal_rcc_stm32.c ──────────────────── */
-
-extern uint32_t      SystemCoreClock;    /*!< SYSCLK frequency in Hz         */
-extern const uint8_t AHBPrescTable[16]; /*!< AHB prescaler → shift LUT      */
-extern const uint8_t APBPrescTable[8];  /*!< APB prescaler → shift LUT      */
 
 /* ── CMSIS-mandated API ──────────────────────────────────────────────────── */
 
@@ -51,28 +34,29 @@ void SystemInit(void);
  * Called internally by HAL_RCC_ClockConfig() and by the HAL library.  */
 void SystemCoreClockUpdate(void);
 
-/* ── PLL parameters — derived from CONFIG_HSI_VALUE ─────────────────────── */
-/* These are used only in hal_rcc_stm32.c; exposed here for documentation.  */
-
-/* VCO input must be 1–2 MHz.  PLLM = HSI_MHz gives 1 MHz.                  */
-#define RCC_PLLM_VAL        ((uint32_t)(16U))   /* CONFIG_HSI_VALUE / 1 MHz  */
-#define RCC_PLLN_VAL        200U
-#define RCC_PLLP_VAL        RCC_PLLP_DIV2       /* SYSCLK = 200 / 2 = 100 MHz */
-#define RCC_PLLQ_VAL        4U                  /* 200 / 4 = 50 MHz           */
-
-/* Resulting bus frequencies (informational — drivers should query HAL)      */
-#define RCC_SYSCLK_HZ       100000000UL
-#define RCC_APB1_HZ          50000000UL
-#define RCC_APB2_HZ         100000000UL
-
-/* Flash wait-states for 90–100 MHz, VDD 2.7–3.6 V (STM32F411 RM §3.4)    */
-#define RCC_FLASH_LATENCY   FLASH_LATENCY_3
-
 /* ── drv_rcc integration — internal registration shim ───────────────────── */
 
 #include <drivers/drv_rcc.h>
 
 void _hal_rcc_stm32_register(const drv_rcc_hal_ops_t **ops_out);
+
+/* ── Per-peripheral clock enables ────────────────────────────────────────── */
+/* All __HAL_RCC_*_CLK_ENABLE() calls are confined to hal_rcc_stm32.c.
+ * Every other file calls these named functions instead of the macros.      */
+
+void hal_rcc_stm32_usart1_clk_en(void);
+void hal_rcc_stm32_usart2_clk_en(void);
+void hal_rcc_stm32_i2c1_clk_en(void);
+void hal_rcc_stm32_spi1_clk_en(void);
+void hal_rcc_stm32_tim1_clk_en(void);
+void hal_rcc_stm32_syscfg_clk_en(void);
+void hal_rcc_stm32_pwr_clk_en(void);
+
+/* Dispatches by drv_rcc_periph_t value — called from drv_rcc_periph_clk_en() */
+void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph);
+
+/* GPIO port clock enable — port is GPIO_TypeDef * cast to void * for portability */
+void hal_rcc_stm32_gpio_clk_en(void *port);
 
 #ifdef __cplusplus
 }

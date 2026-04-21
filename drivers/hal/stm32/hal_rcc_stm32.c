@@ -38,41 +38,7 @@
 #include <device.h>
 #include <def_attributes.h>
 #include <def_err.h>
-#include <drivers/hal/stm32/hal_rcc_stm32.h>
-
-/* ══════════════════════════════════════════════════════════════════════════
- * CMSIS system variables — required by the STM32 HAL library.
- * Must be in .boot_data because SystemInit() runs before .data is copied.
- * ══════════════════════════════════════════════════════════════════════════ */
-
-__SECTION_BOOT_DATA uint32_t SystemCoreClock = RCC_SYSCLK_HZ;
-
-/* AHB/APB prescaler lookup tables — index maps HPRE/PPRE bitfield values
- * to shift amounts (actual divisor = 1 << table[index]).                   */
-const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
-const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
-
-/* ══════════════════════════════════════════════════════════════════════════
- * SystemInit — called from Reset_Handler before .data/.bss initialisation.
- * Must not access any non-boot RAM (no globals outside .boot_data).
- * ══════════════════════════════════════════════════════════════════════════ */
-
-__SECTION_BOOT void SystemInit(void)
-{
-    /* Enable FPU coprocessors CP10 and CP11 (full access) */
-#if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
-    SCB->CPACR |= ((3UL << 10U * 2U) | (3UL << 11U * 2U));
-#endif
-
-    /* Relocate vector table when explicitly requested via linker/Kconfig */
-#if defined(USER_VECT_TAB_ADDRESS)
-#if defined(VECT_TAB_SRAM)
-    SCB->VTOR = SRAM_BASE | 0x00000000U;
-#else
-    SCB->VTOR = FLASH_BASE | 0x00000000U;
-#endif
-#endif
-}
+#include <drivers/hal/stm32/hal_rcc_stm32.h>   /* pulls in board/board_config.h */
 
 /* ══════════════════════════════════════════════════════════════════════════
  * SystemCoreClockUpdate — read live RCC registers, update SystemCoreClock.
@@ -129,7 +95,7 @@ static int32_t _stm32_clock_init(void)
     RCC_ClkInitTypeDef clk = {0};
 
     /* Scale 1 required for SYSCLK > 84 MHz on F411 */
-    __HAL_RCC_PWR_CLK_ENABLE();
+    hal_rcc_stm32_pwr_clk_en();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
     /* HSI → PLL */
@@ -138,10 +104,10 @@ static int32_t _stm32_clock_init(void)
     osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
     osc.PLL.PLLState        = RCC_PLL_ON;
     osc.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
-    osc.PLL.PLLM            = RCC_PLLM_VAL;
-    osc.PLL.PLLN            = RCC_PLLN_VAL;
-    osc.PLL.PLLP            = RCC_PLLP_VAL;
-    osc.PLL.PLLQ            = RCC_PLLQ_VAL;
+    osc.PLL.PLLM            = BOARD_RCC_PLLM;
+    osc.PLL.PLLN            = BOARD_RCC_PLLN;
+    osc.PLL.PLLP            = BOARD_RCC_PLLP;
+    osc.PLL.PLLQ            = BOARD_RCC_PLLQ;
 
     if (HAL_RCC_OscConfig(&osc) != HAL_OK)
         return OS_ERR_OP;
@@ -154,7 +120,7 @@ static int32_t _stm32_clock_init(void)
     clk.APB1CLKDivider = RCC_HCLK_DIV2;
     clk.APB2CLKDivider = RCC_HCLK_DIV1;
 
-    if (HAL_RCC_ClockConfig(&clk, RCC_FLASH_LATENCY) != HAL_OK)
+    if (HAL_RCC_ClockConfig(&clk, BOARD_FLASH_LATENCY) != HAL_OK)
         return OS_ERR_OP;
 
     return OS_ERR_NONE;
@@ -163,6 +129,44 @@ static int32_t _stm32_clock_init(void)
 static uint32_t _stm32_get_sysclk_hz(void) { return HAL_RCC_GetSysClockFreq(); }
 static uint32_t _stm32_get_apb1_hz(void)   { return HAL_RCC_GetPCLK1Freq();    }
 static uint32_t _stm32_get_apb2_hz(void)   { return HAL_RCC_GetPCLK2Freq();    }
+
+/* ── Per-peripheral clock enables ────────────────────────────────────────── */
+/* All __HAL_RCC_*_CLK_ENABLE() macro calls are confined to this file.       */
+
+void hal_rcc_stm32_usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
+void hal_rcc_stm32_usart2_clk_en(void) { __HAL_RCC_USART2_CLK_ENABLE(); }
+void hal_rcc_stm32_i2c1_clk_en(void)   { __HAL_RCC_I2C1_CLK_ENABLE();   }
+void hal_rcc_stm32_spi1_clk_en(void)   { __HAL_RCC_SPI1_CLK_ENABLE();   }
+void hal_rcc_stm32_tim1_clk_en(void)   { __HAL_RCC_TIM1_CLK_ENABLE();   }
+void hal_rcc_stm32_syscfg_clk_en(void) { __HAL_RCC_SYSCFG_CLK_ENABLE(); }
+void hal_rcc_stm32_pwr_clk_en(void)    { __HAL_RCC_PWR_CLK_ENABLE();    }
+
+void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
+{
+    switch (periph)
+    {
+        case DRV_RCC_PERIPH_USART1: hal_rcc_stm32_usart1_clk_en(); break;
+        case DRV_RCC_PERIPH_USART2: hal_rcc_stm32_usart2_clk_en(); break;
+        case DRV_RCC_PERIPH_I2C1:   hal_rcc_stm32_i2c1_clk_en();   break;
+        case DRV_RCC_PERIPH_SPI1:   hal_rcc_stm32_spi1_clk_en();   break;
+        case DRV_RCC_PERIPH_TIM1:   hal_rcc_stm32_tim1_clk_en();   break;
+        case DRV_RCC_PERIPH_SYSCFG: hal_rcc_stm32_syscfg_clk_en(); break;
+        case DRV_RCC_PERIPH_PWR:    hal_rcc_stm32_pwr_clk_en();    break;
+        case DRV_RCC_PERIPH_GPIOA:
+        case DRV_RCC_PERIPH_GPIOB:
+        case DRV_RCC_PERIPH_GPIOC:
+            /* GPIO port enables are handled via hal_rcc_stm32_gpio_clk_en() */
+            break;
+        default: break;
+    }
+}
+
+void hal_rcc_stm32_gpio_clk_en(void *port)
+{
+    if      (port == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
+    else if (port == GPIOB) { __HAL_RCC_GPIOB_CLK_ENABLE(); }
+    else if (port == GPIOC) { __HAL_RCC_GPIOC_CLK_ENABLE(); }
+}
 
 /* ── Registration ────────────────────────────────────────────────────────── */
 

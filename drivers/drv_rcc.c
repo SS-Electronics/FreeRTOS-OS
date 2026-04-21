@@ -16,6 +16,8 @@
 /* Forward declarations — each vendor backend exposes exactly one symbol */
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 void _hal_rcc_stm32_register(const drv_rcc_hal_ops_t **ops_out);
+void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph);
+void hal_rcc_stm32_gpio_clk_en(void *port);
 #endif
 
 /* ── Singleton ops table ─────────────────────────────────────────────────── */
@@ -63,4 +65,18 @@ uint32_t drv_rcc_get_apb2_hz(void)
     if (_ops && _ops->get_apb2_hz)
         return _ops->get_apb2_hz();
     return 0U;
+}
+
+void drv_rcc_periph_clk_en(drv_rcc_periph_t periph)
+{
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+    hal_rcc_stm32_periph_clk_en(periph);
+#endif
+}
+
+void drv_rcc_gpio_clk_en(void *port)
+{
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+    hal_rcc_stm32_gpio_clk_en(port);
+#endif
 }

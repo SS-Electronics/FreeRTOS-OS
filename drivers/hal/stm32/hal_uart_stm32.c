@@ -24,8 +24,9 @@
 #include <drivers/com/hal/stm32/hal_uart_stm32.h>
 #include <drivers/drv_irq.h>
 
-/* Forward declaration — defined in drv_uart.c */
-extern void drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte);
+/* Forward declarations — defined in drv_uart.c */
+extern void    drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte);
+extern int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte);
 
 /* ── Internal helpers ─────────────────────────────────────────────────────── */
 
@@ -121,6 +122,14 @@ static void stm32_uart_rx_isr_cb(drv_uart_handle_t *h,
     (void)h;
 }
 
+static void stm32_uart_tx_start(drv_uart_handle_t *h)
+{
+    if (h == NULL || !h->initialized)
+        return;
+    /* Enable TXE interrupt — ISR will drain the TX ring buffer byte by byte */
+    SET_BIT(h->hw.huart.Instance->CR1, USART_CR1_TXEIE);
+}
+
 /* ── Static ops table ─────────────────────────────────────────────────────── */
 
 static const drv_uart_hal_ops_t _stm32_uart_ops = {
@@ -130,6 +139,7 @@ static const drv_uart_hal_ops_t _stm32_uart_ops = {
     .receive     = stm32_uart_receive,
     .start_rx_it = stm32_uart_start_rx_it,
     .rx_isr_cb   = stm32_uart_rx_isr_cb,
+    .tx_start    = stm32_uart_tx_start,
 };
 
 /* ── Public API ───────────────────────────────────────────────────────────── */
@@ -226,8 +236,16 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
         /* ── TX empty ─────────────────────────────────────────────────────── */
         if ((sr & USART_SR_TXE) && (cr1 & USART_CR1_TXEIE))
         {
-            CLEAR_BIT(instance->CR1, USART_CR1_TXEIE);
-            drv_irq_dispatch_from_isr(IRQ_ID_UART_TX_DONE(id), NULL, &hpt);
+            uint8_t byte;
+            if (drv_uart_tx_get_next_byte(id, &byte) == OS_ERR_NONE)
+            {
+                WRITE_REG(instance->DR, byte);
+            }
+            else
+            {
+                CLEAR_BIT(instance->CR1, USART_CR1_TXEIE);
+                drv_irq_dispatch_from_isr(IRQ_ID_UART_TX_DONE(id), NULL, &hpt);
+            }
             portYIELD_FROM_ISR(hpt);
             return;
         }

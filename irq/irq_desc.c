@@ -13,56 +13,37 @@
  *           → action->handler(irq, data, dev_id, pxHPT)
  *
  * Memory:
- *   Static irqaction pool — no heap.  Pool size = IRQ_ID_TOTAL * IRQ_NOTIFY_MAX_SUBS.
+ *   irqaction nodes are allocated from the FreeRTOS heap via kmaloc/kfree.
+ *   Each desc->action_list is a doubly-circular sentinel (mm/list.h).
  *   irq_desc_table is a flat array indexed by irq_id_t.
  */
 
 #include <irq/irq_desc.h>
 #include <irq/irq_table.h>
+#include <os/kernel_mem.h>
 #include <def_err.h>
 
 /* ── Descriptor table ─────────────────────────────────────────────────────── */
 
 static struct irq_desc _irq_desc_table[IRQ_ID_TOTAL];
 
-/* ── Static irqaction pool (no heap) ─────────────────────────────────────── */
-
-#define _ACTION_POOL_SIZE   (IRQ_ID_TOTAL * IRQ_NOTIFY_MAX_SUBS)
-
-static struct irqaction _action_pool[_ACTION_POOL_SIZE];
-static uint8_t          _action_used[_ACTION_POOL_SIZE];
+/* ── Dynamic irqaction allocator ──────────────────────────────────────────── */
 
 static struct irqaction *_alloc_action(void)
 {
-    for (unsigned int i = 0; i < _ACTION_POOL_SIZE; i++)
-    {
-        if (!_action_used[i])
-        {
-            _action_used[i]         = 1;
-            _action_pool[i].handler = NULL;
-            _action_pool[i].dev_id  = NULL;
-            _action_pool[i].name    = NULL;
-            _action_pool[i].next    = NULL;
-            return &_action_pool[i];
-        }
-    }
-    return NULL;
+    struct irqaction *a = (struct irqaction *)kmaloc(sizeof(struct irqaction));
+    if (a == NULL)
+        return NULL;
+    a->handler = NULL;
+    a->dev_id  = NULL;
+    a->name    = NULL;
+    list_init(&a->node);
+    return a;
 }
 
 static void _free_action(struct irqaction *a)
 {
-    if (a == NULL)
-        return;
-
-    int idx = (int)(a - _action_pool);
-    if (idx < 0 || idx >= (int)_ACTION_POOL_SIZE)
-        return;
-
-    _action_used[idx] = 0;
-    a->handler         = NULL;
-    a->dev_id          = NULL;
-    a->name            = NULL;
-    a->next            = NULL;
+    kfree(a);
 }
 
 /* ── Descriptor lookup ────────────────────────────────────────────────────── */
@@ -81,15 +62,14 @@ void handle_irq_event(struct irq_desc *desc, void *data, BaseType_t *pxHPT)
     if (desc == NULL)
         return;
 
-    struct irqaction *action = desc->action;
-    irqreturn_t       res    = IRQ_NONE;
+    struct irqaction *action;
+    irqreturn_t       res = IRQ_NONE;
 
-    while (action != NULL)
+    list_for_each_entry(action, &desc->action_list, node)
     {
         if (action->handler != NULL)
             res |= action->handler(desc->irq_data.irq, data,
                                    action->dev_id, pxHPT);
-        action = action->next;
     }
 
     if (res == IRQ_NONE)
@@ -201,20 +181,8 @@ int request_irq(irq_id_t irq, irq_handler_t handler,
     new_action->handler = handler;
     new_action->dev_id  = dev_id;
     new_action->name    = name;
-    new_action->next    = NULL;
 
-    /* Append to tail of action chain */
-    if (desc->action == NULL)
-    {
-        desc->action = new_action;
-    }
-    else
-    {
-        struct irqaction *tail = desc->action;
-        while (tail->next != NULL)
-            tail = tail->next;
-        tail->next = new_action;
-    }
+    list_add_tail(&new_action->node, &desc->action_list);
 
     return OS_ERR_NONE;
 }
@@ -225,23 +193,16 @@ void free_irq(irq_id_t irq, void *dev_id)
         return;
 
     struct irq_desc  *desc = &_irq_desc_table[irq];
-    struct irqaction *prev = NULL;
-    struct irqaction *cur  = desc->action;
+    struct irqaction *cur;
 
-    while (cur != NULL)
+    list_for_each_entry(cur, &desc->action_list, node)
     {
         if (cur->dev_id == dev_id)
         {
-            if (prev == NULL)
-                desc->action = cur->next;
-            else
-                prev->next = cur->next;
-
+            list_delete(&cur->node);
             _free_action(cur);
             return;
         }
-        prev = cur;
-        cur  = cur->next;
     }
 }
 
@@ -324,7 +285,7 @@ void irq_desc_init_all(void)
         desc->irq_data.chip_data = NULL;
 
         desc->handle_irq            = handle_simple_irq;
-        desc->action                = NULL;
+        list_init(&desc->action_list);
         desc->status_use_accessors  = 0;
         desc->depth                 = 0;
         desc->tot_count             = 0;

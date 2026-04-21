@@ -30,6 +30,7 @@ static uint8_t _rx_stage_byte[BOARD_UART_COUNT];
 
 /* Ring-buffer pointers linked to per-UART IPC queues */
 static struct ringbuffer *_rx_rb[BOARD_UART_COUNT];
+static struct ringbuffer *_tx_rb[BOARD_UART_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
 
@@ -56,9 +57,11 @@ int32_t drv_uart_register(uint8_t dev_id,
     h->initialized = 0;
     h->last_err    = OS_ERR_NONE;
 
-    /* Link the IPC ring buffer for interrupt-driven RX */
+    /* Link IPC ring buffers for interrupt-driven RX and TX */
     _rx_rb[dev_id] = (struct ringbuffer *)
                      ipc_mqueue_get_handle(global_uart_rx_mqueue_list[dev_id]);
+    _tx_rb[dev_id] = (struct ringbuffer *)
+                     ipc_mqueue_get_handle(global_uart_tx_mqueue_list[dev_id]);
 
     /* Initialise hardware */
     int32_t err = h->ops->hw_init(h);
@@ -66,7 +69,14 @@ int32_t drv_uart_register(uint8_t dev_id,
         return err;
 
     /* Arm the interrupt-driven single-byte receive */
-    return h->ops->start_rx_it(h, &_rx_stage_byte[dev_id]);
+    err = h->ops->start_rx_it(h, &_rx_stage_byte[dev_id]);
+    if (err != OS_ERR_NONE)
+        return err;
+
+    /* Drain any bytes that were written to the TX ring buffer (e.g. by
+     * printk) before the UART was initialised. */
+    drv_uart_tx_kick(dev_id);
+    return OS_ERR_NONE;
 }
 
 /* ── Handle accessor ──────────────────────────────────────────────────── */
@@ -152,5 +162,39 @@ void drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte)
  * here.  hal_uart_stm32_irq_handler() reads USART SR/DR directly and calls
  * drv_uart_rx_isr_dispatch() below, bypassing the HAL callback chain.
  */
+
+/* ── Interrupt-driven TX helpers ──────────────────────────────────────── */
+
+/**
+ * drv_uart_tx_get_next_byte — pull the next pending TX byte.
+ *
+ * Called from the UART TXE ISR.  Returns OS_ERR_NONE and fills *byte if a
+ * byte was available; returns OS_ERR_OP and leaves *byte unchanged if the
+ * TX ring buffer is empty.
+ */
+int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte)
+{
+    if (dev_id >= BOARD_UART_COUNT || byte == NULL || _tx_rb[dev_id] == NULL)
+        return OS_ERR_OP;
+    return (ringbuffer_getchar(_tx_rb[dev_id], byte) > 0) ? OS_ERR_NONE : OS_ERR_OP;
+}
+
+/**
+ * drv_uart_tx_kick — enable the UART TXE interrupt to start draining the
+ *                    TX ring buffer.
+ *
+ * Call after writing one or more bytes to the TX ring buffer (e.g. printk).
+ * If the UART is not yet initialised the call is silently ignored; the bytes
+ * will be sent when drv_uart_register() calls this function at the end of
+ * hardware init.
+ */
+int32_t drv_uart_tx_kick(uint8_t dev_id)
+{
+    drv_uart_handle_t *h = drv_uart_get_handle(dev_id);
+    if (h == NULL || !h->initialized || h->ops == NULL || h->ops->tx_start == NULL)
+        return OS_ERR_OP;
+    h->ops->tx_start(h);
+    return OS_ERR_NONE;
+}
 
 #endif /* NO_OF_UART > 0 */

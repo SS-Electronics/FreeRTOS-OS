@@ -27,49 +27,16 @@
 #ifndef INCLUDE_IRQ_IRQ_NOTIFY_H_
 #define INCLUDE_IRQ_IRQ_NOTIFY_H_
 
-#include <def_std.h>
+/*
+ * Capacity constants, base offsets, irq_id_t typedef, and ID generator macros
+ * live in board/irq_hw_conf.h so they can be tuned per board via irq_table.xml.
+ *
+ * Application builds:  app/board/irq_hw_conf.h  (auto-generated, shadows stub)
+ * Standalone kernel:   include/board/irq_hw_conf.h  (static defaults)
+ */
+#include <board/irq_hw_conf.h>
+
 #include <FreeRTOS.h>
-
-/* ── Capacity constants ──────────────────────────────────────────────────── */
-
-#define IRQ_MAX_UART            4   /* max UART bus instances     */
-#define IRQ_MAX_I2C             4   /* max I2C bus instances      */
-#define IRQ_MAX_SPI             4   /* max SPI bus instances      */
-#define IRQ_MAX_EXTI_LINES      16  /* GPIO EXTI lines 0–15       */
-
-#define IRQ_UART_EVENTS         3   /* RX, TX_DONE, ERROR         */
-#define IRQ_I2C_EVENTS          3   /* TX_DONE, RX_DONE, ERROR    */
-#define IRQ_SPI_EVENTS          4   /* TX_DONE, RX_DONE, TXRX, ERR */
-
-#define IRQ_NOTIFY_MAX_SUBS     4   /* subscribers per IRQ ID     */
-
-/* ── IRQ ID base offsets ─────────────────────────────────────────────────── */
-
-#define IRQ_ID_UART_BASE   0
-#define IRQ_ID_I2C_BASE    (IRQ_ID_UART_BASE + IRQ_MAX_UART * IRQ_UART_EVENTS)
-#define IRQ_ID_SPI_BASE    (IRQ_ID_I2C_BASE  + IRQ_MAX_I2C  * IRQ_I2C_EVENTS)
-#define IRQ_ID_EXTI_BASE   (IRQ_ID_SPI_BASE  + IRQ_MAX_SPI  * IRQ_SPI_EVENTS)
-#define IRQ_ID_TOTAL       (IRQ_ID_EXTI_BASE + IRQ_MAX_EXTI_LINES)
-
-typedef uint32_t irq_id_t;
-
-/* ── ID generator macros ─────────────────────────────────────────────────── */
-
-#define IRQ_ID_UART_RX(n)        ((irq_id_t)(IRQ_ID_UART_BASE + (n)*IRQ_UART_EVENTS + 0))
-#define IRQ_ID_UART_TX_DONE(n)   ((irq_id_t)(IRQ_ID_UART_BASE + (n)*IRQ_UART_EVENTS + 1))
-#define IRQ_ID_UART_ERROR(n)     ((irq_id_t)(IRQ_ID_UART_BASE + (n)*IRQ_UART_EVENTS + 2))
-
-#define IRQ_ID_I2C_TX_DONE(n)    ((irq_id_t)(IRQ_ID_I2C_BASE  + (n)*IRQ_I2C_EVENTS  + 0))
-#define IRQ_ID_I2C_RX_DONE(n)    ((irq_id_t)(IRQ_ID_I2C_BASE  + (n)*IRQ_I2C_EVENTS  + 1))
-#define IRQ_ID_I2C_ERROR(n)      ((irq_id_t)(IRQ_ID_I2C_BASE  + (n)*IRQ_I2C_EVENTS  + 2))
-
-#define IRQ_ID_SPI_TX_DONE(n)    ((irq_id_t)(IRQ_ID_SPI_BASE  + (n)*IRQ_SPI_EVENTS  + 0))
-#define IRQ_ID_SPI_RX_DONE(n)    ((irq_id_t)(IRQ_ID_SPI_BASE  + (n)*IRQ_SPI_EVENTS  + 1))
-#define IRQ_ID_SPI_TXRX_DONE(n)  ((irq_id_t)(IRQ_ID_SPI_BASE  + (n)*IRQ_SPI_EVENTS  + 2))
-#define IRQ_ID_SPI_ERROR(n)      ((irq_id_t)(IRQ_ID_SPI_BASE  + (n)*IRQ_SPI_EVENTS  + 3))
-
-/** IRQ_ID_EXTI(pin) — GPIO EXTI line interrupt, pin in [0, 15]. */
-#define IRQ_ID_EXTI(pin)         ((irq_id_t)(IRQ_ID_EXTI_BASE + (pin)))
 
 /* ── Callback type ───────────────────────────────────────────────────────── */
 

@@ -3,8 +3,8 @@
  *
  * This file is part of FreeRTOS-OS Project.
  *
- * Boot and IRQ flow
- * ─────────────────
+ * Boot sequence
+ * ─────────────
  *
  *  Reset_Handler  (startup_stm32f411vetx.c)
  *    SP ← _estack  |  SystemInit()  |  .data copy  |  .bss zero  |  main()
@@ -14,10 +14,9 @@
  *    HAL_Init()                 — HAL timebase (TIM1), global tick
  *    drv_rcc_clock_init()       — PLL: HSI 16 MHz → 100 MHz SYSCLK
  *    drv_cpu_interrupt_prio_set()  — NVIC group bits before any IRQ enabled
+ *    irq_hw_init_all()          — irq_desc table + irq_chip bindings for all HW IRQs
  *    ipc_queues_init()          — ring-buffer queues for UART RX/TX channels
- *    uart_mgmt_start()          — UART mgmt task; subscribes IRQ_ID_UART_RX(n)
- *    iic_mgmt_start()           — I2C  mgmt task; subscribes IRQ_ID_I2C_*
- *    spi_mgmt_start()           — SPI  mgmt task; subscribes IRQ_ID_SPI_*
+ *    os_kernel_thread_register() — all OS service tasks (see kernel_service_core.c)
  *    printk_init()              — binds printk to UART TX ring buffer
  *    app_main()                 — creates application tasks (may subscribe IRQs)
  *    vTaskStartScheduler()      — interrupts enabled inside vPortSVCHandler
@@ -28,7 +27,7 @@
  *  [startup vector table]  weak alias  →  Default_Handler
  *           │ overridden by strong symbol
  *           ▼
- *  [hal_it_stm32.c]  USART1_IRQHandler / I2C1_EV_IRQHandler / SPI1_IRQHandler …
+ *  [irq_periph_dispatch_generated.c]  USART1_IRQHandler / I2C1_EV_IRQHandler / SPI1_IRQHandler …
  *           │  → hal_uart_stm32_irq_handler / hal_iic_stm32_ev_irq_handler …
  *           ▼
  *  [hal_uart/iic/spi_stm32.c]  HAL_UART_RxCpltCallback / HAL_I2C_MasterTxCpltCallback …
@@ -48,17 +47,10 @@
 #include <ipc/global_var.h>
 #include <os/kernel.h>
 #include <os/kernel_syscall.h>
+#include <os/kernel_services.h>
 #include <drivers/cpu/drv_cpu.h>
 #include <drivers/drv_rcc.h>
-#include <services/uart_mgmt.h>
-
-#if (INC_SERVICE_IIC_MGMT == 1)
-#  include <services/iic_mgmt.h>
-#endif
-
-#if (BOARD_SPI_COUNT > 0)
-#  include <services/spi_mgmt.h>
-#endif
+#include <board/irq_hw_init_generated.h>
 
 
 /* ── Weak application entry point ─────────────────────────────────────────── */
@@ -106,31 +98,19 @@ __SECTION_BOOT __USED void main(void)
      *    interrupt-driven peripheral is initialised. */
     drv_cpu_interrupt_prio_set();
 
+    /* 2a. Initialise irq_desc table and bind irq_chip to all hardware-backed
+     *     software IRQ IDs.  Must run before any request_irq() call.
+     *     TIM1 (HAL tick) is already firing at this point; hal_timebase_stm32_irq_handler
+     *     uses an early-boot fallback until handle_irq is populated here. */
+    irq_hw_init_all();
+
     /* 3. IPC ring-buffer queues — UART mgmt reads ring-buffer handles after
      *    its startup delay, so these must be allocated first. */
     ipc_queues_init();
 
-    /* 4. Start management threads.
-     *
-     *    Each thread:
-     *      a. Initialises the peripheral hardware (after a startup delay).
-     *      b. Subscribes to the generic IRQ notification framework so
-     *         ISR-level events (RX byte, transfer-done, error) are delivered
-     *         as pub/sub callbacks without polling.
-     *
-     *    UART: _uart_rx_cb  feeds bytes into the RX ring buffer (ISR-safe).
-     *    I2C:  _iic_done_cb wakes the mgmt thread via task notification.
-     *    SPI:  _spi_done_cb wakes the mgmt thread via task notification.
-     */
-    uart_mgmt_start();
-
-#if (INC_SERVICE_IIC_MGMT == 1)
-    iic_mgmt_start();
-#endif
-
-#if (BOARD_SPI_COUNT > 0)
-    spi_mgmt_start();
-#endif
+    /* 4. Register all OS service tasks in one call.
+     *    See services/kernel_service_core.c for the full registration table. */
+    os_kernel_thread_register();
 
     /* 5. Bind printk() to the TX ring-buffer of COMM_PRINTK_HW_ID.
      *    Must be called after ipc_queues_init() registers the queue. */

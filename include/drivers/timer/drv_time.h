@@ -14,7 +14,15 @@
 extern "C" {
 #endif
 
-/* Systick-based utilities — always available, no handle required */
+/**
+ * g_ms_ticks — global millisecond tick counter.
+ *
+ * Incremented once per millisecond by hal_timebase_stm32_irq_handler()
+ * (TIM1_UP).  Read via drv_time_get_ticks(); write only from the ISR.
+ */
+extern volatile uint32_t g_ms_ticks;
+
+/* Tick utilities — always available, no handle required */
 uint32_t drv_time_get_ticks(void);
 void     drv_time_delay_ms(uint32_t ms);
 

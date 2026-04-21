@@ -6,9 +6,21 @@
  * Overrides the default SysTick-based HAL_InitTick() so that TIM1 drives the
  * 1 ms HAL tick counter, leaving SysTick free for FreeRTOS.
  *
- * htim1 is a module-level static — no other file needs to reference it
- * directly.  The IRQ handler calls hal_timebase_stm32_irq_handler() which is
- * declared in hal_timebase_stm32.h.
+ * IRQ dispatch follows the irq_desc/irq_chip pattern used by UART, SPI, I2C.
+ * The NVIC chip (irq_chip_nvic_get()) is bound to IRQ_ID_TIM_TICK in
+ * irq_hw_init_all() with handle_edge_irq as the flow handler.
+ *
+ * Call chain:
+ *   TIM1_UP_TIM10_IRQHandler  (irq_periph_dispatch_generated.c)
+ *     → hal_timebase_stm32_irq_handler()
+ *        ├─ __HAL_TIM_CLEAR_FLAG        — clears TIM1 update pending flag
+ *        ├─ g_ms_ticks++ / HAL_IncTick()— advance global ms counter + HAL tick
+ *        └─ __do_IRQ_from_isr(IRQ_ID_TIM_TICK)
+ *              → handle_edge_irq → nvic_irq_ack (no-op) → irqaction chain
+ *                                                          (optional subscribers)
+ *
+ * The hardware flag clear and tick increments run unconditionally so the
+ * system is fully functional before irq_hw_init_all() populates handle_irq.
  */
 
 #include <board/mcu_config.h>
@@ -16,9 +28,14 @@
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
 #include <device.h>
+#include <irq/irq_desc.h>
 #include <drivers/hal/stm32/hal_timebase_stm32.h>
+#include <drivers/timer/drv_time.h>
+#include <drivers/drv_rcc.h>
 
 static TIM_HandleTypeDef _htim1;
+
+/* ── HAL_InitTick override ──────────────────────────────────────────────── */
 
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 {
@@ -28,7 +45,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     uint32_t           pFLatency;
     HAL_StatusTypeDef  status;
 
-    __HAL_RCC_TIM1_CLK_ENABLE();
+    drv_rcc_periph_clk_en(DRV_RCC_PERIPH_TIM1);
 
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
     uwTimclock       = 2U * HAL_RCC_GetPCLK2Freq();
@@ -63,6 +80,8 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     return status;
 }
 
+/* ── HAL tick suspend / resume ─────────────────────────────────────────── */
+
 void HAL_SuspendTick(void)
 {
     __HAL_TIM_DISABLE_IT(&_htim1, TIM_IT_UPDATE);
@@ -73,9 +92,24 @@ void HAL_ResumeTick(void)
     __HAL_TIM_ENABLE_IT(&_htim1, TIM_IT_UPDATE);
 }
 
+/* ── IRQ handler ────────────────────────────────────────────────────────── */
+
 void hal_timebase_stm32_irq_handler(void)
 {
-    HAL_TIM_IRQHandler(&_htim1);
+    BaseType_t pxHPT = pdFALSE;
+
+    /* Service hardware first — clear pending flag and advance tick counters.
+     * Done unconditionally so the system works before irq_hw_init_all(). */
+    __HAL_TIM_CLEAR_FLAG(&_htim1, TIM_FLAG_UPDATE);
+    g_ms_ticks++;
+    HAL_IncTick();
+
+    /* Notify any irq_desc subscribers (populated after irq_hw_init_all). */
+    struct irq_desc *desc = irq_to_desc(IRQ_ID_TIM_TICK);
+    if (desc != NULL && desc->handle_irq != NULL)
+        __do_IRQ_from_isr(IRQ_ID_TIM_TICK, NULL, &pxHPT);
+
+    portYIELD_FROM_ISR(pxHPT);
 }
 
 #endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */

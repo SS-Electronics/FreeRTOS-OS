@@ -9,7 +9,7 @@
  *  [startup_stm32f411vetx.c]  vector table — weak alias USART1_IRQHandler
  *           │ overridden by strong symbol in…
  *           ▼
- *  [hal_it_stm32.c]  USART1_IRQHandler() { hal_uart_stm32_irq_handler(USART1); }
+ *  [irq_periph_dispatch_generated.c]  USART1_IRQHandler() { hal_uart_stm32_irq_handler(USART1); }
  *           │
  *           ▼
  *  [hal_uart_stm32.c]  HAL_UART_IRQHandler()  →  HAL_UART_RxCpltCallback()

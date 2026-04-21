@@ -438,6 +438,13 @@ class BoardConfigGenerator:
         self.spis  = periph.findall('spi')
         self.gpios = periph.findall('gpio')
 
+        # Detect role-assigned UARTs (role="shell", role="debug", …)
+        self.uart_roles = {}   # role_name → uart element
+        for u in self.uarts:
+            role = u.get('role', '').strip().lower()
+            if role:
+                self.uart_roles[role] = u
+
         cls     = _VENDOR_MAP.get(self.vendor, STM32Codegen)
         self.cg = cls()
 
@@ -489,6 +496,15 @@ class BoardConfigGenerator:
         section('iic',  self.i2cs,  'I2C')
         section('spi',  self.spis,  'SPI')
         section('gpio', self.gpios, 'GPIO')
+
+        # Emit role-based UART aliases
+        if self.uart_roles:
+            L.append('/* UART role assignments */')
+            for role, u in self.uart_roles.items():
+                uid   = u.get('id', '')
+                alias = f'BOARD_UART_{role.upper()}_ID'
+                L.append(f'#define {alias:<28} {uid:<20} /* role="{role}" */')
+            L.append('')
 
         L.append(_INC_GUARD_CLOSE.format(guard=guard))
         return '\n'.join(L)
@@ -686,6 +702,22 @@ class BoardConfigGenerator:
         L.append('#include <board/board_device_ids.h>')
         L.append('')
 
+        # ── CMSIS system variables (STM32 only)
+        # SystemCoreClock and the prescaler LUTs must be defined exactly once.
+        # They live in board_config.c so every board variant has its own initial
+        # value (BOARD_SYSCLK_HZ) and they are placed in .boot_data via the
+        # __SECTION_BOOT_DATA attribute so they are valid before .data copy.
+        if self.vendor == 'STM':
+            L.append('/* ── CMSIS system variables ─────────────────────────────────────────────── */')
+            L.append('/* Placed in .boot_data: valid before the .data copy in Reset_Handler.      */')
+            L.append('#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)')
+            L.append('#include <def_attributes.h>')
+            L.append('__SECTION_BOOT_DATA uint32_t SystemCoreClock = BOARD_SYSCLK_HZ;')
+            L.append('const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};')
+            L.append('const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};')
+            L.append('#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */')
+            L.append('')
+
         # ── HAL peripheral handle definitions (storage for extern decls in board_handles.h)
         periph_groups = [('uart', self.uarts), ('i2c', self.i2cs), ('spi', self.spis)]
         has_handles = any(cg.hal_handle_type(pt) and items for pt, items in periph_groups)
@@ -802,17 +834,24 @@ class BoardConfigGenerator:
             L.append('')
 
         # ── Top-level board_config_t
+        shell_u   = self.uart_roles.get('shell')
+        shell_uid = shell_u.get('id', 'UART_APP') if shell_u else '0'
+
         L.append('/* ── Top-level board config ─────────────────────────────────────────────── */')
         L.append('static const board_config_t g_board_config = {')
-        L.append(f'    .board_name  = "{self.board_name}",')
-        L.append(f'    .uart_table  = {"_UART_TABLE" if self.uarts else "NULL"},')
-        L.append(f'    .uart_count  = {"BOARD_UART_COUNT" if self.uarts else "0"},')
-        L.append(f'    .iic_table   = {"_IIC_TABLE" if self.i2cs else "NULL"},')
-        L.append(f'    .iic_count   = {"BOARD_IIC_COUNT" if self.i2cs else "0"},')
-        L.append(f'    .spi_table   = {"_SPI_TABLE" if self.spis else "NULL"},')
-        L.append(f'    .spi_count   = {"BOARD_SPI_COUNT" if self.spis else "0"},')
-        L.append(f'    .gpio_table  = {"_gpio_table" if self.gpios else "NULL"},')
-        L.append(f'    .gpio_count  = {"BOARD_GPIO_COUNT" if self.gpios else "0"},')
+        L.append(f'    .board_name    = "{self.board_name}",')
+        L.append(f'    .uart_table    = {"_UART_TABLE" if self.uarts else "NULL"},')
+        L.append(f'    .uart_count    = {"BOARD_UART_COUNT" if self.uarts else "0"},')
+        if shell_u:
+            L.append(f'    .uart_shell_id = {shell_uid},  /* role="shell" */')
+        else:
+            L.append( '    .uart_shell_id = 0,')
+        L.append(f'    .iic_table     = {"_IIC_TABLE" if self.i2cs else "NULL"},')
+        L.append(f'    .iic_count     = {"BOARD_IIC_COUNT" if self.i2cs else "0"},')
+        L.append(f'    .spi_table     = {"_SPI_TABLE" if self.spis else "NULL"},')
+        L.append(f'    .spi_count     = {"BOARD_SPI_COUNT" if self.spis else "0"},')
+        L.append(f'    .gpio_table    = {"_gpio_table" if self.gpios else "NULL"},')
+        L.append(f'    .gpio_count    = {"BOARD_GPIO_COUNT" if self.gpios else "0"},')
         L.append('};')
         L.append('')
 
@@ -1009,7 +1048,8 @@ class BoardConfigGenerator:
             ' * Board API implementation',
             ' * ═══════════════════════════════════════════════════════════════════════════ */',
             '',
-            'const board_config_t *board_get_config(void) { return &g_board_config; }',
+            'const board_config_t *board_get_config(void)    { return &g_board_config; }',
+            'uint8_t board_get_shell_uart_id(void)           { return g_board_config.uart_shell_id; }',
             '',
             'const board_uart_desc_t *board_find_uart(USART_TypeDef *instance)',
             '{',

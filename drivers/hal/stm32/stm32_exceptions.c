@@ -7,7 +7,7 @@
  * file (startup_stm32f411vetx.s).  Fault handlers spin in a tight loop so a
  * debugger can break in and inspect the stack frame.
  *
- * Peripheral IRQ handlers live in hal_it_stm32.c.
+ * Peripheral IRQ handlers are generated into app/board/irq_periph_dispatch_generated.c.
  */
 
 #include <board/mcu_config.h>

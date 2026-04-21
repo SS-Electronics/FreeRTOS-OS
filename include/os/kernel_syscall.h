@@ -33,15 +33,14 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include <ipc/global_var.h>
 #include <FreeRTOS.h>
 #include <atomic.h>
-
-
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-void 					printk_init(void);
-int32_t					printk(char* ch);
+void    printk_init(void);
+int32_t printk(const char *fmt, ...);
 
 
 #ifdef __cplusplus

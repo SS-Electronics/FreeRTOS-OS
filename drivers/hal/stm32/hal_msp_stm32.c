@@ -20,13 +20,14 @@
 #include <device.h>
 #include <board/board_config.h>
 #include <drivers/drv_irq.h>
+#include <drivers/drv_rcc.h>
 
 /* ── Global MSP init ──────────────────────────────────────────────────────── */
 
 void HAL_MspInit(void)
 {
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-    __HAL_RCC_PWR_CLK_ENABLE();
+    drv_rcc_periph_clk_en(DRV_RCC_PERIPH_SYSCFG);
+    drv_rcc_periph_clk_en(DRV_RCC_PERIPH_PWR);
 
     /* Cortex-M core exceptions — set priority only, no enable needed */
     drv_irq_set_priority((int32_t)SVCall_IRQn, 15);
@@ -42,8 +43,8 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
     if (d == NULL) return;
 
     d->periph_clk_enable();
-    board_gpio_clk_enable(d->scl_pin.port);
-    board_gpio_clk_enable(d->sda_pin.port);
+    drv_rcc_gpio_clk_en(d->scl_pin.port);
+    drv_rcc_gpio_clk_en(d->sda_pin.port);
 
     GPIO_InitTypeDef gpio = {
         .Mode      = d->scl_pin.mode,
@@ -84,9 +85,9 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
     if (d == NULL) return;
 
     d->periph_clk_enable();
-    board_gpio_clk_enable(d->sck_pin.port);
-    board_gpio_clk_enable(d->miso_pin.port);
-    board_gpio_clk_enable(d->mosi_pin.port);
+    drv_rcc_gpio_clk_en(d->sck_pin.port);
+    drv_rcc_gpio_clk_en(d->miso_pin.port);
+    drv_rcc_gpio_clk_en(d->mosi_pin.port);
 
     GPIO_InitTypeDef gpio = {
         .Mode      = d->sck_pin.mode,
@@ -108,7 +109,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 
     if (d->nss_pin.pin != 0)
     {
-        board_gpio_clk_enable(d->nss_pin.port);
+        drv_rcc_gpio_clk_en(d->nss_pin.port);
         gpio.Pin       = d->nss_pin.pin;
         gpio.Alternate = d->nss_pin.alternate;
         HAL_GPIO_Init(d->nss_pin.port, &gpio);
@@ -140,8 +141,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
     if (d == NULL) return;
 
     d->periph_clk_enable();
-    board_gpio_clk_enable(d->tx_pin.port);
-    board_gpio_clk_enable(d->rx_pin.port);
+    drv_rcc_gpio_clk_en(d->tx_pin.port);
+    drv_rcc_gpio_clk_en(d->rx_pin.port);
 
     GPIO_InitTypeDef gpio = {
         .Mode      = d->tx_pin.mode,
