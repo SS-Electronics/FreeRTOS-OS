@@ -63,19 +63,28 @@ FreeRTOS-OS-App/
     ├── drivers/                       ← Layers 2 + 3: driver implementation
     │   ├── drv_rcc.c                  ← RCC clock-init dispatcher
     │   ├── drv_uart.c  drv_iic.c  drv_spi.c  drv_gpio.c
+    │   ├── drv_irq.c                  ← vendor-agnostic IRQ dispatch wrappers
     │   └── hal/stm32/
     │       ├── hal_rcc_stm32.c        ← SystemInit + PLL config + CMSIS tables
     │       ├── hal_uart_stm32.c  hal_iic_stm32.c  hal_spi_stm32.c
     │       ├── hal_gpio_stm32.c  hal_msp_stm32.c
     │       ├── hal_timebase_stm32.c   ← TIM1-based HAL tick
-    │       └── hal_it_stm32.c         ← peripheral ISR dispatch
+    │       ├── hal_it_stm32.c         ← peripheral ISR dispatch (direct register access)
+    │       ├── irq_chip_nvic.c        ← ARM NVIC irq_chip implementation
+    │       └── stm32_exceptions.c     ← Cortex-M4 core fault handlers
     │
     ├── include/
     │   ├── drivers/
     │   │   ├── drv_handle.h           ← handle structs + ops vtables
+    │   │   ├── drv_irq.h              ← vendor-agnostic IRQ dispatch API
     │   │   ├── drv_rcc.h              ← RCC driver public API
     │   │   └── hal/stm32/
-    │   │       └── hal_rcc_stm32.h    ← SystemCoreClock, CMSIS symbols, PLL constants
+    │   │       ├── hal_rcc_stm32.h    ← SystemCoreClock, CMSIS symbols, PLL constants
+    │   │       └── irq_chip_nvic.h    ← NVIC irq_chip: bind hwirq, set priority
+    │   ├── irq/
+    │   │   ├── irq_notify.h           ← IRQ ID macros, IRQ_ID_TOTAL, irq_notify_cb_t
+    │   │   ├── irq_desc.h             ← irq_desc/chip/action structs, full API
+    │   │   └── irq_table.h            ← irq_table_get_name() declaration
     │   ├── board/
     │   │   ├── board_config.h         ← stable board API (hand-written)
     │   │   ├── board_device_ids.h     ← stub for standalone kernel builds
@@ -88,9 +97,14 @@ FreeRTOS-OS-App/
     │
     ├── kernel/                        ← FreeRTOS kernel + Newlib glue
     ├── init/                          ← main.c, app entry point
-    ├── config/                        ← autoconf.h, conf_os.h (generated + hand)
-    ├── scripts/
+    ├── config/                        ← autoconf.h, FreeRTOSConfig.h, conf_os.h
+    ├── irq/
+    │   ├── irq_desc.c                 ← descriptor table, pool, flow handlers, dispatch
+    │   ├── irq_notify.c               ← irq_register() trampoline adapter
+    │   └── irq_table.c                ← GENERATED — IRQ name strings
+    ├── scripts/  (project root)
     │   ├── gen_board_config.py        ← XML → BSP code generator
+    │   ├── gen_irq_table.py           ← irq_table.xml → irq_table.c + irq_hw_init_generated.c
     │   └── gen_active_debug.py        ← autoconf → build/active_debug.cfg
     └── docs/                          ← This documentation
 ```
@@ -175,11 +189,12 @@ The build system is a hand-written recursive `make`. The top-level `Makefile` in
 
 | Target | Effect |
 |--------|--------|
-| `make app` | Full build (board-gen + compile + link) → `build/kernel.elf` |
+| `make app` | Full build (board-gen + compile + link) → `build/app.elf` |
 | `make board-gen` | Regenerate BSP files from board XML |
+| `make irq_gen` | Regenerate `irq_table.c` + `irq_hw_init_generated.c` from `irq_table.xml` |
 | `make menuconfig` | Kconfig ncurses menu |
 | `make config-outputs` | Regenerate `config/autoconf.h` and `autoconf.mk` from `.config` |
-| `make flash` | Flash `build/kernel.elf` via OpenOCD |
+| `make flash-app` | Flash `build/app.elf` via OpenOCD |
 | `make clean` | Remove `build/` and generated BSP files |
 
 The build system injects two key preprocessor symbols at compile time:
@@ -341,6 +356,7 @@ See [DEBUG.md](DEBUG.md) for the complete setup, configuration, and troubleshoot
 
 | Document | Covers |
 |----------|--------|
+| [IRQ.md](IRQ.md) | IRQ descriptor chain, irq_desc/chip/action structs, dispatch path, EXTI example, generator |
 | [BOARD.md](BOARD.md) | XML board description, code generator, generated files, Makefile integration |
 | [DRIVERS.md](DRIVERS.md) | Full driver architecture, Layer 0–3 details, vendor porting, include paths |
 | [DEV_MGMT.md](DEV_MGMT.md) | Management service threads, message protocols, sync/async patterns |

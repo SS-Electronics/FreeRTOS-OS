@@ -102,3 +102,27 @@ void UsageFault_Handler(void)
     __disable_irq();
     while (1) {}
 }
+
+/* ── FreeRTOS static allocation hooks ────────────────────────────────────── */
+
+void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
+                                   StackType_t  **ppxIdleTaskStackBuffer,
+                                   configSTACK_DEPTH_TYPE *pulIdleTaskStackSize)
+{
+    static StaticTask_t _idle_tcb;
+    static StackType_t  _idle_stack[configMINIMAL_STACK_SIZE];
+    *ppxIdleTaskTCBBuffer   = &_idle_tcb;
+    *ppxIdleTaskStackBuffer = _idle_stack;
+    *pulIdleTaskStackSize   = configMINIMAL_STACK_SIZE;
+}
+
+void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
+                                    StackType_t  **ppxTimerTaskStackBuffer,
+                                    configSTACK_DEPTH_TYPE *pulTimerTaskStackSize)
+{
+    static StaticTask_t _timer_tcb;
+    static StackType_t  _timer_stack[configTIMER_TASK_STACK_DEPTH];
+    *ppxTimerTaskTCBBuffer   = &_timer_tcb;
+    *ppxTimerTaskStackBuffer = _timer_stack;
+    *pulTimerTaskStackSize   = configTIMER_TASK_STACK_DEPTH;
+}

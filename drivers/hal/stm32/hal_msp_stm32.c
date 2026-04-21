@@ -8,6 +8,9 @@
  * configure clocks and GPIO alternate functions by querying the board
  * descriptor tables (board_find_uart / board_find_iic / board_find_spi) so
  * this file contains zero board-specific constants.
+ *
+ * NVIC setup is routed through drv_irq_enable / drv_irq_disable so no
+ * HAL_NVIC_* calls appear outside of drivers/drv_irq.c.
  */
 
 #include <board/mcu_config.h>
@@ -16,19 +19,21 @@
 
 #include <device.h>
 #include <board/board_config.h>
+#include <drivers/drv_irq.h>
 
-/* ── Global MSP init ──────────────────────────────────────────────────── */
+/* ── Global MSP init ──────────────────────────────────────────────────────── */
 
 void HAL_MspInit(void)
 {
     __HAL_RCC_SYSCFG_CLK_ENABLE();
     __HAL_RCC_PWR_CLK_ENABLE();
 
-    HAL_NVIC_SetPriority(SVCall_IRQn, 15, 0);
-    HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
+    /* Cortex-M core exceptions — set priority only, no enable needed */
+    drv_irq_set_priority((int32_t)SVCall_IRQn, 15);
+    drv_irq_set_priority((int32_t)PendSV_IRQn, 15);
 }
 
-/* ── I2C MSP ──────────────────────────────────────────────────────────── */
+/* ── I2C MSP ──────────────────────────────────────────────────────────────── */
 
 #ifdef HAL_I2C_MODULE_ENABLED
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
@@ -54,10 +59,8 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
     gpio.Alternate = d->sda_pin.alternate;
     HAL_GPIO_Init(d->sda_pin.port, &gpio);
 
-    HAL_NVIC_SetPriority(d->ev_irqn, d->irq_priority, 0);
-    HAL_NVIC_EnableIRQ(d->ev_irqn);
-    HAL_NVIC_SetPriority(d->er_irqn, d->irq_priority, 0);
-    HAL_NVIC_EnableIRQ(d->er_irqn);
+    drv_irq_enable((int32_t)d->ev_irqn, d->irq_priority);
+    drv_irq_enable((int32_t)d->er_irqn, d->irq_priority);
 }
 
 void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
@@ -65,14 +68,14 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
     const board_iic_desc_t *d = board_find_iic(hi2c->Instance);
     if (d == NULL) return;
 
-    HAL_NVIC_DisableIRQ(d->ev_irqn);
-    HAL_NVIC_DisableIRQ(d->er_irqn);
+    drv_irq_disable((int32_t)d->ev_irqn);
+    drv_irq_disable((int32_t)d->er_irqn);
     HAL_GPIO_DeInit(d->scl_pin.port, d->scl_pin.pin);
     HAL_GPIO_DeInit(d->sda_pin.port, d->sda_pin.pin);
 }
 #endif /* HAL_I2C_MODULE_ENABLED */
 
-/* ── SPI MSP ──────────────────────────────────────────────────────────── */
+/* ── SPI MSP ──────────────────────────────────────────────────────────────── */
 
 #ifdef HAL_SPI_MODULE_ENABLED
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
@@ -110,6 +113,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         gpio.Alternate = d->nss_pin.alternate;
         HAL_GPIO_Init(d->nss_pin.port, &gpio);
     }
+
+    drv_irq_enable((int32_t)d->irqn, d->irq_priority);
 }
 
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
@@ -117,6 +122,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
     const board_spi_desc_t *d = board_find_spi(hspi->Instance);
     if (d == NULL) return;
 
+    drv_irq_disable((int32_t)d->irqn);
     HAL_GPIO_DeInit(d->sck_pin.port,  d->sck_pin.pin);
     HAL_GPIO_DeInit(d->miso_pin.port, d->miso_pin.pin);
     HAL_GPIO_DeInit(d->mosi_pin.port, d->mosi_pin.pin);
@@ -125,7 +131,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
 }
 #endif /* HAL_SPI_MODULE_ENABLED */
 
-/* ── UART MSP ─────────────────────────────────────────────────────────── */
+/* ── UART MSP ─────────────────────────────────────────────────────────────── */
 
 #ifdef HAL_UART_MODULE_ENABLED
 void HAL_UART_MspInit(UART_HandleTypeDef *huart)
@@ -151,8 +157,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
     gpio.Alternate = d->rx_pin.alternate;
     HAL_GPIO_Init(d->rx_pin.port, &gpio);
 
-    HAL_NVIC_SetPriority(d->irqn, d->irq_priority, 0);
-    HAL_NVIC_EnableIRQ(d->irqn);
+    drv_irq_enable((int32_t)d->irqn, d->irq_priority);
 }
 
 void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
@@ -160,7 +165,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
     const board_uart_desc_t *d = board_find_uart(huart->Instance);
     if (d == NULL) return;
 
-    HAL_NVIC_DisableIRQ(d->irqn);
+    drv_irq_disable((int32_t)d->irqn);
     HAL_GPIO_DeInit(d->tx_pin.port, d->tx_pin.pin);
     HAL_GPIO_DeInit(d->rx_pin.port, d->rx_pin.pin);
 }

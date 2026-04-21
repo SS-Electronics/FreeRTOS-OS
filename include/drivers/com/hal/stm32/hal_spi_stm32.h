@@ -21,6 +21,12 @@ extern "C" {
 const drv_spi_hal_ops_t *hal_spi_stm32_get_ops(void);
 
 /**
+ * @brief  Called from SPIx_IRQHandler to dispatch HAL_SPI_IRQHandler
+ *         to whichever generic handle owns @p instance.
+ */
+void hal_spi_stm32_irq_handler(SPI_TypeDef *instance);
+
+/**
  * @brief  Populate the hardware context in a generic SPI handle.
  *
  * @param  h            Generic SPI handle.

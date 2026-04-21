@@ -2,21 +2,27 @@
  * hal_iic_stm32.c — STM32 HAL I2C ops implementation
  *
  * This file is part of FreeRTOS-OS Project.
+ *
+ * Provides both blocking ops (transmit/receive) and interrupt-driven ops
+ * (transmit_it/receive_it).  HAL callbacks dispatch completion events via
+ * drv_irq_dispatch_from_isr() so management threads can wait with
+ * ulTaskNotifyTake() instead of blocking the bus.
  */
 
 #include <board/mcu_config.h>
 
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_I2C_MODULE_ENABLED)
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
 #include <drivers/drv_handle.h>
 #include <drivers/com/hal/stm32/hal_iic_stm32.h>
+#include <drivers/drv_irq.h>
 
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
     return (s == HAL_OK) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-/* ── HAL ops implementations ──────────────────────────────────────────── */
+/* ── HAL ops implementations ──────────────────────────────────────────────── */
 
 static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
 {
@@ -24,8 +30,6 @@ static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
         return OS_ERR_OP;
 
     I2C_HandleTypeDef *hi2c = &h->hw.hi2c;
-
-    /* Clock speed is owned by the generic handle */
     hi2c->Init.ClockSpeed = h->clock_hz;
 
     HAL_StatusTypeDef ret = HAL_I2C_Init(hi2c);
@@ -62,23 +66,12 @@ static int32_t stm32_iic_transmit(drv_iic_handle_t *h,
     uint16_t shifted = (uint16_t)(dev_addr << 1);
 
     if (use_reg)
-    {
-        ret = HAL_I2C_Mem_Write(&h->hw.hi2c,
-                                shifted,
-                                reg_addr,
-                                I2C_MEMADD_SIZE_8BIT,
-                                (uint8_t *)data,
-                                len,
-                                timeout_ms);
-    }
+        ret = HAL_I2C_Mem_Write(&h->hw.hi2c, shifted, reg_addr,
+                                I2C_MEMADD_SIZE_8BIT, (uint8_t *)data,
+                                len, timeout_ms);
     else
-    {
-        ret = HAL_I2C_Master_Transmit(&h->hw.hi2c,
-                                      shifted,
-                                      (uint8_t *)data,
-                                      len,
-                                      timeout_ms);
-    }
+        ret = HAL_I2C_Master_Transmit(&h->hw.hi2c, shifted,
+                                      (uint8_t *)data, len, timeout_ms);
 
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
@@ -99,23 +92,10 @@ static int32_t stm32_iic_receive(drv_iic_handle_t *h,
     uint16_t shifted = (uint16_t)(dev_addr << 1);
 
     if (use_reg)
-    {
-        ret = HAL_I2C_Mem_Read(&h->hw.hi2c,
-                               shifted,
-                               reg_addr,
-                               I2C_MEMADD_SIZE_8BIT,
-                               data,
-                               len,
-                               timeout_ms);
-    }
+        ret = HAL_I2C_Mem_Read(&h->hw.hi2c, shifted, reg_addr,
+                               I2C_MEMADD_SIZE_8BIT, data, len, timeout_ms);
     else
-    {
-        ret = HAL_I2C_Master_Receive(&h->hw.hi2c,
-                                     shifted,
-                                     data,
-                                     len,
-                                     timeout_ms);
-    }
+        ret = HAL_I2C_Master_Receive(&h->hw.hi2c, shifted, data, len, timeout_ms);
 
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
@@ -130,13 +110,61 @@ static int32_t stm32_iic_is_device_ready(drv_iic_handle_t *h,
 
     HAL_StatusTypeDef ret = HAL_I2C_IsDeviceReady(&h->hw.hi2c,
                                                    (uint16_t)(dev_addr << 1),
-                                                   3,
-                                                   timeout_ms);
+                                                   3, timeout_ms);
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
-/* ── Static ops table ─────────────────────────────────────────────────── */
+/* ── IT ops ───────────────────────────────────────────────────────────────── */
+
+static int32_t stm32_iic_transmit_it(drv_iic_handle_t *h,
+                                      uint16_t          dev_addr,
+                                      uint8_t           reg_addr,
+                                      uint8_t           use_reg,
+                                      const uint8_t    *data,
+                                      uint16_t          len)
+{
+    if (h == NULL || !h->initialized || data == NULL)
+        return OS_ERR_OP;
+
+    HAL_StatusTypeDef ret;
+    uint16_t shifted = (uint16_t)(dev_addr << 1);
+
+    if (use_reg)
+        ret = HAL_I2C_Mem_Write_IT(&h->hw.hi2c, shifted, reg_addr,
+                                    I2C_MEMADD_SIZE_8BIT, (uint8_t *)data, len);
+    else
+        ret = HAL_I2C_Master_Transmit_IT(&h->hw.hi2c, shifted,
+                                          (uint8_t *)data, len);
+
+    h->last_err = _hal_to_os_err(ret);
+    return h->last_err;
+}
+
+static int32_t stm32_iic_receive_it(drv_iic_handle_t *h,
+                                     uint16_t          dev_addr,
+                                     uint8_t           reg_addr,
+                                     uint8_t           use_reg,
+                                     uint8_t          *data,
+                                     uint16_t          len)
+{
+    if (h == NULL || !h->initialized || data == NULL)
+        return OS_ERR_OP;
+
+    HAL_StatusTypeDef ret;
+    uint16_t shifted = (uint16_t)(dev_addr << 1);
+
+    if (use_reg)
+        ret = HAL_I2C_Mem_Read_IT(&h->hw.hi2c, shifted, reg_addr,
+                                   I2C_MEMADD_SIZE_8BIT, data, len);
+    else
+        ret = HAL_I2C_Master_Receive_IT(&h->hw.hi2c, shifted, data, len);
+
+    h->last_err = _hal_to_os_err(ret);
+    return h->last_err;
+}
+
+/* ── Static ops table ─────────────────────────────────────────────────────── */
 
 static const drv_iic_hal_ops_t _stm32_iic_ops = {
     .hw_init        = stm32_iic_hw_init,
@@ -144,9 +172,11 @@ static const drv_iic_hal_ops_t _stm32_iic_ops = {
     .transmit       = stm32_iic_transmit,
     .receive        = stm32_iic_receive,
     .is_device_ready = stm32_iic_is_device_ready,
+    .transmit_it    = stm32_iic_transmit_it,
+    .receive_it     = stm32_iic_receive_it,
 };
 
-/* ── Public API ───────────────────────────────────────────────────────── */
+/* ── Public API ───────────────────────────────────────────────────────────── */
 
 const drv_iic_hal_ops_t *hal_iic_stm32_get_ops(void)
 {
@@ -171,6 +201,96 @@ void hal_iic_stm32_set_config(drv_iic_handle_t *h,
     hi2c->Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
     hi2c->Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
     /* ClockSpeed will be set from h->clock_hz in hw_init */
+}
+
+/* ── IRQ dispatch ─────────────────────────────────────────────────────────── */
+
+void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
+{
+    for (uint8_t id = 0; id < NO_OF_IIC; id++)
+    {
+        drv_iic_handle_t *h = drv_iic_get_handle(id);
+        if (h != NULL && h->initialized && h->hw.hi2c.Instance == instance)
+        {
+            HAL_I2C_EV_IRQHandler(&h->hw.hi2c);
+            return;
+        }
+    }
+}
+
+void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
+{
+    for (uint8_t id = 0; id < NO_OF_IIC; id++)
+    {
+        drv_iic_handle_t *h = drv_iic_get_handle(id);
+        if (h != NULL && h->initialized && h->hw.hi2c.Instance == instance)
+        {
+            HAL_I2C_ER_IRQHandler(&h->hw.hi2c);
+            return;
+        }
+    }
+}
+
+/* ── HAL weak callbacks ───────────────────────────────────────────────────── */
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    for (uint8_t id = 0; id < NO_OF_IIC; id++)
+    {
+        drv_iic_handle_t *h = drv_iic_get_handle(id);
+        if (h != NULL && h->initialized && h->hw.hi2c.Instance == hi2c->Instance)
+        {
+            h->last_err = OS_ERR_NONE;
+            BaseType_t hpt = pdFALSE;
+            drv_irq_dispatch_from_isr(IRQ_ID_I2C_TX_DONE(id), NULL, &hpt);
+            portYIELD_FROM_ISR(hpt);
+            return;
+        }
+    }
+}
+
+/* HAL_I2C_Mem_Write_IT completes via MemTxCplt, not MasterTxCplt */
+void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    HAL_I2C_MasterTxCpltCallback(hi2c);
+}
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    for (uint8_t id = 0; id < NO_OF_IIC; id++)
+    {
+        drv_iic_handle_t *h = drv_iic_get_handle(id);
+        if (h != NULL && h->initialized && h->hw.hi2c.Instance == hi2c->Instance)
+        {
+            h->last_err = OS_ERR_NONE;
+            BaseType_t hpt = pdFALSE;
+            drv_irq_dispatch_from_isr(IRQ_ID_I2C_RX_DONE(id), NULL, &hpt);
+            portYIELD_FROM_ISR(hpt);
+            return;
+        }
+    }
+}
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+    HAL_I2C_MasterRxCpltCallback(hi2c);
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
+{
+    for (uint8_t id = 0; id < NO_OF_IIC; id++)
+    {
+        drv_iic_handle_t *h = drv_iic_get_handle(id);
+        if (h != NULL && h->initialized && h->hw.hi2c.Instance == hi2c->Instance)
+        {
+            uint32_t err = HAL_I2C_GetError(hi2c);
+            h->last_err  = OS_ERR_OP;
+            BaseType_t hpt = pdFALSE;
+            drv_irq_dispatch_from_isr(IRQ_ID_I2C_ERROR(id), &err, &hpt);
+            portYIELD_FROM_ISR(hpt);
+            return;
+        }
+    }
 }
 
 #endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM && HAL_I2C_MODULE_ENABLED */

@@ -39,6 +39,8 @@
 #include <def_std.h>
 #include <def_err.h>
 #include <board/mcu_config.h>  /* CONFIG_DEVICE_VARIANT, MCU_VAR_* */
+#include <FreeRTOS.h>          /* TaskHandle_t for IT-based notify  */
+#include <task.h>
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1.  Forward declarations (break circular dependency with hal_ops structs)
@@ -232,7 +234,7 @@ typedef struct drv_iic_hal_ops {
     int32_t (*hw_deinit)(drv_iic_handle_t *h);
 
     /**
-     * @brief  Write @p len bytes to @p dev_addr.
+     * @brief  Blocking write @p len bytes to @p dev_addr.
      * @param  dev_addr    7-bit I2C device address (not shifted).
      * @param  reg_addr    Register address (0 if device doesn't use registers).
      * @param  use_reg     Non-zero to send reg_addr before data.
@@ -245,7 +247,7 @@ typedef struct drv_iic_hal_ops {
                         uint16_t  len,
                         uint32_t  timeout_ms);
 
-    /** @brief Read @p len bytes from @p dev_addr. */
+    /** @brief Blocking read @p len bytes from @p dev_addr. */
     int32_t (*receive)(drv_iic_handle_t *h,
                        uint16_t  dev_addr,
                        uint8_t   reg_addr,
@@ -258,6 +260,28 @@ typedef struct drv_iic_hal_ops {
     int32_t (*is_device_ready)(drv_iic_handle_t *h,
                                uint16_t dev_addr,
                                uint32_t timeout_ms);
+
+    /**
+     * @brief  Interrupt-driven write.  Returns immediately; completion is
+     *         signalled via IRQ_ID_I2C_TX_DONE(dev_id) / irq_notify_from_isr().
+     */
+    int32_t (*transmit_it)(drv_iic_handle_t *h,
+                           uint16_t  dev_addr,
+                           uint8_t   reg_addr,
+                           uint8_t   use_reg,
+                           const uint8_t *data,
+                           uint16_t  len);
+
+    /**
+     * @brief  Interrupt-driven read.  Returns immediately; completion is
+     *         signalled via IRQ_ID_I2C_RX_DONE(dev_id) / irq_notify_from_isr().
+     */
+    int32_t (*receive_it)(drv_iic_handle_t *h,
+                          uint16_t  dev_addr,
+                          uint8_t   reg_addr,
+                          uint8_t   use_reg,
+                          uint8_t  *data,
+                          uint16_t  len);
 } drv_iic_hal_ops_t;
 
 
@@ -266,24 +290,46 @@ typedef struct drv_spi_hal_ops {
     int32_t (*hw_init)(drv_spi_handle_t *h);
     int32_t (*hw_deinit)(drv_spi_handle_t *h);
 
-    /** @brief Transmit-only — ignores MISO. */
+    /** @brief Blocking transmit-only — ignores MISO. */
     int32_t (*transmit)(drv_spi_handle_t *h,
                         const uint8_t *data,
                         uint16_t       len,
                         uint32_t       timeout_ms);
 
-    /** @brief Receive-only — drives MOSI low. */
+    /** @brief Blocking receive-only — drives MOSI low. */
     int32_t (*receive)(drv_spi_handle_t *h,
                        uint8_t  *data,
                        uint16_t  len,
                        uint32_t  timeout_ms);
 
-    /** @brief Full-duplex transfer — TX and RX simultaneously. */
+    /** @brief Blocking full-duplex transfer — TX and RX simultaneously. */
     int32_t (*transfer)(drv_spi_handle_t *h,
                         const uint8_t *tx,
                         uint8_t       *rx,
                         uint16_t       len,
                         uint32_t       timeout_ms);
+
+    /**
+     * @brief  IT transmit — completion via IRQ_ID_SPI_TX_DONE(dev_id).
+     */
+    int32_t (*transmit_it)(drv_spi_handle_t *h,
+                           const uint8_t *data,
+                           uint16_t       len);
+
+    /**
+     * @brief  IT receive — completion via IRQ_ID_SPI_RX_DONE(dev_id).
+     */
+    int32_t (*receive_it)(drv_spi_handle_t *h,
+                          uint8_t  *data,
+                          uint16_t  len);
+
+    /**
+     * @brief  IT full-duplex transfer — completion via IRQ_ID_SPI_TXRX_DONE(dev_id).
+     */
+    int32_t (*transfer_it)(drv_spi_handle_t *h,
+                           const uint8_t *tx,
+                           uint8_t       *rx,
+                           uint16_t       len);
 } drv_spi_hal_ops_t;
 
 
@@ -340,6 +386,7 @@ struct drv_iic_handle {
     uint32_t                 clock_hz;       /**< I2C bus clock (e.g. 400000)     */
     uint32_t                 timeout_ms;
     int32_t                  last_err;
+    TaskHandle_t             notify_task;    /**< Set before IT transfer; cleared after */
 };
 
 /** @brief Generic SPI peripheral handle. */
@@ -351,6 +398,7 @@ struct drv_spi_handle {
     uint32_t                 clock_hz;       /**< SPI clock speed                 */
     uint32_t                 timeout_ms;
     int32_t                  last_err;
+    TaskHandle_t             notify_task;    /**< Set before IT transfer; cleared after */
 };
 
 /** @brief Watchdog peripheral handle (singleton — one WDG per MCU). */

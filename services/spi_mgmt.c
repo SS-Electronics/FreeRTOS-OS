@@ -2,6 +2,17 @@
  * spi_mgmt.c — SPI management service thread
  *
  * This file is part of FreeRTOS-OS Project.
+ *
+ * All transfers use interrupt-driven HAL ops (transmit_it / receive_it /
+ * transfer_it).  Completion is signalled from the ISR callback via the generic
+ * IRQ notification framework:
+ *
+ *   mgmt thread                          ISR (HAL_SPI_*CpltCallback)
+ *   ──────────                           ───────────────────────────
+ *   h->notify_task = currentTask()
+ *   ops->transfer_it(...)  ──────────►  irq_notify_from_isr(IRQ_ID_SPI_TXRX_DONE)
+ *   ulTaskNotifyTake(...)  ◄──────────  vTaskNotifyGiveFromISR(h->notify_task)
+ *   result = h->last_err
  */
 
 #include <services/spi_mgmt.h>
@@ -9,6 +20,7 @@
 #include <os/kernel.h>
 #include <drivers/drv_handle.h>
 #include <board/board_config.h>
+#include <irq/irq_notify.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 #  include <drivers/com/hal/stm32/hal_spi_stm32.h>
@@ -17,6 +29,28 @@
 #if (BOARD_SPI_COUNT > 0)
 
 static QueueHandle_t _mgmt_queue = NULL;
+
+/* ── IRQ subscriber callbacks ─────────────────────────────────────────────── */
+
+static void _spi_done_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
+{
+    (void)id;
+    (void)data;
+    drv_spi_handle_t *h = (drv_spi_handle_t *)arg;
+    if (h->notify_task != NULL)
+        vTaskNotifyGiveFromISR(h->notify_task, pxHPT);
+}
+
+static void _spi_err_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
+{
+    (void)id;
+    (void)data;
+    drv_spi_handle_t *h = (drv_spi_handle_t *)arg;
+    if (h->notify_task != NULL)
+        vTaskNotifyGiveFromISR(h->notify_task, pxHPT);
+}
+
+/* ── Management thread ────────────────────────────────────────────────────── */
 
 static void spi_mgmt_thread(void *arg)
 {
@@ -40,10 +74,6 @@ static void spi_mgmt_thread(void *arg)
                 const board_spi_desc_t *d = &bc->spi_table[i];
                 drv_spi_handle_t       *h = drv_spi_get_handle(d->dev_id);
 
-                /*
-                 * Populate the vendor hw context BEFORE drv_spi_register()
-                 * calls hw_init(), which reads Instance and all Init fields.
-                 */
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
                 hal_spi_stm32_set_config(h,
                                          d->instance,
@@ -58,6 +88,12 @@ static void spi_mgmt_thread(void *arg)
 #endif
                 int32_t err = drv_spi_register(d->dev_id, ops, 0, 10);
                 (void)err;
+
+                /* Subscribe for IT completion and error notifications */
+                irq_register(IRQ_ID_SPI_TX_DONE(d->dev_id),   _spi_done_cb, h);
+                irq_register(IRQ_ID_SPI_RX_DONE(d->dev_id),   _spi_done_cb, h);
+                irq_register(IRQ_ID_SPI_TXRX_DONE(d->dev_id), _spi_done_cb, h);
+                irq_register(IRQ_ID_SPI_ERROR(d->dev_id),      _spi_err_cb,  h);
             }
         }
     }
@@ -78,16 +114,55 @@ static void spi_mgmt_thread(void *arg)
         switch (msg.cmd)
         {
             case SPI_MGMT_CMD_TRANSMIT:
-                result = h->ops->transmit(h, msg.tx_data, msg.len, h->timeout_ms);
+                if (h->ops->transmit_it != NULL)
+                {
+                    h->notify_task = xTaskGetCurrentTaskHandle();
+                    result = h->ops->transmit_it(h, msg.tx_data, msg.len);
+                    if (result == OS_ERR_NONE)
+                        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(h->timeout_ms));
+                    result = h->last_err;
+                    h->notify_task = NULL;
+                }
+                else
+                {
+                    result = h->ops->transmit(h, msg.tx_data, msg.len,
+                                              h->timeout_ms);
+                }
                 break;
 
             case SPI_MGMT_CMD_RECEIVE:
-                result = h->ops->receive(h, msg.rx_data, msg.len, h->timeout_ms);
+                if (h->ops->receive_it != NULL)
+                {
+                    h->notify_task = xTaskGetCurrentTaskHandle();
+                    result = h->ops->receive_it(h, msg.rx_data, msg.len);
+                    if (result == OS_ERR_NONE)
+                        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(h->timeout_ms));
+                    result = h->last_err;
+                    h->notify_task = NULL;
+                }
+                else
+                {
+                    result = h->ops->receive(h, msg.rx_data, msg.len,
+                                             h->timeout_ms);
+                }
                 break;
 
             case SPI_MGMT_CMD_TRANSFER:
-                result = h->ops->transfer(h, msg.tx_data, msg.rx_data,
-                                          msg.len, h->timeout_ms);
+                if (h->ops->transfer_it != NULL)
+                {
+                    h->notify_task = xTaskGetCurrentTaskHandle();
+                    result = h->ops->transfer_it(h, msg.tx_data, msg.rx_data,
+                                                  msg.len);
+                    if (result == OS_ERR_NONE)
+                        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(h->timeout_ms));
+                    result = h->last_err;
+                    h->notify_task = NULL;
+                }
+                else
+                {
+                    result = h->ops->transfer(h, msg.tx_data, msg.rx_data,
+                                              msg.len, h->timeout_ms);
+                }
                 break;
 
             case SPI_MGMT_CMD_REINIT:

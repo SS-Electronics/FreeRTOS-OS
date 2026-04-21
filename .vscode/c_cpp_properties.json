@@ -1,57 +1,75 @@
 {
     // ─────────────────────────────────────────────────────────────────────────
-    //  FreeRTOS-OS  —  IntelliSense Configuration
+    //  FreeRTOS-OS  —  IntelliSense Configuration  (OS SUBFOLDER WORKSPACE)
     //
-    //  One configuration per supported MCU target.
-    //  Switch the active config via the bottom-right status bar selector
-    //  (C/C++ extension: "Select Configuration").
-    //
-    //  compilerPath is left as the bare tool name so the C/C++ extension
-    //  discovers it from PATH.  Set ARM_GCC_PATH in your environment (or
-    //  in settings.json) to override:
-    //    ARM_GCC_PATH=/opt/gcc-arm/bin  make ...
+    //  Used when VS Code is opened at FreeRTOS-OS/ directly.
+    //  Prefer opening at FreeRTOS-OS-App/ (root) which has better path coverage.
     // ─────────────────────────────────────────────────────────────────────────
     "configurations": [
 
-        // ── STM32F411xE (primary target — Nucleo-F411RE / dev-board) ─────────
+        // ── STM32F411xE (primary target) ──────────────────────────────────────
         {
             "name": "STM32F411xE",
             "includePath": [
                 "${workspaceFolder}",
                 "${workspaceFolder}/include",
-                "${workspaceFolder}/include/config",
-                "${workspaceFolder}/include/services",
                 "${workspaceFolder}/include/board",
+                "${workspaceFolder}/include/config",
+                "${workspaceFolder}/include/drivers",
+                "${workspaceFolder}/include/drivers/hal/stm32",
                 "${workspaceFolder}/include/ipc",
+                "${workspaceFolder}/include/irq",
+                "${workspaceFolder}/include/lib",
                 "${workspaceFolder}/include/mm",
                 "${workspaceFolder}/include/os",
-                "${workspaceFolder}/include/drivers",
-                "${workspaceFolder}/include/lib",
+                "${workspaceFolder}/include/services",
+                // Generated config (autoconf.h, FreeRTOSConfig.h, conf_os.h)
+                "${workspaceFolder}/config",
+                // ARM CMSIS
                 "${workspaceFolder}/arch/arm/CMSIS_6",
+                "${workspaceFolder}/arch/arm/CMSIS_6/CMSIS/Core/Include",
+                // STM32 device + HAL
+                "${workspaceFolder}/arch/devices",
                 "${workspaceFolder}/arch/devices/STM/STM32F4xx",
                 "${workspaceFolder}/arch/devices/STM/STM32F4xx/STM32F411",
                 "${workspaceFolder}/arch/devices/STM/stm32f4xx-hal-driver/Inc",
+                "${workspaceFolder}/arch/devices/device_conf",
+                // FreeRTOS kernel
                 "${workspaceFolder}/kernel",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/include",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F",
                 "${workspaceFolder}/lib",
-                // Application headers (when workspace opened inside FreeRTOS-OS/)
+                // Application (relative — only works when app/ is a sibling)
                 "${workspaceFolder}/../app",
-                "${workspaceFolder}/../app/board"
+                "${workspaceFolder}/../app/board",
+                "${workspaceFolder}/../app/os_conf_include"
             ],
             "defines": [
                 "STM32F411xE",
                 "USE_HAL_DRIVER",
                 "__ARM_ARCH_7EM__",
                 "__FPU_PRESENT=1",
-                "ARM_MATH_CM4"
+                "ARM_MATH_CM4",
+                "CONFIG_DEVICE_VARIANT=2",
+                "HAL_MODULE_ENABLED",
+                "HAL_CORTEX_MODULE_ENABLED",
+                "HAL_GPIO_MODULE_ENABLED",
+                "HAL_EXTI_MODULE_ENABLED",
+                "HAL_UART_MODULE_ENABLED",
+                "HAL_I2C_MODULE_ENABLED",
+                "HAL_SPI_MODULE_ENABLED",
+                "HAL_TIM_MODULE_ENABLED",
+                "HAL_RCC_MODULE_ENABLED",
+                "HAL_DMA_MODULE_ENABLED",
+                "HAL_FLASH_MODULE_ENABLED",
+                "HAL_PWR_MODULE_ENABLED"
             ],
             "compilerPath": "arm-none-eabi-gcc",
             "cStandard": "gnu99",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "gcc-arm",
             "forcedInclude": [
-                "${workspaceFolder}/include/config/autoconf.h"
+                "${workspaceFolder}/config/autoconf.h"
             ]
         },
 
@@ -61,38 +79,58 @@
             "includePath": [
                 "${workspaceFolder}",
                 "${workspaceFolder}/include",
-                "${workspaceFolder}/include/config",
-                "${workspaceFolder}/include/services",
                 "${workspaceFolder}/include/board",
+                "${workspaceFolder}/include/config",
+                "${workspaceFolder}/include/drivers",
+                "${workspaceFolder}/include/drivers/hal/stm32",
                 "${workspaceFolder}/include/ipc",
+                "${workspaceFolder}/include/irq",
+                "${workspaceFolder}/include/lib",
                 "${workspaceFolder}/include/mm",
                 "${workspaceFolder}/include/os",
-                "${workspaceFolder}/include/drivers",
-                "${workspaceFolder}/include/lib",
+                "${workspaceFolder}/include/services",
+                "${workspaceFolder}/config",
                 "${workspaceFolder}/arch/arm/CMSIS_6",
+                "${workspaceFolder}/arch/arm/CMSIS_6/CMSIS/Core/Include",
+                "${workspaceFolder}/arch/devices",
                 "${workspaceFolder}/arch/devices/STM/STM32F4xx",
                 "${workspaceFolder}/arch/devices/STM/STM32F4xx/STM32F401",
                 "${workspaceFolder}/arch/devices/STM/stm32f4xx-hal-driver/Inc",
+                "${workspaceFolder}/arch/devices/device_conf",
                 "${workspaceFolder}/kernel",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/include",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F",
                 "${workspaceFolder}/lib",
                 "${workspaceFolder}/../app",
-                "${workspaceFolder}/../app/board"
+                "${workspaceFolder}/../app/board",
+                "${workspaceFolder}/../app/os_conf_include"
             ],
             "defines": [
                 "STM32F401xE",
                 "USE_HAL_DRIVER",
                 "__ARM_ARCH_7EM__",
                 "__FPU_PRESENT=1",
-                "ARM_MATH_CM4"
+                "ARM_MATH_CM4",
+                "CONFIG_DEVICE_VARIANT=2",
+                "HAL_MODULE_ENABLED",
+                "HAL_CORTEX_MODULE_ENABLED",
+                "HAL_GPIO_MODULE_ENABLED",
+                "HAL_EXTI_MODULE_ENABLED",
+                "HAL_UART_MODULE_ENABLED",
+                "HAL_I2C_MODULE_ENABLED",
+                "HAL_SPI_MODULE_ENABLED",
+                "HAL_TIM_MODULE_ENABLED",
+                "HAL_RCC_MODULE_ENABLED",
+                "HAL_DMA_MODULE_ENABLED",
+                "HAL_FLASH_MODULE_ENABLED",
+                "HAL_PWR_MODULE_ENABLED"
             ],
             "compilerPath": "arm-none-eabi-gcc",
             "cStandard": "gnu99",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "gcc-arm",
             "forcedInclude": [
-                "${workspaceFolder}/include/config/autoconf.h"
+                "${workspaceFolder}/config/autoconf.h"
             ]
         }
     ],

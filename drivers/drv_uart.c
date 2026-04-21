@@ -147,59 +147,10 @@ void drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte)
         cbs->on_rx_byte(dev_id, rx_byte);
 }
 
-/* ── STM32 HAL callback (compiled only for STM32 targets) ─────────────── */
-
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
-
 /*
- * STM32 HAL calls this from the UART IRQ handler on successful reception of
- * one byte.  We identify which logical UART device owns the HAL handle and
- * dispatch to the generic ISR.
+ * HAL_UART_RxCpltCallback / TxCpltCallback / ErrorCallback are NOT defined
+ * here.  hal_uart_stm32_irq_handler() reads USART SR/DR directly and calls
+ * drv_uart_rx_isr_dispatch() below, bypassing the HAL callback chain.
  */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    for (uint8_t id = 0; id < BOARD_UART_COUNT; id++)
-    {
-        drv_uart_handle_t *h = &_uart_handles[id];
-        if (h->initialized && &h->hw.huart == huart)
-        {
-            drv_uart_rx_isr_dispatch(id, _rx_stage_byte[id]);
-            return;
-        }
-    }
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-    for (uint8_t id = 0; id < BOARD_UART_COUNT; id++)
-    {
-        drv_uart_handle_t *h = &_uart_handles[id];
-        if (h->initialized && &h->hw.huart == huart)
-        {
-            const board_uart_cbs_t *cbs = board_get_uart_cbs(id);
-            if (cbs != NULL && cbs->on_tx_done != NULL)
-                cbs->on_tx_done(id);
-            return;
-        }
-    }
-}
-
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-    for (uint8_t id = 0; id < BOARD_UART_COUNT; id++)
-    {
-        drv_uart_handle_t *h = &_uart_handles[id];
-        if (h->initialized && &h->hw.huart == huart)
-        {
-            h->last_err = OS_ERR_OP;
-            const board_uart_cbs_t *cbs = board_get_uart_cbs(id);
-            if (cbs != NULL && cbs->on_error != NULL)
-                cbs->on_error(id, huart->ErrorCode);
-            return;
-        }
-    }
-}
-
-#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */
 
 #endif /* NO_OF_UART > 0 */

@@ -20,7 +20,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License 
-along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
+along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>. */
 
 /* Bootloader placed section */
 #define __SECTION_BOOT          __attribute__((section(".boot")))

@@ -33,6 +33,18 @@ void hal_iic_stm32_set_config(drv_iic_handle_t *h,
                               uint32_t          addr_mode,
                               uint32_t          dual_addr);
 
+/**
+ * @brief  Called from I2Cx_EV_IRQHandler to dispatch HAL_I2C_EV_IRQHandler
+ *         to whichever generic handle owns @p instance.
+ */
+void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance);
+
+/**
+ * @brief  Called from I2Cx_ER_IRQHandler to dispatch HAL_I2C_ER_IRQHandler
+ *         to whichever generic handle owns @p instance.
+ */
+void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance);
+
 #ifdef __cplusplus
 }
 #endif

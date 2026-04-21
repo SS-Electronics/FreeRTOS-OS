@@ -96,6 +96,7 @@ obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim.o
 obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_tim_ex.o
 obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart.o
 # obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_uart_ex.o
+obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_i2c.o
 
 
 #---------- Associate Linker script for target MCU -------------- 

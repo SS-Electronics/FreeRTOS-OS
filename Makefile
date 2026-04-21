@@ -91,7 +91,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := include arch drv_app drivers kernel mm ipc services init 
+SUBDIRS := include arch irq drivers kernel mm ipc services drv_app  init 
 
 INCLUDES :=
 
@@ -247,6 +247,25 @@ endif
 
 
 
+
+##############################################################
+# IRQ table code generation
+# Reads APP_DIR/board/irq_table.xml and writes:
+#   irq/irq_table.c                    — software IRQ name table
+#   APP_DIR/board/irq_hw_init_generated.c/.h — NVIC priority / binding init
+# Run: make irq_gen APP_DIR=../app
+.PHONY: irq_gen
+ifdef APP_DIR
+irq_gen:
+	@echo "### Generating IRQ table from $(APP_DIR)/board/irq_table.xml ..."
+	@python3 scripts/gen_irq_table.py $(APP_DIR)/board/irq_table.xml
+	@echo "### IRQ table generation done"
+else
+irq_gen:
+	@echo "### irq_gen requires APP_DIR — e.g.: make irq_gen APP_DIR=../app"
+	@exit 1
+endif
+##############################################################
 
 ##############################################################
 # Board BSP generation

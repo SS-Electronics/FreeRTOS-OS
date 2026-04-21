@@ -3,16 +3,36 @@
  *
  * This file is part of FreeRTOS-OS Project.
  *
+ * IRQ flow (chip → app)
+ * ─────────────────────
+ *
+ *  [startup_stm32f411vetx.c]  vector table — weak alias USART1_IRQHandler
+ *           │ overridden by strong symbol in…
+ *           ▼
+ *  [hal_it_stm32.c]  USART1_IRQHandler() { hal_uart_stm32_irq_handler(USART1); }
+ *           │
+ *           ▼
+ *  [hal_uart_stm32.c]  HAL_UART_IRQHandler()  →  HAL_UART_RxCpltCallback()
+ *           │                                      HAL_UART_TxCpltCallback()
+ *           │                                      HAL_UART_ErrorCallback()
+ *           │
+ *           ▼  irq_notify_from_isr(IRQ_ID_UART_RX(n), &byte, pxHPT)
+ *  [irq/irq.c]  generic pub/sub dispatch
+ *           │
+ *           ├──► _uart_rx_cb  (this file, ISR context)
+ *           │      → ringbuffer_putchar(rb, byte)
+ *           │
+ *           └──► app-registered callbacks (e.g. echo_task wakeup)
+ *                  → vTaskNotifyGiveFromISR(app_task, pxHPT)
+ *
  * Thread lifecycle
  * ────────────────
- *   1. uart_mgmt_start() creates the FreeRTOS task and queue.
+ *   1. uart_mgmt_start() creates the FreeRTOS task and management queue.
  *   2. After TIME_OFFSET_SERIAL_MANAGEMENT ms the task registers every
- *      enabled UART device with the generic driver layer (drv_uart.c) by
- *      binding the correct vendor HAL ops table.
- *   3. The task then loops forever on the management queue, dispatching
- *      transmit / reinit / deinit commands.
- *   4. On error (h->last_err != OS_ERR_NONE) the task attempts a recovery
- *      reinit before returning an error to the caller.
+ *      enabled UART with the generic driver layer and subscribes to the
+ *      generic IRQ notification framework for RX, TX-done, and error events.
+ *   3. The task then loops on the management queue, processing transmit /
+ *      reinit / deinit commands.
  */
 
 #include <services/uart_mgmt.h>
@@ -23,8 +43,9 @@
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
 #include <ipc/mqueue.h>
+#include <irq/irq_notify.h>
 
-/* Vendor HAL selection — include only the active backend */
+/* Vendor HAL selection */
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 #  include <drivers/com/hal/stm32/hal_uart_stm32.h>
 #elif (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
@@ -33,17 +54,52 @@
 
 #if (INC_SERVICE_UART_MGMT == 1)
 
-/* ── Private state ────────────────────────────────────────────────────── */
+/* ── Private state ────────────────────────────────────────────────────────── */
 
 static QueueHandle_t _mgmt_queue = NULL;
 
-/* ── Thread body ──────────────────────────────────────────────────────── */
+/* ── IRQ subscriber callbacks (all run in ISR context) ───────────────────── */
+
+/*
+ * _uart_rx_cb — byte received on a UART channel.
+ * arg = struct ringbuffer * for the channel's RX queue.
+ * data = uint8_t * to the received byte (lives in the HAL staging array).
+ */
+static void _uart_rx_cb(irq_id_t      id,
+                         void         *data,
+                         void         *arg,
+                         BaseType_t   *pxHPT)
+{
+    (void)id;
+    (void)pxHPT;
+    if (data == NULL || arg == NULL)
+        return;
+    ringbuffer_putchar((struct ringbuffer *)arg, *(uint8_t *)data);
+}
+
+/*
+ * _uart_err_cb — peripheral error detected.
+ * arg = drv_uart_handle_t * for the channel.
+ */
+static void _uart_err_cb(irq_id_t      id,
+                          void         *data,
+                          void         *arg,
+                          BaseType_t   *pxHPT)
+{
+    (void)id;
+    (void)data;
+    (void)pxHPT;
+    drv_uart_handle_t *h = (drv_uart_handle_t *)arg;
+    if (h != NULL)
+        h->last_err = OS_ERR_OP;
+}
+
+/* ── Management thread ────────────────────────────────────────────────────── */
 
 static void uart_mgmt_thread(void *arg)
 {
     (void)arg;
 
-    /* ── Startup delay: wait for other subsystems to initialise ── */
     os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT);
 
     /* ── Register and initialise all enabled UART devices ── */
@@ -65,10 +121,6 @@ static void uart_mgmt_thread(void *arg)
                 const board_uart_desc_t *d = &bc->uart_table[i];
                 drv_uart_handle_t       *h = drv_uart_get_handle(d->dev_id);
 
-                /*
-                 * Populate the vendor hw context (instance, framing) BEFORE
-                 * drv_uart_register() calls hw_init(), which reads these fields.
-                 */
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
                 hal_uart_stm32_set_config(h, d->instance,
                                           d->word_len, d->stop_bits,
@@ -77,6 +129,21 @@ static void uart_mgmt_thread(void *arg)
                 int32_t err = drv_uart_register(d->dev_id, ops,
                                                 d->baudrate, 10);
                 (void)err;
+
+                /*
+                 * Subscribe to the generic IRQ notification framework.
+                 *
+                 * _uart_rx_cb feeds every received byte straight into the
+                 * channel's RX ring buffer, which callers drain via
+                 * uart_mgmt_read_byte().  The arg pointer is retrieved here
+                 * after ipc_queues_init() has already allocated the buffer.
+                 */
+                struct ringbuffer *rb = (struct ringbuffer *)
+                    ipc_mqueue_get_handle(
+                        global_uart_rx_mqueue_list[d->dev_id]);
+
+                irq_register(IRQ_ID_UART_RX(d->dev_id),    _uart_rx_cb,  rb);
+                irq_register(IRQ_ID_UART_ERROR(d->dev_id),  _uart_err_cb, h);
             }
         }
     }
@@ -130,17 +197,14 @@ static void uart_mgmt_thread(void *arg)
     }
 }
 
-/* ── Public API ───────────────────────────────────────────────────────── */
+/* ── Public API ───────────────────────────────────────────────────────────── */
 
 int32_t uart_mgmt_start(void)
 {
     _mgmt_queue = xQueueCreate(UART_MGMT_QUEUE_DEPTH, sizeof(uart_mgmt_msg_t));
-
     if (_mgmt_queue == NULL)
-    {
         return OS_ERR_MEM_OF;
-    }
-        
+
     int32_t tid = os_thread_create(uart_mgmt_thread,
                                    "uart_mgmt",
                                    PROC_SERVICE_SERIAL_MGMT_STACK_SIZE,
@@ -178,7 +242,8 @@ int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte)
         return OS_ERR_OP;
 
     struct ringbuffer *rb =
-        (struct ringbuffer *)ipc_mqueue_get_handle(global_uart_rx_mqueue_list[dev_id]);
+        (struct ringbuffer *)ipc_mqueue_get_handle(
+            global_uart_rx_mqueue_list[dev_id]);
 
     if (rb == NULL)
         return OS_ERR_OP;

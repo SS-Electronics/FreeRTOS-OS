@@ -2,6 +2,18 @@
  * iic_mgmt.c — I2C management service thread
  *
  * This file is part of FreeRTOS-OS Project.
+ *
+ * The management thread serialises I2C operations onto each bus.  All
+ * transfers use the interrupt-driven HAL ops (transmit_it / receive_it) so
+ * the thread releases the CPU while the hardware works.  Completion is
+ * signalled from the ISR callback via the generic IRQ notification framework:
+ *
+ *   mgmt thread                          ISR (HAL_I2C_*CpltCallback)
+ *   ──────────                           ────────────────────────────
+ *   h->notify_task = currentTask()
+ *   ops->transmit_it(...)  ──────────►  irq_notify_from_isr(IRQ_ID_I2C_TX_DONE)
+ *   ulTaskNotifyTake(...)  ◄──────────  vTaskNotifyGiveFromISR(h->notify_task)
+ *   result = h->last_err
  */
 
 #include <services/iic_mgmt.h>
@@ -9,6 +21,7 @@
 #include <os/kernel.h>
 #include <drivers/drv_handle.h>
 #include <board/board_config.h>
+#include <irq/irq_notify.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 #  include <drivers/com/hal/stm32/hal_iic_stm32.h>
@@ -19,6 +32,28 @@
 #if (INC_SERVICE_IIC_MGMT == 1)
 
 static QueueHandle_t _mgmt_queue = NULL;
+
+/* ── IRQ subscriber callbacks ─────────────────────────────────────────────── */
+
+static void _iic_done_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
+{
+    (void)id;
+    (void)data;
+    drv_iic_handle_t *h = (drv_iic_handle_t *)arg;
+    if (h->notify_task != NULL)
+        vTaskNotifyGiveFromISR(h->notify_task, pxHPT);
+}
+
+static void _iic_err_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
+{
+    (void)id;
+    (void)data;
+    drv_iic_handle_t *h = (drv_iic_handle_t *)arg;
+    if (h->notify_task != NULL)
+        vTaskNotifyGiveFromISR(h->notify_task, pxHPT);
+}
+
+/* ── Management thread ────────────────────────────────────────────────────── */
 
 static void iic_mgmt_thread(void *arg)
 {
@@ -44,10 +79,6 @@ static void iic_mgmt_thread(void *arg)
                 const board_iic_desc_t *d = &bc->iic_table[i];
                 drv_iic_handle_t       *h = drv_iic_get_handle(d->dev_id);
 
-                /*
-                 * Populate the vendor hw context (instance, addr_mode) BEFORE
-                 * drv_iic_register() calls hw_init(), which reads these fields.
-                 */
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
                 hal_iic_stm32_set_config(h, d->instance,
                                          d->addr_mode, d->dual_addr);
@@ -55,6 +86,11 @@ static void iic_mgmt_thread(void *arg)
                 int32_t err = drv_iic_register(d->dev_id, ops,
                                                d->clock_hz, IIC_ACK_TIMEOUT_MS);
                 (void)err;
+
+                /* Subscribe for IT completion and error notifications */
+                irq_register(IRQ_ID_I2C_TX_DONE(d->dev_id), _iic_done_cb, h);
+                irq_register(IRQ_ID_I2C_RX_DONE(d->dev_id), _iic_done_cb, h);
+                irq_register(IRQ_ID_I2C_ERROR(d->dev_id),   _iic_err_cb,  h);
             }
         }
     }
@@ -75,26 +111,45 @@ static void iic_mgmt_thread(void *arg)
         switch (msg.cmd)
         {
             case IIC_MGMT_CMD_TRANSMIT:
-                result = h->ops->transmit(h,
-                                          msg.dev_addr,
-                                          msg.reg_addr,
-                                          msg.use_reg,
-                                          msg.data,
-                                          msg.len,
-                                          h->timeout_ms);
+                if (h->ops->transmit_it != NULL)
+                {
+                    h->notify_task = xTaskGetCurrentTaskHandle();
+                    result = h->ops->transmit_it(h, msg.dev_addr, msg.reg_addr,
+                                                  msg.use_reg, msg.data, msg.len);
+                    if (result == OS_ERR_NONE)
+                        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(h->timeout_ms));
+                    result = h->last_err;
+                    h->notify_task = NULL;
+                }
+                else
+                {
+                    result = h->ops->transmit(h, msg.dev_addr, msg.reg_addr,
+                                              msg.use_reg, msg.data, msg.len,
+                                              h->timeout_ms);
+                }
                 break;
 
             case IIC_MGMT_CMD_RECEIVE:
-                result = h->ops->receive(h,
-                                         msg.dev_addr,
-                                         msg.reg_addr,
-                                         msg.use_reg,
-                                         msg.data,
-                                         msg.len,
-                                         h->timeout_ms);
+                if (h->ops->receive_it != NULL)
+                {
+                    h->notify_task = xTaskGetCurrentTaskHandle();
+                    result = h->ops->receive_it(h, msg.dev_addr, msg.reg_addr,
+                                                 msg.use_reg, msg.data, msg.len);
+                    if (result == OS_ERR_NONE)
+                        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(h->timeout_ms));
+                    result = h->last_err;
+                    h->notify_task = NULL;
+                }
+                else
+                {
+                    result = h->ops->receive(h, msg.dev_addr, msg.reg_addr,
+                                             msg.use_reg, msg.data, msg.len,
+                                             h->timeout_ms);
+                }
                 break;
 
             case IIC_MGMT_CMD_PROBE:
+                /* HAL has no IT variant for IsDeviceReady — use blocking */
                 result = h->ops->is_device_ready(h, msg.dev_addr, h->timeout_ms);
                 break;
 
