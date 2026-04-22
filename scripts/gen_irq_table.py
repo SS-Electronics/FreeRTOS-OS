@@ -255,6 +255,8 @@ def parse_xml_elements(root):
                 "irqn":     elem.get("irqn"),
                 "priority": int(elem.get("priority", "15")),
                 "action":   elem.get("action", "set_priority"),
+                "irq_id":   elem.get("irq_id"),          # optional software IRQ ID name
+                "flow":     elem.get("flow", "simple"),  # "simple" | "edge"
             })
 
         elif tag == "sys_clk":
@@ -417,7 +419,7 @@ def _ts():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
-def gen_irq_hw_conf_h(cfg, out_path):
+def gen_irq_hw_conf_h(cfg, sys_irq_ids, out_path):
     """Generate app/board/irq_hw_conf.h — capacity constants and ID macros."""
     guard = 'APP_BOARD_IRQ_HW_CONF_H_'
 
@@ -429,6 +431,17 @@ def gen_irq_hw_conf_h(cfg, out_path):
     spi_events      = cfg.get('spi_events',      IRQ_SPI_EVENTS)
     max_exti        = cfg.get('max_exti',        IRQ_MAX_EXTI_LINES)
     notify_max_subs = cfg.get('notify_max_subs', IRQ_NOTIFY_MAX_SUBS)
+
+    # Build the sys IRQ ID section and the final IRQ_ID_TOTAL definition.
+    if sys_irq_ids:
+        sys_lines  = '\n/* ── System IRQ IDs (allocated after EXTI block) ────────────────────── */\n\n'
+        sys_lines += '#define IRQ_ID_SYS_BASE    (IRQ_ID_EXTI_BASE + IRQ_MAX_EXTI_LINES)\n'
+        for i, (id_name, _irqn, _prio, _flow) in enumerate(sys_irq_ids):
+            sys_lines += f'#define IRQ_ID_{id_name:<16} ((irq_id_t)(IRQ_ID_SYS_BASE + {i}))\n'
+        n_sys = len(sys_irq_ids)
+        sys_lines += f'\n#define IRQ_ID_TOTAL       (IRQ_ID_SYS_BASE + {n_sys})\n'
+    else:
+        sys_lines  = '\n#define IRQ_ID_TOTAL       (IRQ_ID_EXTI_BASE + IRQ_MAX_EXTI_LINES)\n'
 
     content = f"""{_BANNER.format(ts=_ts())}
 #ifndef {guard}
@@ -455,8 +468,7 @@ def gen_irq_hw_conf_h(cfg, out_path):
 #define IRQ_ID_I2C_BASE    (IRQ_ID_UART_BASE + IRQ_MAX_UART * IRQ_UART_EVENTS)
 #define IRQ_ID_SPI_BASE    (IRQ_ID_I2C_BASE  + IRQ_MAX_I2C  * IRQ_I2C_EVENTS)
 #define IRQ_ID_EXTI_BASE   (IRQ_ID_SPI_BASE  + IRQ_MAX_SPI  * IRQ_SPI_EVENTS)
-#define IRQ_ID_TOTAL       (IRQ_ID_EXTI_BASE + IRQ_MAX_EXTI_LINES)
-
+{sys_lines}
 typedef uint32_t irq_id_t;
 
 /* ── ID generator macros ─────────────────────────────────────────────────── */
@@ -670,7 +682,7 @@ def gen_periph_dispatch_c(handler_map, extra_includes, vec_entries, out_path):
     _write(out_path, ''.join(lines))
 
 
-def gen_irq_table_c(names, out_path):
+def gen_irq_table_c(names, sys_irq_ids, out_path):
     lines = [_BANNER.format(ts=_ts())]
     lines.append('#include <irq/irq_table.h>\n')
     lines.append('static const char * const _irq_names[IRQ_ID_TOTAL] = {\n')
@@ -704,6 +716,12 @@ def gen_irq_table_c(names, out_path):
     for n in range(IRQ_MAX_EXTI_LINES):
         lines.append(f'    [{exti_macro(n):<28}] = "{names[IRQ_ID_EXTI_BASE + n]}",\n')
 
+    if sys_irq_ids:
+        lines.append('\n    /* ── System IRQ IDs ───────────────────────────────────────────── */\n')
+        for id_name, _irqn, _prio, _flow in sys_irq_ids:
+            macro = f'IRQ_ID_{id_name}'
+            lines.append(f'    [{macro:<28}] = "{id_name}",\n')
+
     lines.append('};\n\n')
     lines.append('const char *irq_table_get_name(irq_id_t id)\n')
     lines.append('{\n')
@@ -715,7 +733,7 @@ def gen_irq_table_c(names, out_path):
     _write(out_path, ''.join(lines))
 
 
-def gen_irq_hw_init_c(hw_irqs, sys_irqs, clk_info, out_path):
+def gen_irq_hw_init_c(hw_irqs, sys_irqs, sys_irq_ids, clk_info, out_path):
     """Generate irq_hw_init_all():
       1. RCC clock enables   (sys, peripheral, GPIO port)
       2. irq_desc_init_all()
@@ -759,6 +777,15 @@ def gen_irq_hw_init_c(hw_irqs, sys_irqs, clk_info, out_path):
             lines.append(f'    HAL_NVIC_SetPriority({irqn}, {prio}U, 0U);\n')
             if action == "enable":
                 lines.append(f'    HAL_NVIC_EnableIRQ({irqn});\n')
+
+    if sys_irq_ids:
+        lines.append('\n    /* ── Bind irq_chip_nvic to system IRQ IDs ────────────────────────── */\n')
+        for id_name, irqn, prio, flow in sys_irq_ids:
+            macro      = f'IRQ_ID_{id_name}'
+            handler_fn = 'handle_edge_irq' if flow == 'edge' else 'handle_simple_irq'
+            lines.append(f'\n    /* {id_name} — {irqn}, priority {prio}, {flow} flow */\n')
+            lines.append(f'    irq_set_chip_and_handler({macro:<28}, irq_chip_nvic_get(), {handler_fn});\n')
+            lines.append(f'    irq_chip_nvic_bind_hwirq({macro:<28}, {irqn}, {prio}U);\n')
 
     lines.append('}\n\n')
     lines.append('#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */\n')
@@ -841,12 +868,19 @@ def main():
     vec_entries                         = parse_vector_table_elem(root)
     handler_map, extra_includes         = parse_dispatch_data(root)
 
-    gen_irq_hw_conf_h(cfg, out_irq_hw_conf_h)
+    # Collect sys elements that carry a software IRQ ID (irq_id attribute).
+    sys_irq_ids = [
+        (s["irq_id"], s["irqn"], s["priority"], s["flow"])
+        for s in sys_irqs
+        if s.get("irq_id")
+    ]
+
+    gen_irq_hw_conf_h(cfg, sys_irq_ids, out_irq_hw_conf_h)
     gen_periph_handlers_h(vec_entries, out_periph_handlers_h)
     gen_periph_vectors_inc(vec_entries, out_periph_vectors_inc)
     gen_periph_dispatch_c(handler_map, extra_includes, vec_entries, out_periph_dispatch_c)
-    gen_irq_table_c(names, out_irq_table_c)
-    gen_irq_hw_init_c(hw_irqs, sys_irqs, clk_info, out_hw_init_c)
+    gen_irq_table_c(names, sys_irq_ids, out_irq_table_c)
+    gen_irq_hw_init_c(hw_irqs, sys_irqs, sys_irq_ids, clk_info, out_hw_init_c)
     gen_irq_hw_init_h(out_hw_init_h)
 
     print("gen_irq_table: done.")
