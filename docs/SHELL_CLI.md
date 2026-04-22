@@ -1,25 +1,167 @@
 # OS Shell CLI — FreeRTOS-OS
 
-An interactive command-line interface running over a designated UART, built on FreeRTOS+CLI. Input is received via the interrupt-driven UART RX ring buffer; output is written directly into the TX ring buffer and drained by the TXEIE interrupt path.
+An interactive command-line interface running over UART_APP (USART2, PA2/PA3), built on FreeRTOS+CLI. Connect with PuTTY or any serial terminal at **115200 8N1, no flow control**.
 
 ---
 
 ## Table of Contents
 
+- [Connecting with PuTTY](#connecting-with-putty)
+  - [Windows](#windows)
+  - [Linux](#linux)
+  - [First Boot Sequence](#first-boot-sequence)
 - [Architecture](#architecture)
 - [I/O Paths in Detail](#io-paths-in-detail)
-  - [RX Path — UART ISR to Shell Task](#rx-path--uart-isr-to-shell-task)
-  - [TX Path — Shell Task to UART Wire](#tx-path--shell-task-to-uart-wire)
 - [Shell UART Assignment](#shell-uart-assignment)
 - [Configuration](#configuration)
 - [Built-in Commands](#built-in-commands)
 - [Registering Commands](#registering-commands)
-  - [Simple command (no arguments)](#simple-command-no-arguments)
-  - [Command with arguments](#command-with-arguments)
-  - [Multi-page output](#multi-page-output)
 - [Line Editing](#line-editing)
-- [printk Integration](#printk-integration)
+- [printk vs Shell](#printk-vs-shell)
 - [File Map](#file-map)
+
+---
+
+## Connecting with PuTTY
+
+### Windows
+
+1. Find the COM port number: **Device Manager → Ports (COM & LPT)** — look for your USB-to-serial adapter (e.g. CH340, CP2102, FTDI). Note the COM number, e.g. `COM5`.
+
+2. Open PuTTY. On the **Session** page:
+   - Connection type: **Serial**
+   - Serial line: `COM5` (replace with your port)
+   - Speed: `115200`
+
+3. Navigate to **Connection → Serial**:
+
+   | Setting | Value |
+   |---|---|
+   | Speed (baud) | 115200 |
+   | Data bits | 8 |
+   | Stop bits | 1 |
+   | Parity | None |
+   | Flow control | **None** |
+
+4. (Optional) **Terminal → Local echo**: set to **Force off** — the firmware echoes your keystrokes itself.
+
+5. (Optional) **Terminal → Local line editing**: set to **Force off** — the firmware handles line editing (backspace, Ctrl-C).
+
+6. Click **Open**. Power-cycle or reset the board. After ~5 seconds the banner appears:
+
+   ```
+   === FreeRTOS-OS Shell ===
+   Type 'help' for available commands.
+
+   >
+   ```
+
+---
+
+### Linux
+
+Connect the USB-to-serial adapter (`/dev/ttyUSB0` or `/dev/ttyACM0`):
+
+**Option A — PuTTY:**
+```bash
+putty -serial /dev/ttyUSB0 -sercfg 115200,8,n,1,N
+```
+
+**Option B — screen:**
+```bash
+screen /dev/ttyUSB0 115200
+# Exit: Ctrl-A then K, then Y
+```
+
+**Option C — minicom:**
+```bash
+minicom -D /dev/ttyUSB0 -b 115200
+# Disable hardware flow control: Ctrl-A O → Serial port setup → F = No
+# Exit: Ctrl-A X
+```
+
+**Option D — picocom (recommended, minimal):**
+```bash
+picocom -b 115200 --echo /dev/ttyUSB0
+# Exit: Ctrl-A Ctrl-X
+```
+
+If you get a **Permission denied** error on `/dev/ttyUSB0`:
+```bash
+sudo usermod -aG dialout $USER
+# Log out and back in, or:
+newgrp dialout
+```
+
+---
+
+### First Boot Sequence
+
+The shell has a startup delay to let the UART driver initialise first:
+
+```
+T + 0 s   MCU reset / power-on
+T + 4 s   uart_mgmt_thread wakes, initialises USART1 and USART2
+T + 5 s   os_shell_task wakes, prints banner, enters read loop
+```
+
+```
+=== FreeRTOS-OS Shell ===
+Type 'help' for available commands.
+
+>
+```
+
+Type `help` and press Enter to list all registered commands.
+
+---
+
+### Quick Session Example
+
+```
+> help
+help
+  List all registered commands.
+version
+  Print firmware version and build date.
+uptime
+  Print system uptime in milliseconds.
+reboot
+  Trigger a software reset (NVIC_SystemReset).
+heap
+  Show FreeRTOS heap: total, used, free, min-ever-free, malloc failures.
+tasks
+  List all OS tasks with state and stack high-watermark (5 s snapshot).
+
+> version
+FreeRTOS-OS v1.0  built Apr 22 2026 03:10:00
+Kernel: FreeRTOS V202212.00
+
+> heap
+Heap usage:
+  Total  :  80000 B
+  Used   :  14720 B
+  Free   :  65280 B
+  MinFree:  64912 B  (min ever free)
+  Errors : 0 malloc failure(s)
+
+> tasks
+Tasks  (4 registered)
+  ID  Name             State      StackHWM
+  ----------------------------------------
+   1  task_mgr         blocked    112 w
+   2  uart_mgmt        blocked    256 w
+   3  heartbeat        blocked    128 w
+   4  btn              blocked    128 w
+  [T] Tmr Svc          blocked    256 w  (timer daemon)
+  Stack overflow events: 0
+
+> uptime
+Uptime: 12438 ms  (12 s)
+
+> reboot
+Rebooting...
+```
 
 ---
 
@@ -35,30 +177,32 @@ An interactive command-line interface running over a designated UART, built on F
 │              FreeRTOS+CLI  (kernel/FreeRTOS-Plus-CLI/)        │
 │   FreeRTOS_CLIRegisterCommand()                              │
 │   FreeRTOS_CLIProcessCommand()  — returns pdTRUE/pdFALSE     │
-└──────────┬────────────────────────────────┬──────────────────┘
-           │ RX ring buffer poll            │ TX ring buffer write
-┌──────────▼──────────┐          ┌──────────▼──────────────────┐
-│  _os_shell_task()   │          │  global_uart_tx_mqueue       │
-│  (services/)        │          │  drv_uart_tx_kick()          │
-└──────────┬──────────┘          └──────────┬──────────────────┘
-           │                                │  TXEIE
-┌──────────▼──────────┐          ┌──────────▼──────────────────┐
-│  global_uart_rx_    │          │  TXE ISR → USART2->DR       │
-│  mqueue (ring buf)  │          │  (TXEIE disabled when empty) │
-└──────────┬──────────┘          └─────────────────────────────┘
-           │  RXNE ISR
+└──────────┬────────────────────────────┬──────────────────────┘
+           │ RX ring buffer poll        │ TX ring buffer write
+┌──────────▼──────────┐      ┌──────────▼──────────────────────┐
+│  _os_shell_task()   │      │  global_uart_tx_mqueue[1]        │
+│  (services/)        │      │  drv_uart_tx_kick(UART_APP)      │
+└──────────┬──────────┘      └──────────┬──────────────────────┘
+           │                            │  TXEIE enabled
+┌──────────▼──────────┐      ┌──────────▼──────────────────────┐
+│ global_uart_rx_     │      │  TXE ISR → USART2->DR            │
+│ mqueue[1] (ring buf)│      │  (TXEIE disabled when empty)     │
+└──────────┬──────────┘      └──────────────────────────────────┘
+           │  filled by RXNE ISR
 ┌──────────▼──────────────────────────────────────────────────┐
-│               USART2_IRQHandler()  (hal_it_stm32.c)          │
-│  RXNE: ringbuffer_putchar(rx_rb, byte)                       │
-│        drv_irq_dispatch(IRQ_ID_UART_RX(1))                  │
-│  TXE:  drv_uart_tx_get_next_byte(1, &b) → USART2->DR        │
+│               USART2_IRQHandler  (NVIC priority 5)           │
+│  RXNE: hal_uart_stm32_irq_handler → ringbuffer_putchar       │
+│  TXE:  drv_uart_tx_get_next_byte → USART2->DR                │
 └─────────────────────────────────────────────────────────────┘
+             ▲
+             │  PA2 TX → USB-to-Serial → /dev/ttyUSB0 → PuTTY
+             │  PA3 RX ← USB-to-Serial ← /dev/ttyUSB0 ← PuTTY
 ```
 
-The shell task never interacts with the `uart_mgmt` management queue. This means:
+The shell task never interacts with the `uart_mgmt` management queue — it writes directly into the TX ring buffer, and reads directly from the RX ring buffer. This means:
 
 - Shell output is never delayed by pending `uart_mgmt` TX requests from other tasks.
-- `printk()` (which also writes directly to a ring buffer on `COMM_PRINTK_HW_ID`) and shell output can coexist cleanly as long as `COMM_PRINTK_HW_ID != UART_SHELL_HW_ID`.
+- `printk()` (UART_DEBUG / USART1) and shell I/O (UART_APP / USART2) are on separate UARTs and do not interfere.
 
 ---
 
@@ -67,233 +211,208 @@ The shell task never interacts with the `uart_mgmt` management queue. This means
 ### RX Path — UART ISR to Shell Task
 
 ```
-USART2_IRQHandler()
-  │  RXNE flag set
+USART2_IRQHandler()  (RXNE flag)
   └─ hal_uart_stm32_irq_handler(USART2)
        ├─ reads DR → byte
-       ├─ ringbuffer_putchar(global_uart_rx_mqueue_list[1], byte)
-       └─ drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(1), &byte, &hpt)
-            └─ handle_simple_irq() → irqaction chain
-                 └─ (any request_irq'd handler on UART_RX(1))
+       ├─ ringbuffer_putchar(global_uart_rx_mqueue[1], byte)
+       └─ irq_desc chain → uart_mgmt _uart_rx_cb (also runs, stores same byte)
 
 _os_shell_task()
   └─ for (;;):
-       rb = ipc_mqueue_get_handle(global_uart_rx_mqueue_list[UART_SHELL_HW_ID])
-       byte = ringbuffer_getchar(rb)
-       if empty: vTaskDelay(5 ms); continue
-       process byte → line buffer
+       rx_rb = ipc_mqueue_get_handle(global_uart_rx_mqueue[UART_SHELL_HW_ID])
+       if ringbuffer_getchar(rx_rb, &byte) == 0: vTaskDelay(5 ms); continue
+       process byte → line buffer → FreeRTOS_CLIProcessCommand()
 ```
 
-The 5 ms yield when the ring buffer is empty prevents the shell task from starving other tasks. On a 100 MHz Cortex-M4 this costs ~1 character latency at 115200 baud (character period ≈ 87 µs), which is imperceptible for interactive use.
+The 5 ms yield when empty keeps CPU load near zero for interactive use.
 
 ### TX Path — Shell Task to UART Wire
 
 ```
 _shell_write(str, len)
-  │
-  └─ rb = ipc_mqueue_get_handle(global_uart_tx_mqueue_list[UART_SHELL_HW_ID])
-       for each byte: ringbuffer_putchar(rb, byte)
+  ├─ tx_rb = ipc_mqueue_get_handle(global_uart_tx_mqueue[UART_SHELL_HW_ID])
+  ├─ for each byte: ringbuffer_putchar(tx_rb, byte)   ← ISR-safe
   └─ drv_uart_tx_kick(UART_SHELL_HW_ID)
-         SET_BIT(USART2->CR1, USART_CR1_TXEIE)   ← enables TXE interrupt
+         SET_BIT(USART2->CR1, USART_CR1_TXEIE)
 
 USART2_IRQHandler()  (TXE flag)
-  └─ drv_uart_tx_get_next_byte(1, &b)
+  └─ drv_uart_tx_get_next_byte(UART_APP, &b)          ← ISR-safe (from_isr)
        if byte available:  WRITE_REG(USART2->DR, b)
-       if ring buffer empty:
-           CLEAR_BIT(USART2->CR1, USART_CR1_TXEIE)  ← disable TXEIE
-           drv_irq_dispatch(IRQ_ID_UART_TX_DONE(1))  ← TX-done event
+       if ring buffer empty: CLEAR_BIT(USART2->CR1, USART_CR1_TXEIE)
 ```
-
-No heap allocation, no `uart_mgmt` queue item, no task notification required. The interrupt fires once per byte until the ring buffer is drained.
 
 ---
 
 ## Shell UART Assignment
 
-The shell UART is assigned in two places that must agree:
+The shell runs on **UART_APP** (dev_id = 1, USART2, PA2 TX / PA3 RX).
 
-**1. Board XML** — mark exactly one UART with `role="shell"`:
-
-```xml
-<uart id="UART_APP" dev_id="1" instance="USART2" … role="shell">
-```
-
-**2. `config/conf_os.h`** — set `UART_SHELL_HW_ID` to the matching `dev_id`:
+Set in `config/conf_os.h`:
 
 ```c
-#define UART_SHELL_HW_ID   (1)   /* UART_APP (USART2) */
+#define UART_SHELL_HW_ID    (1)   /* UART_APP — USART2, PA2/PA3, /dev/ttyUSB0 */
+#define COMM_PRINTK_HW_ID   (0)   /* UART_DEBUG — USART1, PA9/PA10, ST-Link VCP */
 ```
 
-Running `make board-gen` after editing the XML regenerates `board_device_ids.h` with:
-
-```c
-#define BOARD_UART_SHELL_ID   UART_APP   /* role="shell" */
-```
-
-`board_get_shell_uart_id()` returns `BOARD_UART_SHELL_ID` at runtime. The management threads (uart_mgmt) also own this UART for normal TX/RX, but the shell task bypasses the queue for its own output.
+`printk()` output goes to UART_DEBUG (USART1), completely separate from the shell UART. Attach a second serial terminal (or the ST-Link virtual COM port) to see `printk` log output.
 
 ---
 
 ## Configuration
 
-All in `config/conf_os.h` (edit directly or via `make menuconfig`):
+All in `config/conf_os.h`:
 
 | Macro | Default | Description |
-|-------|---------|-------------|
+|---|---|---|
 | `INC_SERVICE_OS_SHELL_MGMT` | `1` | `1` = compile and start the shell task |
-| `UART_SHELL_HW_ID` | `1` | `dev_id` of the shell UART (must match `BOARD_UART_SHELL_ID`) |
-| `SHELL_LINE_BUF_LEN` | `128` | Maximum input line length in bytes (including null terminator) |
-| `SHELL_OUT_BUF_LEN` | `512` | Output scratch buffer per FreeRTOS+CLI call |
-| `TIME_OFFSET_OS_SHELL_MGMT` | `4500` ms | Startup delay — must be greater than `TIME_OFFSET_SERIAL_MANAGEMENT` (4000 ms) so UART is initialised first |
-
-Stack and priority (also in `conf_os.h`):
-
-```c
-#define PROC_SERVICE_OS_SHELL_MGMT_STACK_SIZE   512   /* words */
-#define PROC_SERVICE_OS_SHELL_MGMT_PRIORITY       2
-```
+| `UART_SHELL_HW_ID` | `1` | `dev_id` of the shell UART |
+| `SHELL_LINE_BUF_LEN` | `128` | Maximum input line length (bytes, including NUL) |
+| `SHELL_OUT_BUF_LEN` | `512` | Output buffer per `FreeRTOS_CLIProcessCommand()` call |
+| `TIME_OFFSET_OS_SHELL_MGMT` | `5000` ms | Startup delay — must be > `TIME_OFFSET_SERIAL_MANAGEMENT` |
+| `PROC_SERVICE_OS_SHELL_MGMT_STACK_SIZE` | `1024` words | Shell task stack |
+| `PROC_SERVICE_OS_SHELL_MGMT_PRIORITY` | `1` | Shell task FreeRTOS priority |
 
 ---
 
 ## Built-in Commands
 
 | Command  | Arguments | Description |
-|----------|-----------|-------------|
-| `help`   | none      | Lists all registered commands with their one-line help strings |
-| `version`| none      | Prints the firmware version string from `FW_VERSION_STRING` |
-| `uptime` | none      | Prints the FreeRTOS tick count and wall-clock time |
-| `reboot` | none      | Calls `NVIC_SystemReset()` — immediate MCU reset |
+|---|---|---|
+| `help`   | none | Lists all registered commands |
+| `version`| none | Firmware version and build date |
+| `uptime` | none | System uptime in ms and seconds |
+| `reboot` | none | Software reset via `NVIC_SystemReset()` |
+| `heap`   | none | FreeRTOS heap: total / used / free / min-ever-free / fault count |
+| `tasks`  | none | Per-task: ID, name, state, stack high-watermark |
 
 ---
 
 ## Registering Commands
+
+Call `os_shell_mgmt_start()` from `app_main()`. Register extra commands before or after — FreeRTOS+CLI's linked list is safe to modify at any time before the shell processes input.
 
 ### Simple command (no arguments)
 
 ```c
 #include <services/os_shell_management.h>
 
-static BaseType_t _cmd_temp(char *out, size_t out_len, const char *args)
+static BaseType_t _cmd_temp_fn(char *out, size_t len, const char *args)
 {
-    int32_t temp_c = sensor_read_temperature();
-    snprintf(out, out_len, "Temperature: %ld C\r\n", (long)temp_c);
-    return pdFALSE;   /* output complete */
+    (void)args;
+    int32_t t = sensor_read_temperature();
+    snprintf(out, len, "Temperature: %ld C\r\n", (long)t);
+    return pdFALSE;   /* single-shot output */
 }
 
-static const CLI_Command_Definition_t _temp_cmd = {
+static const CLI_Command_Definition_t _cmd_temp = {
     "temp",
-    "temp: read temperature sensor\r\n",
-    _cmd_temp,
-    0   /* 0 required arguments */
+    "temp\r\n  Read on-chip temperature sensor.\r\n",
+    _cmd_temp_fn, 0
 };
 
-/* Register before or after os_shell_mgmt_start() — FreeRTOS+CLI is safe to
-   call from any task before the shell task starts processing input. */
-os_shell_register_command(&_temp_cmd);
+int app_main(void)
+{
+    os_shell_register_command(&_cmd_temp);
+    os_shell_mgmt_start();
+    return 0;
+}
 ```
 
 ### Command with arguments
 
-FreeRTOS+CLI parses the command line. Use `FreeRTOS_CLIGetParameter()` to extract arguments:
+Use `FreeRTOS_CLIGetParameter()` to extract space-separated arguments:
 
 ```c
-static BaseType_t _cmd_gpio(char *out, size_t out_len, const char *args)
+static BaseType_t _cmd_gpio_fn(char *out, size_t len, const char *args)
 {
-    BaseType_t param_len;
-    const char *id_str = FreeRTOS_CLIGetParameter(args, 1, &param_len);
-    const char *val_str = FreeRTOS_CLIGetParameter(args, 2, &param_len);
+    BaseType_t plen;
+    const char *id_s  = FreeRTOS_CLIGetParameter(args, 1, &plen);
+    const char *val_s = FreeRTOS_CLIGetParameter(args, 2, &plen);
 
-    if (id_str == NULL || val_str == NULL) {
-        snprintf(out, out_len, "Usage: gpio <id> <0|1>\r\n");
+    if (!id_s || !val_s) {
+        snprintf(out, len, "Usage: gpio <id> <0|1>\r\n");
         return pdFALSE;
     }
-    uint8_t gpio_id = (uint8_t)atoi(id_str);
-    uint8_t state   = (uint8_t)atoi(val_str);
-    gpio_mgmt_post(gpio_id, GPIO_MGMT_CMD_WRITE, state, 0);
-    snprintf(out, out_len, "GPIO %u set to %u\r\n", gpio_id, state);
+    gpio_mgmt_post((uint8_t)atoi(id_s), GPIO_MGMT_CMD_WRITE, (uint8_t)atoi(val_s), 0);
+    snprintf(out, len, "GPIO %s → %s\r\n", id_s, val_s);
     return pdFALSE;
 }
 
-static const CLI_Command_Definition_t _gpio_cmd = {
+static const CLI_Command_Definition_t _cmd_gpio = {
     "gpio",
-    "gpio <id> <0|1>: set a GPIO output\r\n",
-    _cmd_gpio,
-    2   /* 2 required arguments */
+    "gpio <id> <0|1>\r\n  Set a GPIO output high or low.\r\n",
+    _cmd_gpio_fn, 2
 };
 ```
 
 ### Multi-page output
 
-When a command produces more output than `SHELL_OUT_BUF_LEN` can hold in one call, return `pdTRUE` to signal that `FreeRTOS_CLIProcessCommand()` should be called again. The shell task loops until `pdFALSE`:
+Return `pdTRUE` to request another call; `pdFALSE` to signal done. Use a `static` counter that resets on the final return:
 
 ```c
-static uint8_t _page = 0;
+static int16_t _page = 0;
 
-static BaseType_t _cmd_list(char *out, size_t out_len, const char *args)
+static BaseType_t _cmd_list_fn(char *out, size_t len, const char *args)
 {
-    if (_page == 0) snprintf(out, out_len, "--- page 1 ---\r\n…");
-    else            snprintf(out, out_len, "--- page 2 ---\r\n…");
+    (void)args;
+    if (_page == 0) snprintf(out, len, "--- page 1 ---\r\n…\r\n");
+    else            snprintf(out, len, "--- page 2 ---\r\n…\r\n");
+
     _page++;
-    if (_page >= 2) { _page = 0; return pdFALSE; }   /* done */
-    return pdTRUE;   /* more pages */
+    if (_page >= 2) { _page = 0; return pdFALSE; }
+    return pdTRUE;
 }
 ```
-
-Use a `static` page counter that is reset to `0` when the last page is emitted.
 
 ---
 
 ## Line Editing
 
-The shell task processes the following control characters before submitting a line to FreeRTOS+CLI:
+| Keystroke | Action |
+|---|---|
+| Any printable character | Appended to line buffer; echoed to terminal |
+| `Enter` (`CR` or `LF`) | Submit line to `FreeRTOS_CLIProcessCommand()` |
+| `Backspace` (`0x08`) | Erase last character; sends `\b \b` to terminal |
+| `Delete` (`0x7F`) | Same as Backspace |
+| `Ctrl-C` (`0x03`) | Clear line buffer; prints `^C` and re-prompts |
 
-| Input | Action |
-|-------|--------|
-| `CR` (`\r`) or `LF` (`\n`) | Submit line to `FreeRTOS_CLIProcessCommand()` |
-| `BS` (`0x08`) or `DEL` (`0x7F`) | Erase last character; echo `\b \b` to terminal |
-| `Ctrl-C` (`0x03`) | Clear the line buffer; emit `^C\r\n` and re-prompt |
-| All other printable characters | Append to line buffer; echo character back |
+Lines longer than `SHELL_LINE_BUF_LEN - 1` bytes are silently truncated.
 
-Lines longer than `SHELL_LINE_BUF_LEN - 1` are silently truncated.
+**PuTTY note:** If Backspace doesn't work, go to **Terminal → Keyboard → The Backspace key** and switch between `Control-H` and `Control-? (127)`. The firmware handles both `0x08` and `0x7F`.
 
 ---
 
-## printk Integration
+## printk vs Shell
 
-`printk()` is independent of the shell. It writes to the ring buffer for `COMM_PRINTK_HW_ID` (defined in `conf_os.h`):
+`printk()` and the shell are on separate UARTs and completely independent:
 
-```c
-/* conf_os.h */
-#define COMM_PRINTK_HW_ID    (0)   /* UART_DEBUG (USART1) */
-#define UART_SHELL_HW_ID     (1)   /* UART_APP   (USART2) */
-```
-
-With separate UARTs, debug log output (`printk`) and interactive shell input/output (`os_shell_mgmt`) are completely independent. Connect a terminal to USART2 for the shell; connect a second terminal or logic analyser to USART1 for log output.
-
-`printk()` accepts `printf`-style variadic arguments:
+| | `printk()` | Shell |
+|---|---|---|
+| UART | UART_DEBUG — USART1, PA9/PA10 | UART_APP — USART2, PA2/PA3 |
+| Terminal | ST-Link VCP (e.g. `/dev/ttyACM0`) | USB-to-Serial (e.g. `/dev/ttyUSB0`) |
+| Direction | TX only — log output | TX (output) + RX (keyboard input) |
+| API | `printk("fmt %d\n", val)` | FreeRTOS+CLI commands |
+| Config key | `COMM_PRINTK_HW_ID = 0` | `UART_SHELL_HW_ID = 1` |
 
 ```c
-printk("boot: core @ %lu MHz\n", (unsigned long)(SystemCoreClock / 1000000));
-printk("sensor[%d] temp = %d°C\n", sensor_id, temp);
+/* conf_os.h — separation of debug log and interactive shell */
+#define COMM_PRINTK_HW_ID   (0)   /* UART_DEBUG — USART1 — log output  */
+#define UART_SHELL_HW_ID    (1)   /* UART_APP   — USART2 — shell I/O   */
 ```
-
-The formatted string is assembled with `vsnprintf()` into a static buffer, then copied byte-by-byte into the ring buffer under a critical section. `drv_uart_tx_kick(COMM_PRINTK_HW_ID)` enables TXEIE to drain it.
 
 ---
 
 ## File Map
 
 | File | Role |
-|------|------|
+|---|---|
 | `include/services/os_shell_management.h` | Public API: `os_shell_mgmt_start()`, `os_shell_register_command()` |
 | `services/os_shell_management.c` | Shell task, line editor, built-in commands, `_shell_write()` |
+| `shell/shell_task_mgmt.c` | `heap` and `tasks` commands |
 | `kernel/FreeRTOS-Plus-CLI/FreeRTOS_CLI.h` | FreeRTOS+CLI public API |
 | `kernel/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c` | FreeRTOS+CLI implementation |
 | `include/os/kernel_syscall.h` | `printk(const char *fmt, ...)` declaration |
-| `kernel/syscalls.c` | `printk()` implementation (vsnprintf + ring buffer + tx_kick) |
-| `config/conf_os.h` | `UART_SHELL_HW_ID`, `SHELL_LINE_BUF_LEN`, `SHELL_OUT_BUF_LEN`, `INC_SERVICE_OS_SHELL_MGMT` |
-| `app/board/stm32f411_devboard.xml` | `role="shell"` on `UART_APP` |
-| `app/board/board_device_ids.h` | `BOARD_UART_SHELL_ID` (generated) |
+| `config/conf_os.h` | `UART_SHELL_HW_ID`, `COMM_PRINTK_HW_ID`, `SHELL_LINE_BUF_LEN`, `SHELL_OUT_BUF_LEN` |
 
 ---
 

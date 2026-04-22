@@ -31,6 +31,7 @@
 #define OS_SERVICES_OS_SHELL_MANAGEMENT_H_
 
 #include <def_std.h>
+#include <FreeRTOS.h>
 #include <FreeRTOS_CLI.h>
 
 #ifdef __cplusplus

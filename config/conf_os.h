@@ -61,7 +61,7 @@
 #define CONF_MAX_CHAR_IN_PRINTK         ITM_PRINT_BUFF_LENGTH
 
 /* UART hardware index used by printk() — must be < NO_OF_UART */
-#define COMM_PRINTK_HW_ID               (1)   /* UART_APP (USART2 — PA2 TX / PA3 RX) */
+#define COMM_PRINTK_HW_ID               (0)   /* UART_DEBUG (USART1 — PA9 TX / PA10 RX) */
 
 /* UART hardware index used by the OS shell CLI — must be < NO_OF_UART.
  * Matches UART_APP (dev_id=1) from board_device_ids.h. */

@@ -279,4 +279,137 @@ Both must follow the ISR-safe API rules above.
 
 ---
 
-*Last updated: 2026-04-22 — Post-mortem: USART2 silent / ISR priority + ringbuffer_getchar*
+## Post-Mortem: Shell Silent — Four Independent Defects
+
+### Symptom
+
+After wiring the interactive shell service (`os_shell_management.c`) to `app_main()` and connecting PuTTY to `/dev/ttyUSB0` (USART2, 115200 8N1), no banner appeared and keystrokes produced no response. The MCU was running (heartbeat LED toggling), USART2 was initialized (previous `[APP] Hello` messages had worked), but the shell was completely silent.
+
+---
+
+### Root Cause 1 — `os_shell_management.c` Never Compiled
+
+`services/Makefile` controlled which `.c` files were included in the build. `os_shell_management.c` was present in `services/` but had no entry in the Makefile. The linker silently discarded the compilation unit, so `os_shell_mgmt_start()` resolved to its `__attribute__((weak))` stub in `main.c` (which does nothing).
+
+**Evidence:** `arm-none-eabi-nm build/app.elf | grep os_shell_mgmt_start` returned `os_shell_mgmt_start` at a suspiciously low address with size 0 — the weak stub.
+
+**Fix:** Added the guarded entry to `services/Makefile`:
+
+```makefile
+ifeq ($(CONFIG_INC_SERVICE_OS_SHELL_MGMT),1)
+obj-y += services/os_shell_management.o
+endif
+```
+
+`CONFIG_INC_SERVICE_OS_SHELL_MGMT = 1` was already set in `autoconf.h` from Kconfig, so the file compiled in immediately.
+
+---
+
+### Root Cause 2 — `FreeRTOS_CLI.h` Missing `FreeRTOS.h` Include
+
+`FreeRTOS_CLI.h` uses `BaseType_t` and `UBaseType_t` (FreeRTOS-defined types) without including `FreeRTOS.h` itself. The header relies on the caller to pull in FreeRTOS types first. The `os_shell_management.h` public header included `FreeRTOS_CLI.h` directly after `def_std.h` — FreeRTOS types were not yet in scope, causing compile errors:
+
+```
+FreeRTOS_CLI.h:41: error: expected declaration specifiers or '...' before '*' token
+FreeRTOS_CLI.h:51: error: unknown type name 'pdCOMMAND_LINE_CALLBACK'
+FreeRTOS_CLI.h:95: error: unknown type name 'BaseType_t'
+```
+
+**Fix:** Added `#include <FreeRTOS.h>` to `os_shell_management.h` before `FreeRTOS_CLI.h`:
+
+```c
+#include <def_std.h>
+#include <FreeRTOS.h>        /* ← added: BaseType_t, UBaseType_t required by CLI */
+#include <FreeRTOS_CLI.h>
+```
+
+---
+
+### Root Cause 3 — `echo_task` Consuming Shell RX Bytes
+
+`app_main.c` ran an `echo_task` that polled the UART_APP RX ring buffer via `uart_mgmt_read_byte(UART_APP, &rx_byte)`. The shell task polls the **same** ring buffer via `ringbuffer_getchar(rx_rb, &byte)`. Both are task-context readers of a single-consumer ring buffer:
+
+```
+USART2 RXNE ISR
+  └─ ringbuffer_putchar(rx_rb, byte)   ← one producer
+
+echo_task:  ringbuffer_getchar(rx_rb, &b)  ┐
+shell_task: ringbuffer_getchar(rx_rb, &b)  ┘ two consumers — race
+```
+
+Each byte in the ring buffer could be consumed by either task. In practice `echo_task` ran at the same priority, woke on `ulTaskNotifyTake`, and drained the buffer first. The shell received no bytes, so no commands were processed and no output was sent.
+
+`echo_task` also called `irq_register(IRQ_ID_UART_RX(UART_APP), _echo_uart_rx_cb, NULL)` which added a notification subscriber to the same IRQ chain — waking echo before the shell task could even check.
+
+**Fix:** Removed `echo_task` and `hello_task` from `app_main.c`. The shell is the sole UART_APP RX consumer. `hello_task` was also removed because it wrote `[APP] Hello from FreeRTOS-OS!\r\n` to UART_APP every 2 seconds, which would appear mid-line in any active shell session.
+
+---
+
+### Root Cause 4 — `printk` and Shell on the Same UART
+
+`conf_os.h` had both `COMM_PRINTK_HW_ID` and `UART_SHELL_HW_ID` set to `1` (UART_APP / USART2). `printk()` writes asynchronously to the TX ring buffer from any task. With the shell also writing to the same TX ring buffer, `printk` output would appear interspersed with shell prompts and command output:
+
+```
+> heap
+[BTN] Button pressed — count 1     ← printk fired mid-command
+Heap usage:
+  Total  : ...
+```
+
+Both writers are individually correct (both use `ringbuffer_putchar` which is ISR-safe), but the interleaving is unacceptable for interactive use.
+
+**Fix:** Moved `printk` to UART_DEBUG (USART1, PA9/PA10 — accessible via the ST-Link virtual COM port):
+
+```c
+/* config/conf_os.h */
+#define COMM_PRINTK_HW_ID   (0)   /* UART_DEBUG — USART1 — PA9/PA10 — ST-Link VCP */
+#define UART_SHELL_HW_ID    (1)   /* UART_APP   — USART2 — PA2/PA3  — USB-Serial  */
+```
+
+`btn_task` was also updated to use `printk()` instead of `uart_mgmt_async_transmit(UART_APP, ...)` so button events go to the debug UART, not the shell terminal.
+
+---
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `services/Makefile` | Added `os_shell_management.o` guarded by `CONFIG_INC_SERVICE_OS_SHELL_MGMT` |
+| `include/services/os_shell_management.h` | Added `#include <FreeRTOS.h>` before `FreeRTOS_CLI.h` |
+| `app/app_main.c` | Removed `echo_task` and `hello_task`; added `os_shell_mgmt_start()`; `btn_task` uses `printk()` |
+| `config/conf_os.h` | `COMM_PRINTK_HW_ID` changed from `1` → `0` |
+
+---
+
+### Boot Timing After the Fix
+
+```
+T + 0 s    MCU reset
+T + 4 s    uart_mgmt_thread: USART1 + USART2 initialised (TIME_OFFSET_SERIAL_MANAGEMENT)
+T + 5 s    os_shell_task: banner printed, read loop started (TIME_OFFSET_OS_SHELL_MGMT)
+```
+
+PuTTY on `/dev/ttyUSB0` at 115200 8N1 (no flow control) shows:
+
+```
+=== FreeRTOS-OS Shell ===
+Type 'help' for available commands.
+
+>
+```
+
+---
+
+### Prevention Guidelines
+
+1. **Every `.c` file in `services/` needs a Makefile entry.** After adding a new service source, verify with `arm-none-eabi-nm build/app.elf | grep <symbol>` that the expected symbols have real addresses and non-zero size.
+
+2. **FreeRTOS+CLI headers require `FreeRTOS.h` to be included first.** Any header that includes `FreeRTOS_CLI.h` must pull in `FreeRTOS.h` immediately before it.
+
+3. **A ring buffer has one logical consumer.** Never have two tasks calling `ringbuffer_getchar` on the same buffer. If multiple consumers are needed, use the IRQ subscriber chain (`irq_register` / `request_irq`) to fan-out notifications, each subscriber writing to its own buffer.
+
+4. **`printk` and the shell must be on different UARTs.** `COMM_PRINTK_HW_ID != UART_SHELL_HW_ID` is a hard requirement for usable interactive sessions. Verify this after any board bring-up where only one physical UART is wired.
+
+---
+
+*Last updated: 2026-04-22 — Post-mortem: USART2 silent / ISR priority + ringbuffer_getchar; Shell silent / Makefile + FreeRTOS.h + ring buffer consumer + UART assignment*
