@@ -155,7 +155,7 @@ config HAL_USART_MODULE_ENABLED
 
 config HAL_SPI_MODULE_ENABLED
     bool "SPI (SPI1..SPI5)"
-    default n
+    default y
     help
       STM32F411VET6 has up to 5 SPI/I2S peripherals.
 
