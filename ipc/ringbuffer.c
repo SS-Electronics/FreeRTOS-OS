@@ -276,3 +276,25 @@ uint32_t ringbuffer_getchar(struct ringbuffer *rb, uint8_t *ch)
     taskEXIT_CRITICAL();
     return ret;
 }
+
+/* ── Single-char get (ISR-safe) ──────────────────────────────────────────── */
+
+uint32_t ringbuffer_getchar_from_isr(struct ringbuffer *rb, uint8_t *ch)
+{
+    UBaseType_t ux = taskENTER_CRITICAL_FROM_ISR();
+
+    uint32_t ret = 0;
+    if (_data_len(rb) > 0) {
+        *ch = rb->buffer_ptr[rb->read_index];
+        if (rb->read_index == (uint16_t)(rb->buffer_size - 1)) {
+            rb->read_mirror = (uint16_t)(~rb->read_mirror) & 1U;
+            rb->read_index  = 0;
+        } else {
+            rb->read_index++;
+        }
+        ret = 1;
+    }
+
+    taskEXIT_CRITICAL_FROM_ISR(ux);
+    return ret;
+}

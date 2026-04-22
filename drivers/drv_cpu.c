@@ -77,31 +77,7 @@ void              drv_wdg_refresh(void)     {}
 
 #endif /* CONFIG_MCU_WDG_EN */
 
-/* ── ARM fault handlers ───────────────────────────────────────────────── */
-
-void HardFault_Handler(void)
-{
-    __disable_irq();
-    while (1) {}
-}
-
-void MemManage_Handler(void)
-{
-    __disable_irq();
-    while (1) {}
-}
-
-void BusFault_Handler(void)
-{
-    __disable_irq();
-    while (1) {}
-}
-
-void UsageFault_Handler(void)
-{
-    __disable_irq();
-    while (1) {}
-}
+/* Fault handlers are defined in drivers/hal/stm32/stm32_exceptions.c */
 
 /* ── FreeRTOS static allocation hooks ────────────────────────────────────── */
 

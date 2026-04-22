@@ -36,6 +36,33 @@
   #endif
 #endif
 
+/* ── STM32F411xE memory map (mirrors stm32_f411_FLASH.ld) ────────────────── */
+/*
+ * Flash  512 K total
+ *   FLASH_BOOT  0x0800_0000  32 K   sectors 0–1  (bootloader)
+ *   FLASH_OS    0x0800_8000 224 K   sectors 2–5  (OS + kernel + drivers)
+ *   FLASH_APP   0x0804_0000 256 K   sector  6–7  (application)
+ *
+ * RAM    128 K total  (0x2000_0000 – 0x2001_FFFF)
+ *   FreeRTOS heap   80 000 B   (~78 K)   heap_4 static array in .bss
+ *   .data / .bss    ~  49 KB   globals, handles, ring buffers
+ *   MSP stack        1 024 B   linker _Min_Stack_Size (grows downward from _estack)
+ *   Newlib heap        512 B   linker _Min_Heap_Size  (sbrk region, not RTOS heap)
+ */
+#define configFLASH_BOOT_ORIGIN     0x08000000UL
+#define configFLASH_BOOT_SIZE_BYTES (32UL  * 1024UL)   /*  32 K */
+#define configFLASH_OS_ORIGIN       0x08008000UL
+#define configFLASH_OS_SIZE_BYTES   (224UL * 1024UL)   /* 224 K */
+#define configFLASH_APP_ORIGIN      0x08040000UL
+#define configFLASH_APP_SIZE_BYTES  (256UL * 1024UL)   /* 256 K */
+#define configRAM_ORIGIN            0x20000000UL
+#define configRAM_SIZE_BYTES        (128UL * 1024UL)   /* 128 K */
+
+/* Minimum MSP stack reserved by the linker (_Min_Stack_Size in .ld) */
+#define configMSP_STACK_MIN_BYTES   (1024UL)
+/* Minimum newlib heap reserved by the linker (_Min_Heap_Size in .ld) */
+#define configNEWLIB_HEAP_MIN_BYTES (512UL)
+
 /* FPU / MPU — Cortex-M4F has FPU, no MPU on most F4 variants */
 #define configENABLE_FPU    1
 #define configENABLE_MPU    0
@@ -66,13 +93,27 @@
 
 /* ── Task parameters ──────────────────────────────────────────────────────── */
 #define configMAX_PRIORITIES                (CONFIG_RTOS_MAX_PRIORITIES)
+
+/* Idle-task / minimum stack in WORDS (×4 = bytes on Cortex-M4).
+ * CONFIG_RTOS_MINIMAL_STACK_SIZE = 512 words = 2048 bytes. */
 #define configMINIMAL_STACK_SIZE            ((uint16_t)CONFIG_RTOS_MINIMAL_STACK_SIZE)
+
+/* FreeRTOS heap (heap_4 static array in .bss).
+ * Budget: 128K RAM − 80000 B heap − 1024 B MSP − 512 B newlib ≈ 49 KB for .data/.bss.
+ * CONFIG_RTOS_TOTAL_HEAP_SIZE = 80000 bytes (~78 K). */
 #define configTOTAL_HEAP_SIZE               ((size_t)CONFIG_RTOS_TOTAL_HEAP_SIZE)
+
+/* Heap is the static array inside heap_4.c — application does not provide it. */
+#define configAPPLICATION_ALLOCATED_HEAP    0
+
 #define configMAX_TASK_NAME_LEN             (CONFIG_RTOS_MAX_TASK_NAME_LEN)
 
 /* ── Kernel features ──────────────────────────────────────────────────────── */
 #define configUSE_TRACE_FACILITY            1
 #define configUSE_16_BIT_TICKS              0
+/* Record the top-of-stack address in the TCB so uxTaskGetStackHighWaterMark()
+ * can accurately report remaining stack on Cortex-M4. */
+#define configRECORD_STACK_HIGH_ADDRESS     1
 
 #ifdef CONFIG_RTOS_USE_MUTEXES
   #define configUSE_MUTEXES                 1
@@ -163,8 +204,9 @@
 /* USER CODE END 1 */
 
 /* ── Port handler name aliases ────────────────────────────────────────────── */
-#define vPortSVCHandler     SVC_Handler
-#define xPortPendSVHandler  PendSV_Handler
+#define vPortSVCHandler      SVC_Handler
+#define xPortPendSVHandler   PendSV_Handler
+#define xPortSysTickHandler  SysTick_Handler
 
 #define USE_CUSTOM_SYSTICK_HANDLER_IMPLEMENTATION  0
 

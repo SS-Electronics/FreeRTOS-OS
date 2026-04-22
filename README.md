@@ -16,7 +16,9 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
 | [docs/BOARD.md](docs/BOARD.md) | Board XML schema, BSP code generator, adding boards/vendors |
 | [docs/DEV_MGMT.md](docs/DEV_MGMT.md) | UART / I2C / SPI / GPIO management service threads |
 | [docs/SHELL_CLI.md](docs/SHELL_CLI.md) | OS shell CLI, FreeRTOS+CLI, printk, registering commands |
+| [docs/IRQ.md](docs/IRQ.md) | Linux-style IRQ dispatch, irq_desc chain, request_irq, irq_register |
 | [docs/DEBUG.md](docs/DEBUG.md) | VSCode debug setup, OpenOCD, GDB, ITM/SWO |
+| [docs/OS_INSIDE.md](docs/OS_INSIDE.md) | Internals deep-dive: ISR priority rules, post-mortems, debug recipes |
 
 ---
 
@@ -203,6 +205,22 @@ Default: **STM32F411xE** (⭐). Run `make menuconfig` → *Target MCU part numbe
 | `STM32F429xx` | Cortex-M4F @ 180 MHz | 2 MB | 256 KB |
 
 Full device list: run `make menuconfig` and browse *Target MCU part number*.
+
+---
+
+## ISR Priority Rules
+
+FreeRTOS on Cortex-M uses `BASEPRI` to implement critical sections. Any peripheral ISR that calls FreeRTOS API (including `FROM_ISR` variants) **must** have an NVIC priority numerically **greater than or equal to** `configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY` (5 on this project). Priorities 1–4 are reserved for bare-metal ISRs that call zero FreeRTOS API.
+
+All peripheral IRQ priorities are set in `app/board/irq_table.xml`. After any change run `make irq_gen` to regenerate `irq_hw_init_generated.c`.
+
+| Priority range | FreeRTOS API allowed? | Example use |
+|---|---|---|
+| 1–4 | **No** — runs above BASEPRI mask | HAL timebase timer |
+| 5–14 | **Yes** — `FROM_ISR` variants only | UART, SPI, I2C, EXTI |
+| 15 | Lowest — kernel use | SysTick, PendSV |
+
+See [docs/OS_INSIDE.md](docs/OS_INSIDE.md) for the detailed post-mortem and prevention guidelines.
 
 ---
 

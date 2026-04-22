@@ -133,7 +133,7 @@ int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte)
 {
     if (dev_id >= BOARD_UART_COUNT || byte == NULL || _tx_rb[dev_id] == NULL)
         return OS_ERR_OP;
-    return (ringbuffer_getchar(_tx_rb[dev_id], byte) > 0) ? OS_ERR_NONE : OS_ERR_OP;
+    return (ringbuffer_getchar_from_isr(_tx_rb[dev_id], byte) > 0) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
 /**

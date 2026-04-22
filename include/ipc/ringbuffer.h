@@ -77,6 +77,10 @@ uint32_t ringbuffer_get(struct ringbuffer *rb, uint8_t *ptr, uint16_t length);
 
 uint32_t ringbuffer_getchar(struct ringbuffer *rb, uint8_t *ch);
 
+/* ── Single-char get — ISR-safe ─────────────────────────────────────────── */
+
+uint32_t ringbuffer_getchar_from_isr(struct ringbuffer *rb, uint8_t *ch);
+
 /* ── Queries ─────────────────────────────────────────────────────────────── */
 
 enum ringbuffer_state ringbuffer_status(struct ringbuffer *rb);
