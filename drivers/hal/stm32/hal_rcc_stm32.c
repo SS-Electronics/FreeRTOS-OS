@@ -1,34 +1,84 @@
-/*
- * hal_rcc_stm32.c — STM32 RCC + CMSIS system init backend
+/**
+ * @file    hal_rcc_stm32.c
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @brief   STM32 RCC + CMSIS system initialization backend
  *
- * This file is part of FreeRTOS-OS Project.
+ * @ingroup hal_rcc
  *
- * Replaces system_stm32f4xx.c.  Provides two groups of functionality:
+ * @details
+ * This module implements the Reset and Clock Control (RCC) backend for STM32,
+ * replacing the default CMSIS system file (e.g. system_stm32f4xx.c).
  *
- * 1. Pre-scheduler (called from Reset_Handler before .data/.bss init):
- *      SystemInit()           — FPU enable, optional VTOR relocation
- *      SystemCoreClockUpdate()— read RCC registers → update SystemCoreClock
- *      SystemCoreClock        — CMSIS global (required by STM32 HAL library)
- *      AHBPrescTable[]        — CMSIS prescaler LUT (required by HAL library)
- *      APBPrescTable[]        — CMSIS prescaler LUT (required by HAL library)
+ * It provides a clean separation between:
+ * - Early boot clock setup (pre-scheduler)
+ * - Runtime clock configuration (post HAL_Init)
  *
- * 2. Post-HAL_Init() (called from main() via drv_rcc_clock_init()):
- *      _stm32_clock_init()    — PLL + bus dividers + flash latency
- *      _stm32_get_sysclk_hz() — return current SYSCLK via HAL query
- *      _stm32_get_apb1_hz()   — return current APB1 via HAL query
- *      _stm32_get_apb2_hz()   — return current APB2 via HAL query
+ * The implementation integrates:
+ * - CMSIS SystemCoreClock model
+ * - STM32 HAL RCC APIs
+ * - Project-specific driver abstraction (drv_rcc)
  *
- * Clock tree configured by _stm32_clock_init():
- *   HSI (CONFIG_HSI_VALUE = 16 MHz)
- *     └─ /PLLM (16) ──→ 1 MHz VCO input
- *          └─ ×PLLN (200) ──→ 200 MHz VCO output
- *               ├─ /PLLP (2)  ──→ SYSCLK = 100 MHz
- *               └─ /PLLQ (4)  ──→ USB/SDIO =  50 MHz
- *   AHB  = SYSCLK / 1 = 100 MHz
- *   APB1 = HCLK   / 2 =  50 MHz  (F411 max)
- *   APB2 = HCLK   / 1 = 100 MHz
- *   Flash latency = 3 wait-states
+ * -----------------------------------------------------------------------------
+ * @section boot_phase Pre-Scheduler Initialization
+ *
+ * Executed before C runtime initialization (from Reset_Handler):
+ *
+ * - SystemInit()
+ *      - Enables FPU (if present)
+ *      - Optionally relocates vector table (VTOR)
+ *
+ * - SystemCoreClockUpdate()
+ *      - Reads RCC registers
+ *      - Updates global SystemCoreClock
+ *
+ * - CMSIS globals (required by HAL):
+ *      - SystemCoreClock
+ *      - AHBPrescTable[]
+ *      - APBPrescTable[]
+ *
+ * -----------------------------------------------------------------------------
+ * @section runtime_phase Post-HAL Initialization
+ *
+ * Executed after HAL_Init() from application layer:
+ *
+ * - _stm32_clock_init()
+ *      Configure PLL, bus clocks, and flash latency
+ *
+ * - Clock query APIs:
+ *      _stm32_get_sysclk_hz()
+ *      _stm32_get_apb1_hz()
+ *      _stm32_get_apb2_hz()
+ *
+ * -----------------------------------------------------------------------------
+ * @section clock_tree Configured Clock Tree
+ *
+ * Default configuration:
+ *
+ * @code
+ * HSI (16 MHz)
+ *   └─ /PLLM → VCO input
+ *       └─ ×PLLN → VCO output
+ *           ├─ /PLLP → SYSCLK
+ *           └─ /PLLQ → USB/SDIO
+ *
+ * AHB  = SYSCLK / 1
+ * APB1 = HCLK   / 2
+ * APB2 = HCLK   / 1
+ * @endcode
+ *
+ * -----------------------------------------------------------------------------
+ * @section design_constraints Design Constraints
+ *
+ * - All RCC register access is encapsulated in this file
+ * - Upper layers must not directly use HAL_RCC_* APIs
+ * - Peripheral clock enables are centralized here
+ *
+ * -----------------------------------------------------------------------------
+ * @note
+ * Compiled only when CONFIG_DEVICE_VARIANT == MCU_VAR_STM
  */
+
+/* ────────────────────────────────────────────────────────────────────────── */
 
 #include <board/mcu_config.h>
 
@@ -38,13 +88,25 @@
 #include <device.h>
 #include <def_attributes.h>
 #include <def_err.h>
-#include <drivers/hal/stm32/hal_rcc_stm32.h>   /* pulls in board/board_config.h */
+#include <drivers/hal/stm32/hal_rcc_stm32.h>
 
-/* ══════════════════════════════════════════════════════════════════════════
- * SystemCoreClockUpdate — read live RCC registers, update SystemCoreClock.
- * Called by HAL library whenever the clock tree may have changed.
- * ══════════════════════════════════════════════════════════════════════════ */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* CMSIS Clock Update                                                        */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Update SystemCoreClock from RCC registers
+ *
+ * @details
+ * Computes the current system clock frequency based on RCC configuration.
+ * This function is required by CMSIS and is used by STM32 HAL internally.
+ *
+ * @note
+ * Must be called whenever clock configuration changes.
+ *
+ * @warning
+ * Assumes PLL and prescaler configuration follow STM32 reference manual.
+ */
 __SECTION_BOOT void SystemCoreClockUpdate(void)
 {
     uint32_t tmp, pllvco, pllp, pllm;
@@ -84,21 +146,32 @@ __SECTION_BOOT void SystemCoreClockUpdate(void)
     SystemCoreClock >>= tmp;
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
- * drv_rcc HAL ops — PLL + bus clock configuration.
- * Called after HAL_Init() via drv_rcc_clock_init() from main().
- * ══════════════════════════════════════════════════════════════════════════ */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Clock Configuration                                                       */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Initialize system clock tree
+ *
+ * @retval OS_ERR_NONE Success
+ * @retval OS_ERR_OP   HAL configuration failure
+ *
+ * @details
+ * Configures:
+ * - PLL source and multipliers
+ * - Bus prescalers (AHB, APB1, APB2)
+ * - Flash latency
+ *
+ * @pre HAL_Init() must be called before this function
+ */
 static int32_t _stm32_clock_init(void)
 {
     RCC_OscInitTypeDef osc = {0};
     RCC_ClkInitTypeDef clk = {0};
 
-    /* Scale 1 required for SYSCLK > 84 MHz on F411 */
     hal_rcc_stm32_pwr_clk_en();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    /* HSI → PLL */
     osc.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
     osc.HSIState            = RCC_HSI_ON;
     osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -112,7 +185,6 @@ static int32_t _stm32_clock_init(void)
     if (HAL_RCC_OscConfig(&osc) != HAL_OK)
         return OS_ERR_OP;
 
-    /* Bus dividers */
     clk.ClockType      = RCC_CLOCKTYPE_HCLK  | RCC_CLOCKTYPE_SYSCLK |
                          RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     clk.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
@@ -126,41 +198,71 @@ static int32_t _stm32_clock_init(void)
     return OS_ERR_NONE;
 }
 
-static uint32_t _stm32_get_sysclk_hz(void) { return HAL_RCC_GetSysClockFreq(); }
-static uint32_t _stm32_get_apb1_hz(void)   { return HAL_RCC_GetPCLK1Freq();    }
-static uint32_t _stm32_get_apb2_hz(void)   { return HAL_RCC_GetPCLK2Freq();    }
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Clock Query APIs                                                          */
+/* ────────────────────────────────────────────────────────────────────────── */
 
-/* ── Per-peripheral clock enables ────────────────────────────────────────── */
-/* All __HAL_RCC_*_CLK_ENABLE() macro calls are confined to this file.       */
+/** @brief Get SYSCLK frequency (Hz) */
+static uint32_t _stm32_get_sysclk_hz(void)
+{
+    return HAL_RCC_GetSysClockFreq();
+}
 
+/** @brief Get APB1 frequency (Hz) */
+static uint32_t _stm32_get_apb1_hz(void)
+{
+    return HAL_RCC_GetPCLK1Freq();
+}
+
+/** @brief Get APB2 frequency (Hz) */
+static uint32_t _stm32_get_apb2_hz(void)
+{
+    return HAL_RCC_GetPCLK2Freq();
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Peripheral Clock Control                                                  */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/* ── Named per-peripheral clock enables ──────────────────────────────────── */
+
+void hal_rcc_stm32_pwr_clk_en(void)    { __HAL_RCC_PWR_CLK_ENABLE(); }
+void hal_rcc_stm32_syscfg_clk_en(void) { __HAL_RCC_SYSCFG_CLK_ENABLE(); }
 void hal_rcc_stm32_usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
 void hal_rcc_stm32_usart2_clk_en(void) { __HAL_RCC_USART2_CLK_ENABLE(); }
-void hal_rcc_stm32_i2c1_clk_en(void)   { __HAL_RCC_I2C1_CLK_ENABLE();   }
-void hal_rcc_stm32_spi1_clk_en(void)   { __HAL_RCC_SPI1_CLK_ENABLE();   }
-void hal_rcc_stm32_tim1_clk_en(void)   { __HAL_RCC_TIM1_CLK_ENABLE();   }
-void hal_rcc_stm32_syscfg_clk_en(void) { __HAL_RCC_SYSCFG_CLK_ENABLE(); }
-void hal_rcc_stm32_pwr_clk_en(void)    { __HAL_RCC_PWR_CLK_ENABLE();    }
+void hal_rcc_stm32_i2c1_clk_en(void)   { __HAL_RCC_I2C1_CLK_ENABLE(); }
+void hal_rcc_stm32_spi1_clk_en(void)   { __HAL_RCC_SPI1_CLK_ENABLE(); }
+void hal_rcc_stm32_tim1_clk_en(void)   { __HAL_RCC_TIM1_CLK_ENABLE(); }
 
+/**
+ * @brief Enable peripheral clock
+ *
+ * @param periph Peripheral identifier
+ *
+ * @details
+ * Centralized control for all peripheral clock enables.
+ * Prevents direct HAL_RCC_* usage in upper layers.
+ */
 void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
 {
     switch (periph)
     {
-        case DRV_RCC_PERIPH_USART1: hal_rcc_stm32_usart1_clk_en(); break;
-        case DRV_RCC_PERIPH_USART2: hal_rcc_stm32_usart2_clk_en(); break;
-        case DRV_RCC_PERIPH_I2C1:   hal_rcc_stm32_i2c1_clk_en();   break;
-        case DRV_RCC_PERIPH_SPI1:   hal_rcc_stm32_spi1_clk_en();   break;
-        case DRV_RCC_PERIPH_TIM1:   hal_rcc_stm32_tim1_clk_en();   break;
-        case DRV_RCC_PERIPH_SYSCFG: hal_rcc_stm32_syscfg_clk_en(); break;
-        case DRV_RCC_PERIPH_PWR:    hal_rcc_stm32_pwr_clk_en();    break;
-        case DRV_RCC_PERIPH_GPIOA:
-        case DRV_RCC_PERIPH_GPIOB:
-        case DRV_RCC_PERIPH_GPIOC:
-            /* GPIO port enables are handled via hal_rcc_stm32_gpio_clk_en() */
-            break;
+        case DRV_RCC_PERIPH_USART1: __HAL_RCC_USART1_CLK_ENABLE(); break;
+        case DRV_RCC_PERIPH_USART2: __HAL_RCC_USART2_CLK_ENABLE(); break;
+        case DRV_RCC_PERIPH_I2C1:   __HAL_RCC_I2C1_CLK_ENABLE();   break;
+        case DRV_RCC_PERIPH_SPI1:   __HAL_RCC_SPI1_CLK_ENABLE();   break;
+        case DRV_RCC_PERIPH_TIM1:   __HAL_RCC_TIM1_CLK_ENABLE();   break;
+        case DRV_RCC_PERIPH_SYSCFG: __HAL_RCC_SYSCFG_CLK_ENABLE(); break;
+        case DRV_RCC_PERIPH_PWR:    __HAL_RCC_PWR_CLK_ENABLE();    break;
         default: break;
     }
 }
 
+/**
+ * @brief Enable GPIO port clock
+ *
+ * @param port GPIO port base address (GPIOA, GPIOB, ...)
+ */
 void hal_rcc_stm32_gpio_clk_en(void *port)
 {
     if      (port == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
@@ -168,8 +270,13 @@ void hal_rcc_stm32_gpio_clk_en(void *port)
     else if (port == GPIOC) { __HAL_RCC_GPIOC_CLK_ENABLE(); }
 }
 
-/* ── Registration ────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* HAL Registration                                                          */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief RCC HAL operations table
+ */
 static const drv_rcc_hal_ops_t _stm32_rcc_ops = {
     .clock_init    = _stm32_clock_init,
     .get_sysclk_hz = _stm32_get_sysclk_hz,
@@ -177,6 +284,11 @@ static const drv_rcc_hal_ops_t _stm32_rcc_ops = {
     .get_apb2_hz   = _stm32_get_apb2_hz,
 };
 
+/**
+ * @brief Register RCC HAL backend
+ *
+ * @param ops_out Output pointer to HAL ops table
+ */
 void _hal_rcc_stm32_register(const drv_rcc_hal_ops_t **ops_out)
 {
     *ops_out = &_stm32_rcc_ops;

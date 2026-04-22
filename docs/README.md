@@ -67,7 +67,7 @@ FreeRTOS-OS-App/
     │   └── hal/stm32/
     │       ├── hal_rcc_stm32.c        ← SystemInit + PLL config + CMSIS tables
     │       ├── hal_uart_stm32.c  hal_iic_stm32.c  hal_spi_stm32.c
-    │       ├── hal_gpio_stm32.c  hal_msp_stm32.c
+    │       ├── hal_gpio_stm32.c
     │       ├── hal_timebase_stm32.c   ← TIM1-based HAL tick
     │       ├── hal_it_stm32.c         ← peripheral ISR dispatch (direct register access)
     │       ├── irq_chip_nvic.c        ← ARM NVIC irq_chip implementation
@@ -135,8 +135,8 @@ FreeRTOS-OS-App/
 ┌──────────────────────────▼──────────────────────────────────────────┐
 │              Vendor HAL Backends  (drivers/hal/)         LAYER 2   │
 │  STM32: hal_rcc_stm32  hal_uart_stm32  hal_iic_stm32               │
-│         hal_spi_stm32  hal_gpio_stm32  hal_msp_stm32               │
-│         hal_timebase_stm32  hal_it_stm32                           │
+│         hal_spi_stm32  hal_gpio_stm32  hal_timebase_stm32          │
+│         hal_it_stm32                                               │
 │  Infineon: stubs (TODO)   Microchip: stubs (TODO)                  │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │  #include <device.h>

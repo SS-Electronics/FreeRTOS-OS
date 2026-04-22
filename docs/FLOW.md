@@ -274,7 +274,7 @@ HAL_Init();
 |------|-------------|-----|
 | Set Flash prefetch / instruction cache | `FLASH->ACR` bits | Improves code fetch performance |
 | Set NVIC priority grouping | `HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4)` | All 4 bits = preemption priority, 0 bits = sub-priority — required by FreeRTOS |
-| Call `HAL_MspInit()` | Weak callback in `hal_msp_stm32.c` | Board-level low-level init (NVIC, SysTick config) |
+| Call `HAL_MspInit()` | Weak no-op stub — setup done in `board_clk_enable()` and `irq_hw_init_all()` | No board-level work at this point |
 | Call `HAL_InitTick(TICK_INT_PRIORITY)` | **Overridden** by `hal_timebase_stm32.c` | Normally configures SysTick — overridden here to configure TIM1 instead so SysTick is free for FreeRTOS |
 
 **TIM1 timebase override** ([drivers/hal/stm32/hal_timebase_stm32.c](../drivers/hal/stm32/hal_timebase_stm32.c)):
@@ -685,7 +685,7 @@ point regardless of peripheral configuration.
        └─ main()                                  init/main.c
             ├─ HAL_Init()                         stm32f4xx_hal.c
             │    ├─ NVIC priority grouping = 4
-            │    ├─ HAL_MspInit()                 hal_msp_stm32.c
+            │    ├─ HAL_MspInit()                 no-op stub (in HAL library)
             │    └─ HAL_InitTick()  [overridden]  hal_timebase_stm32.c
             │         └─ TIM1 → 1 kHz update IRQ
             ├─ drv_rcc_clock_init()               drv_rcc.c

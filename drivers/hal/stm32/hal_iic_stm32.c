@@ -4,9 +4,10 @@
  * This file is part of FreeRTOS-OS Project.
  *
  * Provides both blocking ops (transmit/receive) and interrupt-driven ops
- * (transmit_it/receive_it).  HAL callbacks dispatch completion events via
- * drv_irq_dispatch_from_isr() so management threads can wait with
- * ulTaskNotifyTake() instead of blocking the bus.
+ * (transmit_it/receive_it).  Completion events are dispatched directly from
+ * hal_iic_stm32_ev_irq_handler() / hal_iic_stm32_er_irq_handler() by
+ * inspecting HAL_I2C_GetState() before and after calling the HAL handler —
+ * no HAL weak callbacks are used.
  */
 
 #include <board/mcu_config.h>
@@ -16,6 +17,7 @@
 #include <drivers/drv_handle.h>
 #include <drivers/com/hal/stm32/hal_iic_stm32.h>
 #include <drivers/drv_irq.h>
+#include <board/board_config.h>
 
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
@@ -29,7 +31,30 @@ static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
     if (h == NULL)
         return OS_ERR_OP;
 
-    I2C_HandleTypeDef *hi2c = &h->hw.hi2c;
+    I2C_HandleTypeDef      *hi2c = &h->hw.hi2c;
+    const board_iic_desc_t *d    = board_find_iic(hi2c->Instance);
+    if (d == NULL)
+        return OS_ERR_OP;
+
+    /* GPIO and NVIC setup — owned here so HAL_I2C_MspInit (called internally
+     * by HAL_I2C_Init below) is a no-op and init ownership stays in this fn. */
+    GPIO_InitTypeDef gpio = {
+        .Mode      = d->scl_pin.mode,
+        .Pull      = d->scl_pin.pull,
+        .Speed     = d->scl_pin.speed,
+        .Alternate = d->scl_pin.alternate,
+    };
+
+    gpio.Pin = d->scl_pin.pin;
+    HAL_GPIO_Init(d->scl_pin.port, &gpio);
+
+    gpio.Pin       = d->sda_pin.pin;
+    gpio.Alternate = d->sda_pin.alternate;
+    HAL_GPIO_Init(d->sda_pin.port, &gpio);
+
+    drv_irq_enable((int32_t)d->ev_irqn, d->irq_priority);
+    drv_irq_enable((int32_t)d->er_irqn, d->irq_priority);
+
     hi2c->Init.ClockSpeed = h->clock_hz;
 
     HAL_StatusTypeDef ret = HAL_I2C_Init(hi2c);
@@ -45,9 +70,20 @@ static int32_t stm32_iic_hw_deinit(drv_iic_handle_t *h)
     if (h == NULL)
         return OS_ERR_OP;
 
+    const board_iic_desc_t *d = board_find_iic(h->hw.hi2c.Instance);
+
     HAL_StatusTypeDef ret = HAL_I2C_DeInit(&h->hw.hi2c);
     h->initialized = 0;
     h->last_err    = _hal_to_os_err(ret);
+
+    if (d != NULL)
+    {
+        drv_irq_disable((int32_t)d->ev_irqn);
+        drv_irq_disable((int32_t)d->er_irqn);
+        HAL_GPIO_DeInit(d->scl_pin.port, d->scl_pin.pin);
+        HAL_GPIO_DeInit(d->sda_pin.port, d->sda_pin.pin);
+    }
+
     return h->last_err;
 }
 
@@ -205,92 +241,66 @@ void hal_iic_stm32_set_config(drv_iic_handle_t *h,
 
 /* ── IRQ dispatch ─────────────────────────────────────────────────────────── */
 
+/*
+ * hal_iic_stm32_ev_irq_handler — I2C event IRQ, dispatches completion events.
+ *
+ * Captures HAL state before and after calling HAL_I2C_EV_IRQHandler.  When
+ * the state transitions to READY the transfer is done; the previous state
+ * (BUSY_TX vs BUSY_RX) selects which IRQ ID to dispatch.  Both Master and
+ * Mem transfer variants share the same BUSY_TX / BUSY_RX states so no
+ * separate MemTxCplt / MemRxCplt path is needed.
+ */
 void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
 {
     for (uint8_t id = 0; id < NO_OF_IIC; id++)
     {
         drv_iic_handle_t *h = drv_iic_get_handle(id);
-        if (h != NULL && h->initialized && h->hw.hi2c.Instance == instance)
+        if (h == NULL || !h->initialized || h->hw.hi2c.Instance != instance)
+            continue;
+
+        HAL_I2C_StateTypeDef prev = HAL_I2C_GetState(&h->hw.hi2c);
+        HAL_I2C_EV_IRQHandler(&h->hw.hi2c);
+        HAL_I2C_StateTypeDef next = HAL_I2C_GetState(&h->hw.hi2c);
+
+        if (next == HAL_I2C_STATE_READY && prev != HAL_I2C_STATE_READY)
         {
-            HAL_I2C_EV_IRQHandler(&h->hw.hi2c);
-            return;
+            h->last_err = OS_ERR_NONE;
+            BaseType_t hpt = pdFALSE;
+            if (prev == HAL_I2C_STATE_BUSY_TX)
+                drv_irq_dispatch_from_isr(IRQ_ID_I2C_TX_DONE(id), NULL, &hpt);
+            else
+                drv_irq_dispatch_from_isr(IRQ_ID_I2C_RX_DONE(id), NULL, &hpt);
+            portYIELD_FROM_ISR(hpt);
         }
+        return;
     }
 }
 
+/*
+ * hal_iic_stm32_er_irq_handler — I2C error IRQ.
+ *
+ * Calls HAL_I2C_ER_IRQHandler (which resets the state machine to READY), then
+ * reads the error code and dispatches IRQ_ID_I2C_ERROR directly — no
+ * HAL_I2C_ErrorCallback weak override needed.
+ */
 void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
 {
     for (uint8_t id = 0; id < NO_OF_IIC; id++)
     {
         drv_iic_handle_t *h = drv_iic_get_handle(id);
-        if (h != NULL && h->initialized && h->hw.hi2c.Instance == instance)
-        {
-            HAL_I2C_ER_IRQHandler(&h->hw.hi2c);
-            return;
-        }
+        if (h == NULL || !h->initialized || h->hw.hi2c.Instance != instance)
+            continue;
+
+        HAL_I2C_ER_IRQHandler(&h->hw.hi2c);
+
+        uint32_t err = HAL_I2C_GetError(&h->hw.hi2c);
+        h->last_err  = OS_ERR_OP;
+        BaseType_t hpt = pdFALSE;
+        drv_irq_dispatch_from_isr(IRQ_ID_I2C_ERROR(id), &err, &hpt);
+        portYIELD_FROM_ISR(hpt);
+        return;
     }
 }
 
-/* ── HAL weak callbacks ───────────────────────────────────────────────────── */
-
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-    for (uint8_t id = 0; id < NO_OF_IIC; id++)
-    {
-        drv_iic_handle_t *h = drv_iic_get_handle(id);
-        if (h != NULL && h->initialized && h->hw.hi2c.Instance == hi2c->Instance)
-        {
-            h->last_err = OS_ERR_NONE;
-            BaseType_t hpt = pdFALSE;
-            drv_irq_dispatch_from_isr(IRQ_ID_I2C_TX_DONE(id), NULL, &hpt);
-            portYIELD_FROM_ISR(hpt);
-            return;
-        }
-    }
-}
-
-/* HAL_I2C_Mem_Write_IT completes via MemTxCplt, not MasterTxCplt */
-void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-    HAL_I2C_MasterTxCpltCallback(hi2c);
-}
-
-void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-    for (uint8_t id = 0; id < NO_OF_IIC; id++)
-    {
-        drv_iic_handle_t *h = drv_iic_get_handle(id);
-        if (h != NULL && h->initialized && h->hw.hi2c.Instance == hi2c->Instance)
-        {
-            h->last_err = OS_ERR_NONE;
-            BaseType_t hpt = pdFALSE;
-            drv_irq_dispatch_from_isr(IRQ_ID_I2C_RX_DONE(id), NULL, &hpt);
-            portYIELD_FROM_ISR(hpt);
-            return;
-        }
-    }
-}
-
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-    HAL_I2C_MasterRxCpltCallback(hi2c);
-}
-
-void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
-{
-    for (uint8_t id = 0; id < NO_OF_IIC; id++)
-    {
-        drv_iic_handle_t *h = drv_iic_get_handle(id);
-        if (h != NULL && h->initialized && h->hw.hi2c.Instance == hi2c->Instance)
-        {
-            uint32_t err = HAL_I2C_GetError(hi2c);
-            h->last_err  = OS_ERR_OP;
-            BaseType_t hpt = pdFALSE;
-            drv_irq_dispatch_from_isr(IRQ_ID_I2C_ERROR(id), &err, &hpt);
-            portYIELD_FROM_ISR(hpt);
-            return;
-        }
-    }
-}
 
 #endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM && HAL_I2C_MODULE_ENABLED */

@@ -30,7 +30,6 @@ This document describes the complete driver subsystem from silicon to applicatio
     - [I2C — hal_iic_stm32](#i2c--hal_iic_stm32)
     - [SPI — hal_spi_stm32](#spi--hal_spi_stm32)
     - [GPIO — hal_gpio_stm32](#gpio--hal_gpio_stm32)
-    - [MSP Callbacks — hal_msp_stm32](#msp-callbacks--hal_msp_stm32)
     - [HAL Timebase — hal_timebase_stm32](#hal-timebase--hal_timebase_stm32)
     - [ISR Dispatch — hal_it_stm32](#isr-dispatch--hal_it_stm32)
   - [Infineon Baremetal Backend (Stubs)](#infineon-baremetal-backend-stubs)
@@ -96,7 +95,6 @@ The system is built from the silicon up in four distinct layers. Higher layers n
 │  │  hal_iic_stm32.c            │  │  hal_iic_infineon.c        │   │
 │  │  hal_spi_stm32.c            │  │  (stubs — TODO registers)  │   │
 │  │  hal_gpio_stm32.c           │  └───────────────────────────┘   │
-│  │  hal_msp_stm32.c            │                                   │
 │  │  hal_timebase_stm32.c       │                                   │
 │  │  hal_it_stm32.c             │                                   │
 │  └─────────────────────────────┘                                   │
@@ -239,7 +237,6 @@ FreeRTOS-OS/
 │       │   ├── hal_iic_stm32.c
 │       │   ├── hal_spi_stm32.c
 │       │   ├── hal_gpio_stm32.c
-│       │   ├── hal_msp_stm32.c        ← HAL_MspInit + peripheral MSP callbacks
 │       │   ├── hal_timebase_stm32.c   ← TIM1-based HAL tick override
 │       │   └── hal_it_stm32.c         ← Peripheral ISR dispatch table
 │       └── infineon/
@@ -884,33 +881,7 @@ void hal_gpio_stm32_set_config(drv_gpio_handle_t *h,
 
 `set_config` stores parameters only — does **not** call `HAL_GPIO_Init()`. That happens inside `hw_init`, which is called by `drv_gpio_register()`.
 
-> GPIO peripheral clocks must be enabled before `hw_init()` runs. This is done in `hal_msp_stm32.c` via `HAL_MspInit()` or the board-specific `board_init()`.
-
----
-
-#### MSP Callbacks — hal_msp_stm32
-
-| File | Path |
-|---|---|
-| Source | [`drivers/hal/stm32/hal_msp_stm32.c`](drivers/hal/stm32/hal_msp_stm32.c) |
-
-The ST HAL library calls `HAL_MspInit()` and per-peripheral `HAL_xxx_MspInit()` weak callbacks during `HAL_Init()` and `HAL_xxx_Init()`. These callbacks configure the GPIO alternate functions and enable the peripheral clocks.
-
-By keeping them here (not in `arch/`) the STM32-specific peripheral setup is co-located with the rest of the STM32 HAL backend.
-
-**Callbacks implemented:**
-
-| Callback | Responsibility |
-|---|---|
-| `HAL_MspInit()` | Enable SysTick, configure global NVIC priority grouping |
-| `HAL_UART_MspInit(huart)` | Enable UART GPIO alternate functions (TX/RX pins), enable UART peripheral clock, configure NVIC entry — looks up pin config via `board_find_uart()` |
-| `HAL_UART_MspDeInit(huart)` | Reset peripheral, disable GPIO and clock |
-| `HAL_I2C_MspInit(hi2c)` | Enable I2C GPIO open-drain AF, enable clock — looks up via `board_find_iic()` |
-| `HAL_I2C_MspDeInit(hi2c)` | Symmetric teardown |
-| `HAL_SPI_MspInit(hspi)` | Enable SPI GPIO AF, enable clock — looks up via `board_find_spi()` |
-| `HAL_SPI_MspDeInit(hspi)` | Symmetric teardown |
-
-The board descriptor lookups (`board_find_uart`, `board_find_iic`, `board_find_spi`) return a pointer to the board descriptor entry whose peripheral instance matches the one inside the HAL handle. This makes `hal_msp_stm32.c` board-agnostic — pin assignments live only in the board XML / board descriptor tables.
+> GPIO peripheral clocks must be enabled before `hw_init()` runs. This is done via `board_clk_enable()` called from `main()` before any peripheral management thread starts.
 
 ---
 

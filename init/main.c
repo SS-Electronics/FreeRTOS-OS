@@ -50,6 +50,7 @@
 #include <os/kernel_services.h>
 #include <drivers/cpu/drv_cpu.h>
 #include <drivers/drv_rcc.h>
+#include <board/board_config.h>
 #include <board/irq_hw_init_generated.h>
 
 
@@ -93,6 +94,12 @@ __SECTION_BOOT __USED void main(void)
      *    SYSCLK so this must complete before any peripheral is touched. */
     HAL_Init();
     drv_rcc_clock_init();
+
+    /* 1a. Enable all RCC clocks (sys bus, peripherals, GPIO ports) so every
+     *     HAL_xxx_MspInit() can configure GPIO and NVIC without enabling clocks
+     *     itself.  Must run before irq_hw_init_all() and before any peripheral
+     *     management thread calls HAL_xxx_Init(). */
+    board_clk_enable();
 
     /* 2. Configure NVIC group bits required by FreeRTOS before any
      *    interrupt-driven peripheral is initialised. */

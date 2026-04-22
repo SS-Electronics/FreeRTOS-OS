@@ -9,11 +9,9 @@
  * IRQ handling — hal_uart_stm32_irq_handler():
  *   Reads USART SR/CR1/CR3 registers directly and dispatches events without
  *   going through the STM32 HAL callback chain.  On each RXNE interrupt the
- *   received byte is read from DR and forwarded via two paths:
- *     1. drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(n)) — management tasks
- *        subscribe to this via drv_irq_register().
- *     2. drv_uart_rx_isr_dispatch(n, byte) — puts the byte into the IPC ring
- *        buffer and calls any board-level on_rx_byte hook.
+ *   received byte is read from DR and forwarded via drv_irq_dispatch_from_isr
+ *   (IRQ_ID_UART_RX(n)) — subscribers (e.g. uart_mgmt._uart_rx_cb) write the
+ *   byte into the IPC ring buffer.
  */
 
 #include <board/mcu_config.h>
@@ -23,9 +21,9 @@
 #include <drivers/drv_handle.h>
 #include <drivers/com/hal/stm32/hal_uart_stm32.h>
 #include <drivers/drv_irq.h>
+#include <board/board_config.h>
 
-/* Forward declarations — defined in drv_uart.c */
-extern void    drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte);
+/* Forward declaration — defined in drv_uart.c */
 extern int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte);
 
 /* ── Internal helpers ─────────────────────────────────────────────────────── */
@@ -42,7 +40,28 @@ static int32_t stm32_uart_hw_init(drv_uart_handle_t *h)
     if (h == NULL || h->ops == NULL)
         return OS_ERR_OP;
 
-    UART_HandleTypeDef *huart = &h->hw.huart;
+    UART_HandleTypeDef      *huart = &h->hw.huart;
+    const board_uart_desc_t *d     = board_find_uart(huart->Instance);
+    if (d == NULL)
+        return OS_ERR_OP;
+
+    /* GPIO and NVIC setup — owned here so HAL_UART_MspInit (called internally
+     * by HAL_UART_Init below) is a no-op and init ownership stays in this fn. */
+    GPIO_InitTypeDef gpio = {
+        .Mode      = d->tx_pin.mode,
+        .Pull      = d->tx_pin.pull,
+        .Speed     = d->tx_pin.speed,
+        .Alternate = d->tx_pin.alternate,
+    };
+
+    gpio.Pin = d->tx_pin.pin;
+    HAL_GPIO_Init(d->tx_pin.port, &gpio);
+
+    gpio.Pin       = d->rx_pin.pin;
+    gpio.Alternate = d->rx_pin.alternate;
+    HAL_GPIO_Init(d->rx_pin.port, &gpio);
+
+    drv_irq_enable((int32_t)d->irqn, d->irq_priority);
 
     huart->Init.BaudRate = h->baudrate;
 
@@ -63,10 +82,20 @@ static int32_t stm32_uart_hw_deinit(drv_uart_handle_t *h)
     if (h == NULL)
         return OS_ERR_OP;
 
+    const board_uart_desc_t *d = board_find_uart(h->hw.huart.Instance);
+
     CLEAR_BIT(h->hw.huart.Instance->CR1, USART_CR1_RXNEIE);
     HAL_StatusTypeDef ret = HAL_UART_DeInit(&h->hw.huart);
     h->initialized = 0;
     h->last_err    = _hal_to_os_err(ret);
+
+    if (d != NULL)
+    {
+        drv_irq_disable((int32_t)d->irqn);
+        HAL_GPIO_DeInit(d->tx_pin.port, d->tx_pin.pin);
+        HAL_GPIO_DeInit(d->rx_pin.port, d->rx_pin.pin);
+    }
+
     return h->last_err;
 }
 
@@ -99,29 +128,6 @@ static int32_t stm32_uart_receive(drv_uart_handle_t *h,
     return h->last_err;
 }
 
-static int32_t stm32_uart_start_rx_it(drv_uart_handle_t *h, uint8_t *rx_byte)
-{
-    (void)rx_byte; /* byte is read directly from DR in the IRQ handler */
-    if (h == NULL || !h->initialized)
-        return OS_ERR_OP;
-
-    SET_BIT(h->hw.huart.Instance->CR1, USART_CR1_RXNEIE);
-    return OS_ERR_NONE;
-}
-
-static void stm32_uart_rx_isr_cb(drv_uart_handle_t *h,
-                                  uint8_t            rx_byte,
-                                  void              *rb)
-{
-    /* Push byte into ring buffer if provided */
-    if (rb != NULL)
-    {
-        extern void ringbuffer_putchar(void *rb, uint8_t ch);
-        ringbuffer_putchar(rb, rx_byte);
-    }
-    (void)h;
-}
-
 static void stm32_uart_tx_start(drv_uart_handle_t *h)
 {
     if (h == NULL || !h->initialized)
@@ -133,13 +139,11 @@ static void stm32_uart_tx_start(drv_uart_handle_t *h)
 /* ── Static ops table ─────────────────────────────────────────────────────── */
 
 static const drv_uart_hal_ops_t _stm32_uart_ops = {
-    .hw_init     = stm32_uart_hw_init,
-    .hw_deinit   = stm32_uart_hw_deinit,
-    .transmit    = stm32_uart_transmit,
-    .receive     = stm32_uart_receive,
-    .start_rx_it = stm32_uart_start_rx_it,
-    .rx_isr_cb   = stm32_uart_rx_isr_cb,
-    .tx_start    = stm32_uart_tx_start,
+    .hw_init   = stm32_uart_hw_init,
+    .hw_deinit = stm32_uart_hw_deinit,
+    .transmit  = stm32_uart_transmit,
+    .receive   = stm32_uart_receive,
+    .tx_start  = stm32_uart_tx_start,
 };
 
 /* ── Public API ───────────────────────────────────────────────────────────── */
@@ -180,7 +184,7 @@ void hal_uart_stm32_set_config(drv_uart_handle_t *h,
  *
  * RX path:
  *   RXNE set → read DR (clears RXNE) → drv_irq_dispatch_from_isr(RX)
- *                                    → drv_uart_rx_isr_dispatch() (ring buf)
+ *              subscriber (_uart_rx_cb) writes byte into IPC ring buffer
  * Error path:
  *   Read DR to clear SR error flags, dispatch RX byte if RXNE was also set,
  *   then dispatch ERROR event.
@@ -209,7 +213,6 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
             {
                 uint8_t byte = (uint8_t)(READ_REG(instance->DR) & 0xFFU);
                 drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(id), &byte, &hpt);
-                drv_uart_rx_isr_dispatch(id, byte);
                 portYIELD_FROM_ISR(hpt);
                 return;
             }
@@ -223,10 +226,7 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
             uint8_t byte = (uint8_t)(READ_REG(instance->DR) & 0xFFU);
 
             if (sr & USART_SR_RXNE)
-            {
                 drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(id), &byte, &hpt);
-                drv_uart_rx_isr_dispatch(id, byte);
-            }
 
             drv_irq_dispatch_from_isr(IRQ_ID_UART_ERROR(id), &errorflags, &hpt);
             portYIELD_FROM_ISR(hpt);

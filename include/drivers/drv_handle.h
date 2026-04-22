@@ -210,23 +210,6 @@ typedef struct drv_uart_hal_ops {
                        uint32_t  timeout_ms);
 
     /**
-     * @brief  Arm the interrupt-driven single-byte receive.
-     *         The ISR callback feeds bytes into the RX ring buffer.
-     * @param  rx_byte  Pointer to the staging byte used by the ISR.
-     */
-    int32_t (*start_rx_it)(drv_uart_handle_t *h, uint8_t *rx_byte);
-
-    /**
-     * @brief  ISR-context receive-complete callback.
-     *         Called from HAL_UART_RxCpltCallback; must be ISR-safe.
-     * @param  rx_byte  The byte that was just received.
-     * @param  rb       Ring-buffer to push the byte into (may be NULL).
-     */
-    void    (*rx_isr_cb)(drv_uart_handle_t *h,
-                         uint8_t            rx_byte,
-                         void              *rb);
-
-    /**
      * @brief  Kick interrupt-driven TX from the TX ring buffer.
      *         Enables the TXE interrupt so the ISR drains the ring buffer.
      *         Safe to call from task context while TX is already in progress

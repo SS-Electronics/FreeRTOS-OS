@@ -148,10 +148,18 @@ def build_default_names():
 # ── XML parse (peripheral bindings + sys IRQs) ────────────────────────────────
 
 def parse_xml_elements(root):
-    """Parse uart/i2c/spi/exti/sys elements. Returns (names, hw_irqs, sys_irqs)."""
+    """Parse uart/i2c/spi/exti/sys/sys_clk/gpio_clk elements.
+    Returns (names, hw_irqs, sys_irqs, clk_info) where clk_info is a dict:
+      clk_info['sys']   = list of inst strings (SYSCFG, PWR, …)
+      clk_info['uart']  = list of hal_inst strings (USART1, USART2, …)
+      clk_info['i2c']   = list of hal_inst strings (I2C1, …)
+      clk_info['spi']   = list of hal_inst strings (SPI1, …)
+      clk_info['gpio']  = list of port letters (A, B, …) — unique, sorted
+    """
     names    = build_default_names()
     hw_irqs  = []
     sys_irqs = []
+    clk_info = {'sys': [], 'uart': [], 'i2c': [], 'spi': [], 'gpio': set()}
 
     for elem in root:
         tag = elem.tag
@@ -161,6 +169,7 @@ def parse_xml_elements(root):
             lbl  = elem.get("label", f"UART{n}")
             irqn = elem.get("irqn")
             prio = int(elem.get("priority", "5"))
+            hal_inst = elem.get("hal_inst", "")
 
             if n >= IRQ_MAX_UART:
                 _die(f"uart dev_id={n} exceeds IRQ_MAX_UART={IRQ_MAX_UART}")
@@ -174,6 +183,9 @@ def parse_xml_elements(root):
                 hw_irqs.append((uart_tx_done_macro(n), irqn, prio, None))
                 hw_irqs.append((uart_error_macro(n),   irqn, prio, None))
 
+            if hal_inst and hal_inst not in clk_info['uart']:
+                clk_info['uart'].append(hal_inst)
+
         elif tag == "i2c":
             n       = int(elem.get("dev_id"))
             lbl     = elem.get("label", f"I2C{n}")
@@ -181,6 +193,7 @@ def parse_xml_elements(root):
             prio_ev = int(elem.get("priority_ev", "5"))
             irqn_er = elem.get("irqn_er")
             prio_er = int(elem.get("priority_er", "5"))
+            hal_inst = elem.get("hal_inst", "")
 
             if n >= IRQ_MAX_I2C:
                 _die(f"i2c dev_id={n} exceeds IRQ_MAX_I2C={IRQ_MAX_I2C}")
@@ -195,11 +208,15 @@ def parse_xml_elements(root):
             if irqn_er:
                 hw_irqs.append((i2c_error_macro(n),   irqn_er, prio_er, None))
 
+            if hal_inst and hal_inst not in clk_info['i2c']:
+                clk_info['i2c'].append(hal_inst)
+
         elif tag == "spi":
             n    = int(elem.get("dev_id"))
             lbl  = elem.get("label", f"SPI{n}")
             irqn = elem.get("irqn")
             prio = int(elem.get("priority", "5"))
+            hal_inst = elem.get("hal_inst", "")
 
             if n >= IRQ_MAX_SPI:
                 _die(f"spi dev_id={n} exceeds IRQ_MAX_SPI={IRQ_MAX_SPI}")
@@ -214,6 +231,9 @@ def parse_xml_elements(root):
                 hw_irqs.append((spi_rx_done_macro(n),   irqn, prio, None))
                 hw_irqs.append((spi_txrx_done_macro(n), irqn, prio, None))
                 hw_irqs.append((spi_error_macro(n),     irqn, prio, None))
+
+            if hal_inst and hal_inst not in clk_info['spi']:
+                clk_info['spi'].append(hal_inst)
 
         elif tag == "exti":
             n    = int(elem.get("line"))
@@ -237,7 +257,18 @@ def parse_xml_elements(root):
                 "action":   elem.get("action", "set_priority"),
             })
 
-    return names, hw_irqs, sys_irqs
+        elif tag == "sys_clk":
+            inst = elem.get("inst", "").strip()
+            if inst and inst not in clk_info['sys']:
+                clk_info['sys'].append(inst)
+
+        elif tag == "gpio_clk":
+            port = elem.get("port", "").strip().upper()
+            if port:
+                clk_info['gpio'].add(port)
+
+    clk_info['gpio'] = sorted(clk_info['gpio'])
+    return names, hw_irqs, sys_irqs, clk_info
 
 def _irqn_to_handler(irqn):
     """Convert an IRQn symbol to its C handler name: USART1_IRQn → USART1_IRQHandler."""
@@ -684,7 +715,12 @@ def gen_irq_table_c(names, out_path):
     _write(out_path, ''.join(lines))
 
 
-def gen_irq_hw_init_c(hw_irqs, sys_irqs, out_path):
+def gen_irq_hw_init_c(hw_irqs, sys_irqs, clk_info, out_path):
+    """Generate irq_hw_init_all():
+      1. RCC clock enables   (sys, peripheral, GPIO port)
+      2. irq_desc_init_all()
+      3. irq_chip_nvic binding + NVIC priority setup
+    """
     lines = [_BANNER.format(ts=_ts())]
     lines.append('#include <board/mcu_config.h>\n\n')
     lines.append('#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)\n\n')
@@ -745,7 +781,8 @@ extern "C" {{
  *                   every hardware-backed software IRQ ID, and configure NVIC
  *                   priorities.
  *
- * Call once at boot before any request_irq() or drv_irq_register() calls.
+ * Call once at boot after board_clk_enable() and before any request_irq()
+ * or drv_irq_register() calls.
  * Generated from app/board/irq_table.xml by scripts/gen_irq_table.py.
  */
 void irq_hw_init_all(void);
@@ -800,7 +837,7 @@ def main():
     cfg = parse_config_elem(root)
     _update_globals(cfg)
 
-    names, hw_irqs, sys_irqs            = parse_xml_elements(root)
+    names, hw_irqs, sys_irqs, clk_info  = parse_xml_elements(root)
     vec_entries                         = parse_vector_table_elem(root)
     handler_map, extra_includes         = parse_dispatch_data(root)
 
@@ -809,7 +846,7 @@ def main():
     gen_periph_vectors_inc(vec_entries, out_periph_vectors_inc)
     gen_periph_dispatch_c(handler_map, extra_includes, vec_entries, out_periph_dispatch_c)
     gen_irq_table_c(names, out_irq_table_c)
-    gen_irq_hw_init_c(hw_irqs, sys_irqs, out_hw_init_c)
+    gen_irq_hw_init_c(hw_irqs, sys_irqs, clk_info, out_hw_init_c)
     gen_irq_hw_init_h(out_hw_init_h)
 
     print("gen_irq_table: done.")

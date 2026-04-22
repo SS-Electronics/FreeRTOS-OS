@@ -41,7 +41,7 @@ static void gpio_mgmt_thread(void *arg)
                 drv_gpio_handle_t       *h = drv_gpio_get_handle(d->dev_id);
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
-                board_gpio_clk_enable(d->port);
+                board_clk_enable();
                 hal_gpio_stm32_set_config(h,
                                           d->port,
                                           d->pin,

@@ -66,8 +66,8 @@ class VendorCodegen:
         """Return (fn_name: str, fn_definition: str) for a clock-enable wrapper."""
         raise NotImplementedError
 
-    def gpio_clk_enable_body(self, ports: set) -> str:
-        """Return body of board_gpio_clk_enable(GPIO_TypeDef *port)."""
+    def all_clk_enable_body(self, ports: set, uarts: list, i2cs: list, spis: list) -> str:
+        """Return body of board_clk_enable(void) — all RCC clock enables."""
         raise NotImplementedError
 
     # ── GPIO ─────────────────────────────────────────────────────────────────
@@ -191,11 +191,32 @@ class STM32Codegen(VendorCodegen):
         body = f'static void {fn}(void) {{ __HAL_RCC_{instance}_CLK_ENABLE(); }}'
         return fn, body
 
-    def gpio_clk_enable_body(self, ports):
-        lines = []
-        for i, p in enumerate(sorted(ports)):
-            kw = 'if' if i == 0 else 'else if'
-            lines.append(f'    {kw} (port == GPIO{p}) {{ __HAL_RCC_GPIO{p}_CLK_ENABLE(); }}')
+    def all_clk_enable_body(self, ports, uarts, i2cs, spis):
+        lines = ['    /* System bus clocks */',
+                 '    __HAL_RCC_SYSCFG_CLK_ENABLE();',
+                 '    __HAL_RCC_PWR_CLK_ENABLE();']
+        if uarts:
+            lines += ['', '#ifdef HAL_UART_MODULE_ENABLED',
+                      '    /* UART peripheral clocks */']
+            for inst in uarts:
+                lines.append(f'    __HAL_RCC_{inst}_CLK_ENABLE();')
+            lines.append('#endif /* HAL_UART_MODULE_ENABLED */')
+        if i2cs:
+            lines += ['', '#ifdef HAL_I2C_MODULE_ENABLED',
+                      '    /* I2C peripheral clocks */']
+            for inst in i2cs:
+                lines.append(f'    __HAL_RCC_{inst}_CLK_ENABLE();')
+            lines.append('#endif /* HAL_I2C_MODULE_ENABLED */')
+        if spis:
+            lines += ['', '#ifdef HAL_SPI_MODULE_ENABLED',
+                      '    /* SPI peripheral clocks */']
+            for inst in spis:
+                lines.append(f'    __HAL_RCC_{inst}_CLK_ENABLE();')
+            lines.append('#endif /* HAL_SPI_MODULE_ENABLED */')
+        if ports:
+            lines += ['', '    /* GPIO port clocks for alternate-function peripheral pins */']
+            for p in sorted(ports):
+                lines.append(f'    __HAL_RCC_GPIO{p}_CLK_ENABLE();')
         return '\n'.join(lines)
 
     def gpio_port(self, letter):         return f'GPIO{letter.upper()}'
@@ -277,7 +298,7 @@ class InfineonCodegen(VendorCodegen):
                 f'}}')
         return fn, body
 
-    def gpio_clk_enable_body(self, ports):
+    def all_clk_enable_body(self, ports, uarts, i2cs, spis):
         return '    /* INFO: Infineon XMC GPIO ports are always clocked — no enable needed. */'
 
     def gpio_port(self, letter):          return f'XMC_GPIO_PORT{letter.upper()}'
@@ -330,7 +351,7 @@ class MicrochipCodegen(VendorCodegen):
                 f'}}')
         return fn, body
 
-    def gpio_clk_enable_body(self, ports):
+    def all_clk_enable_body(self, ports, uarts, i2cs, spis):
         return '    /* TODO: Microchip — enable GPIO port clocks via PORT/GPIO SFRs */'
 
     def gpio_port(self, letter):          return f'PORT_{letter.upper()}'
@@ -760,29 +781,13 @@ class BoardConfigGenerator:
             if g.get('port'):
                 all_ports.add(g.get('port').upper())
 
-        # ── Clock-enable wrappers
-        clk_fns = {}
-        instances = (
-            [(u.get('instance',''), 'uart') for u in self.uarts] +
-            [(c.get('instance',''), 'i2c')  for c in self.i2cs]  +
-            [(s.get('instance',''), 'spi')  for s in self.spis]
-        )
-        if instances:
-            L.append('/* ── Peripheral clock-enable wrappers ─────────────────────────────────── */')
-        for inst, ptype in instances:
-            if inst and inst not in clk_fns:
-                fn_name, fn_def = cg.periph_clk_fn(ptype, inst)
-                clk_fns[inst]   = fn_name
-                L.append(fn_def)
-        L.append('')
-
         # ── UART table
         if self.uarts:
             L.append('/* ── UART table ─────────────────────────────────────────────────────────── */')
             L.append('#ifdef HAL_UART_MODULE_ENABLED')
             L.append('static const board_uart_desc_t _uart_table[BOARD_UART_COUNT] = {')
             for i, u in enumerate(self.uarts):
-                L.extend(self._uart_entry(u, i, clk_fns))
+                L.extend(self._uart_entry(u, i))
             L.append('};')
             L.append('#define _UART_TABLE  _uart_table')
             L.append('#else')
@@ -798,7 +803,7 @@ class BoardConfigGenerator:
             L.append('#ifdef HAL_I2C_MODULE_ENABLED')
             L.append('static const board_iic_desc_t _iic_table[BOARD_IIC_COUNT] = {')
             for i, c in enumerate(self.i2cs):
-                L.extend(self._iic_entry(c, i, clk_fns))
+                L.extend(self._iic_entry(c, i))
             L.append('};')
             L.append('#define _IIC_TABLE  _iic_table')
             L.append('#else')
@@ -814,7 +819,7 @@ class BoardConfigGenerator:
             L.append('#ifdef HAL_SPI_MODULE_ENABLED')
             L.append('static const board_spi_desc_t _spi_table[BOARD_SPI_COUNT] = {')
             for i, s in enumerate(self.spis):
-                L.extend(self._spi_entry(s, i, clk_fns))
+                L.extend(self._spi_entry(s, i))
             L.append('};')
             L.append('#define _SPI_TABLE  _spi_table')
             L.append('#else')
@@ -855,16 +860,11 @@ class BoardConfigGenerator:
         L.append('};')
         L.append('')
 
-        # ── Runtime callback tables
-        L.append('/* ── Runtime callback tables (zero-initialised = no callbacks registered) ── */')
-        if self.uarts: L.append('static board_uart_cbs_t _uart_cbs[BOARD_UART_COUNT];')
-        if self.i2cs:  L.append('static board_iic_cbs_t  _iic_cbs[BOARD_IIC_COUNT];')
-        if self.spis:  L.append('static board_spi_cbs_t  _spi_cbs[BOARD_SPI_COUNT];')
-        if self.gpios: L.append('static board_gpio_cbs_t _gpio_cbs[BOARD_GPIO_COUNT];')
-        L.append('')
-
-        # ── API + callbacks
-        L.extend(self._api_impl(all_ports))
+        # ── API
+        uart_insts = [u.get('hal_inst','') for u in self.uarts if u.get('hal_inst','')]
+        i2c_insts  = [c.get('hal_inst','') for c in self.i2cs  if c.get('hal_inst','')]
+        spi_insts  = [s.get('hal_inst','') for s in self.spis  if s.get('hal_inst','')]
+        L.extend(self._api_impl(all_ports, uart_insts, i2c_insts, spi_insts))
         return '\n'.join(L) + '\n'
 
     # ── Pin struct helper ─────────────────────────────────────────────────────
@@ -887,7 +887,7 @@ class BoardConfigGenerator:
 
     # ── Per-peripheral entry generators ──────────────────────────────────────
 
-    def _uart_entry(self, u, idx, clk_fns) -> list:
+    def _uart_entry(self, u, idx) -> list:
         cg   = self.cg
         inst = u.get('instance', f'USART{idx+1}')
         uid  = u.get('id', f'UART_{idx}')
@@ -903,30 +903,29 @@ class BoardConfigGenerator:
         L = [
             f'    /* {uid} → {inst} */',
             f'    [{idx}] = {{',
-            f'        .dev_id            = {u.get("dev_id", str(idx))},',
-            f'        .instance          = {inst},',
-            f'        .baudrate          = {u.get("baudrate","115200")},',
-            f'        .word_len          = {cg.uart_wordlen(u.get("word_len","8"))},',
-            f'        .stop_bits         = {cg.uart_stopbits(u.get("stop_bits","1"))},',
-            f'        .parity            = {cg.uart_parity(u.get("parity","none"))},',
-            f'        .mode              = {cg.uart_mode(u.get("mode","tx_rx"))},',
-            f'        .tx_pin            = {{',
+            f'        .dev_id       = {u.get("dev_id", str(idx))},',
+            f'        .instance     = {inst},',
+            f'        .baudrate     = {u.get("baudrate","115200")},',
+            f'        .word_len     = {cg.uart_wordlen(u.get("word_len","8"))},',
+            f'        .stop_bits    = {cg.uart_stopbits(u.get("stop_bits","1"))},',
+            f'        .parity       = {cg.uart_parity(u.get("parity","none"))},',
+            f'        .mode         = {cg.uart_mode(u.get("mode","tx_rx"))},',
+            f'        .tx_pin       = {{',
         ]
         if tx is not None:
             L.append(self._pin_struct(tx, inst))
-        L += [f'        }},', f'        .rx_pin            = {{']
+        L += [f'        }},', f'        .rx_pin       = {{']
         if rx is not None:
             L.append(self._pin_struct(rx, inst))
         L += [
             f'        }},',
-            f'        .irqn              = {irq_name},',
-            f'        .irq_priority      = {irq_prio},',
-            f'        .periph_clk_enable = {clk_fns.get(inst,"NULL")},',
+            f'        .irqn         = {irq_name},',
+            f'        .irq_priority = {irq_prio},',
             f'    }},',
         ]
         return L
 
-    def _iic_entry(self, c, idx, clk_fns) -> list:
+    def _iic_entry(self, c, idx) -> list:
         cg   = self.cg
         inst = c.get('instance', f'I2C{idx+1}')
         cid  = c.get('id', f'I2C_{idx}')
@@ -940,29 +939,28 @@ class BoardConfigGenerator:
         L = [
             f'    /* {cid} → {inst} */',
             f'    [{idx}] = {{',
-            f'        .dev_id            = {c.get("dev_id", str(idx))},',
-            f'        .instance          = {inst},',
-            f'        .clock_hz          = {c.get("clock_hz","400000")},',
-            f'        .addr_mode         = {cg.i2c_addr_mode(c.get("addr_mode","7bit"))},',
-            f'        .dual_addr         = {cg.i2c_dual_addr(c.get("dual_addr","disable"))},',
-            f'        .scl_pin           = {{',
+            f'        .dev_id       = {c.get("dev_id", str(idx))},',
+            f'        .instance     = {inst},',
+            f'        .clock_hz     = {c.get("clock_hz","400000")},',
+            f'        .addr_mode    = {cg.i2c_addr_mode(c.get("addr_mode","7bit"))},',
+            f'        .dual_addr    = {cg.i2c_dual_addr(c.get("dual_addr","disable"))},',
+            f'        .scl_pin      = {{',
         ]
         if scl is not None:
             L.append(self._pin_struct(scl, inst, is_od=True))
-        L += ['        },', '        .sda_pin           = {']
+        L += ['        },', '        .sda_pin      = {']
         if sda is not None:
             L.append(self._pin_struct(sda, inst, is_od=True))
         L += [
             '        },',
-            f'        .ev_irqn           = {ev_name},',
-            f'        .er_irqn           = {er_name},',
-            f'        .irq_priority      = {prio},',
-            f'        .periph_clk_enable = {clk_fns.get(inst,"NULL")},',
+            f'        .ev_irqn      = {ev_name},',
+            f'        .er_irqn      = {er_name},',
+            f'        .irq_priority = {prio},',
             '    },',
         ]
         return L
 
-    def _spi_entry(self, s, idx, clk_fns) -> list:
+    def _spi_entry(self, s, idx) -> list:
         cg   = self.cg
         inst = s.get('instance', f'SPI{idx+1}')
         sid  = s.get('id', f'SPI_{idx}')
@@ -1003,7 +1001,6 @@ class BoardConfigGenerator:
         L += [
             f'        .irqn           = {irq_name},',
             f'        .irq_priority   = {irq_prio},',
-            f'        .periph_clk_enable = {clk_fns.get(inst,"NULL")},',
             '    },',
         ]
         return L
@@ -1041,7 +1038,7 @@ class BoardConfigGenerator:
 
     # ── API implementation ────────────────────────────────────────────────────
 
-    def _api_impl(self, all_ports) -> list:
+    def _api_impl(self, all_ports, uart_insts, i2c_insts, spi_insts) -> list:
         cg = self.cg
         L  = [
             '/* ═══════════════════════════════════════════════════════════════════════════',
@@ -1075,63 +1072,12 @@ class BoardConfigGenerator:
             '    return NULL;',
             '}',
             '',
-            'void board_gpio_clk_enable(GPIO_TypeDef *port)',
+            'void board_clk_enable(void)',
             '{',
-            cg.gpio_clk_enable_body(all_ports),
+            cg.all_clk_enable_body(all_ports, uart_insts, i2c_insts, spi_insts),
             '}',
             '',
-            '/* ── Callback registration ───────────────────────────────────────────────── */',
-            '',
         ]
-        if self.uarts:
-            n = 'BOARD_UART_COUNT'
-            L += [
-                f'void board_uart_register_rx_cb(uint8_t id, board_uart_rx_cb_t cb)',
-                f'{{ if (id < {n}) _uart_cbs[id].on_rx_byte = cb; }}',
-                '',
-                f'void board_uart_register_tx_done_cb(uint8_t id, board_uart_tx_done_cb_t cb)',
-                f'{{ if (id < {n}) _uart_cbs[id].on_tx_done = cb; }}',
-                '',
-                f'void board_uart_register_error_cb(uint8_t id, board_uart_error_cb_t cb)',
-                f'{{ if (id < {n}) _uart_cbs[id].on_error = cb; }}',
-                '',
-                f'const board_uart_cbs_t *board_get_uart_cbs(uint8_t id)',
-                f'{{ return (id < {n}) ? &_uart_cbs[id] : NULL; }}',
-                '',
-            ]
-        if self.i2cs:
-            n = 'BOARD_IIC_COUNT'
-            L += [
-                f'void board_iic_register_done_cb(uint8_t id, board_iic_done_cb_t cb)',
-                f'{{ if (id < {n}) _iic_cbs[id].on_done = cb; }}',
-                '',
-                f'void board_iic_register_error_cb(uint8_t id, board_iic_error_cb_t cb)',
-                f'{{ if (id < {n}) _iic_cbs[id].on_error = cb; }}',
-                '',
-                f'const board_iic_cbs_t *board_get_iic_cbs(uint8_t id)',
-                f'{{ return (id < {n}) ? &_iic_cbs[id] : NULL; }}',
-                '',
-            ]
-        if self.spis:
-            n = 'BOARD_SPI_COUNT'
-            L += [
-                f'void board_spi_register_done_cb(uint8_t id, board_spi_done_cb_t cb)',
-                f'{{ if (id < {n}) _spi_cbs[id].on_done = cb; }}',
-                '',
-                f'const board_spi_cbs_t *board_get_spi_cbs(uint8_t id)',
-                f'{{ return (id < {n}) ? &_spi_cbs[id] : NULL; }}',
-                '',
-            ]
-        if self.gpios:
-            n = 'BOARD_GPIO_COUNT'
-            L += [
-                f'void board_gpio_register_irq_cb(uint8_t id, board_gpio_irq_cb_t cb)',
-                f'{{ if (id < {n}) _gpio_cbs[id].on_irq = cb; }}',
-                '',
-                f'const board_gpio_cbs_t *board_get_gpio_cbs(uint8_t id)',
-                f'{{ return (id < {n}) ? &_gpio_cbs[id] : NULL; }}',
-                '',
-            ]
         return L
 
 

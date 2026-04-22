@@ -14,7 +14,6 @@
 #include <drivers/drv_handle.h>
 #include <board/mcu_config.h>
 #include <conf_os.h>
-#include <board/board_config.h>
 #include <def_err.h>
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
@@ -25,11 +24,7 @@
 
 static drv_uart_handle_t _uart_handles[BOARD_UART_COUNT];
 
-/* One staging byte per UART used by the interrupt-driven RX path */
-static uint8_t _rx_stage_byte[BOARD_UART_COUNT];
-
-/* Ring-buffer pointers linked to per-UART IPC queues */
-static struct ringbuffer *_rx_rb[BOARD_UART_COUNT];
+/* Ring-buffer pointer for interrupt-driven TX per UART */
 static struct ringbuffer *_tx_rb[BOARD_UART_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
@@ -57,19 +52,12 @@ int32_t drv_uart_register(uint8_t dev_id,
     h->initialized = 0;
     h->last_err    = OS_ERR_NONE;
 
-    /* Link IPC ring buffers for interrupt-driven RX and TX */
-    _rx_rb[dev_id] = (struct ringbuffer *)
-                     ipc_mqueue_get_handle(global_uart_rx_mqueue_list[dev_id]);
+    /* Link IPC ring buffer for interrupt-driven TX */
     _tx_rb[dev_id] = (struct ringbuffer *)
                      ipc_mqueue_get_handle(global_uart_tx_mqueue_list[dev_id]);
 
-    /* Initialise hardware */
+    /* Initialise hardware — RXNEIE is enabled inside hw_init */
     int32_t err = h->ops->hw_init(h);
-    if (err != OS_ERR_NONE)
-        return err;
-
-    /* Arm the interrupt-driven single-byte receive */
-    err = h->ops->start_rx_it(h, &_rx_stage_byte[dev_id]);
     if (err != OS_ERR_NONE)
         return err;
 
@@ -131,37 +119,6 @@ int32_t drv_serial_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
 
     return h->ops->receive(h, data, len, h->timeout_ms);
 }
-
-/* ── ISR callback dispatcher ──────────────────────────────────────────── */
-
-/*
- * Called from HAL_UART_RxCpltCallback (vendor-specific ISR glue).
- * Dispatches to the ops rx_isr_cb of the matching handle.
- *
- * The vendor HAL layer (hal_uart_stm32.c) must call this from the STM32
- * HAL callback after identifying which handle received data.
- */
-void drv_uart_rx_isr_dispatch(uint8_t dev_id, uint8_t rx_byte)
-{
-    if (dev_id >= BOARD_UART_COUNT)
-        return;
-
-    drv_uart_handle_t *h = &_uart_handles[dev_id];
-
-    if (h->initialized && h->ops != NULL && h->ops->rx_isr_cb != NULL)
-        h->ops->rx_isr_cb(h, rx_byte, _rx_rb[dev_id]);
-
-    /* Dispatch to application callback registered via board_uart_register_rx_cb() */
-    const board_uart_cbs_t *cbs = board_get_uart_cbs(dev_id);
-    if (cbs != NULL && cbs->on_rx_byte != NULL)
-        cbs->on_rx_byte(dev_id, rx_byte);
-}
-
-/*
- * HAL_UART_RxCpltCallback / TxCpltCallback / ErrorCallback are NOT defined
- * here.  hal_uart_stm32_irq_handler() reads USART SR/DR directly and calls
- * drv_uart_rx_isr_dispatch() below, bypassing the HAL callback chain.
- */
 
 /* ── Interrupt-driven TX helpers ──────────────────────────────────────── */
 

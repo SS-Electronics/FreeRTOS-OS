@@ -102,35 +102,13 @@ static int32_t infineon_uart_receive(drv_uart_handle_t *h,
     return OS_ERR_NONE;
 }
 
-static int32_t infineon_uart_start_rx_it(drv_uart_handle_t *h, uint8_t *rx_byte)
-{
-    if (h == NULL || !h->initialized || rx_byte == NULL)
-        return OS_ERR_OP;
-
-    /* TODO: Enable receive interrupt on USIC channel. */
-    (void)rx_byte;
-    return OS_ERR_NONE;
-}
-
-static void infineon_uart_rx_isr_cb(drv_uart_handle_t *h,
-                                     uint8_t            rx_byte,
-                                     void              *rb)
-{
-    /* TODO: Read the received byte and push to ring buffer. */
-    (void)h;
-    (void)rx_byte;
-    (void)rb;
-}
-
 /* ── Static ops table ─────────────────────────────────────────────────── */
 
 static const drv_uart_hal_ops_t _infineon_uart_ops = {
-    .hw_init     = infineon_uart_hw_init,
-    .hw_deinit   = infineon_uart_hw_deinit,
-    .transmit    = infineon_uart_transmit,
-    .receive     = infineon_uart_receive,
-    .start_rx_it = infineon_uart_start_rx_it,
-    .rx_isr_cb   = infineon_uart_rx_isr_cb,
+    .hw_init   = infineon_uart_hw_init,
+    .hw_deinit = infineon_uart_hw_deinit,
+    .transmit  = infineon_uart_transmit,
+    .receive   = infineon_uart_receive,
 };
 
 /* ── Public API ───────────────────────────────────────────────────────── */

@@ -34,7 +34,6 @@ obj-y += drivers/hal/stm32/hal_uart_stm32.o
 obj-y += drivers/hal/stm32/hal_iic_stm32.o
 obj-y += drivers/hal/stm32/hal_spi_stm32.o
 obj-y += drivers/hal/stm32/hal_gpio_stm32.o
-obj-y += drivers/hal/stm32/hal_msp_stm32.o
 obj-y += drivers/hal/stm32/hal_timebase_stm32.o
 obj-y += drivers/hal/stm32/hal_rcc_stm32.o
 endif
