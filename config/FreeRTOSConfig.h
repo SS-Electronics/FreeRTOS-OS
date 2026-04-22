@@ -132,6 +132,11 @@
 /* Heap implementation selection */
 #define USE_FreeRTOS_HEAP_4
 
+/* ── FreeRTOS+CLI ─────────────────────────────────────────────────────────── */
+/* Size of the internal static output buffer inside FreeRTOS_CLI.c.
+ * Must be >= the pcWriteBuffer length passed to FreeRTOS_CLIProcessCommand(). */
+#define configCOMMAND_INT_MAX_OUTPUT_SIZE       512
+
 /* ── Cortex-M4 interrupt priority configuration ───────────────────────────── */
 #ifdef __NVIC_PRIO_BITS
   #define configPRIO_BITS    __NVIC_PRIO_BITS

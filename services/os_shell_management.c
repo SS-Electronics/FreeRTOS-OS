@@ -44,6 +44,7 @@
 #include <drivers/timer/drv_time.h>
 
 #include <FreeRTOS_CLI.h>
+#include <shell/shell_task_mgmt.h>
 
 #if (INC_SERVICE_OS_SHELL_MGMT == 1)
 
@@ -151,6 +152,9 @@ static void _os_shell_task(void *arg)
     FreeRTOS_CLIRegisterCommand(&_cmd_version);
     FreeRTOS_CLIRegisterCommand(&_cmd_uptime);
     FreeRTOS_CLIRegisterCommand(&_cmd_reboot);
+
+    /* Register shell command modules */
+    shell_task_mgmt_register_cmds();
 
     /* Print welcome banner */
     _shell_write(SHELL_BANNER, (uint16_t)(sizeof(SHELL_BANNER) - 1));

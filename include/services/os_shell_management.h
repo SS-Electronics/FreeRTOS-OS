@@ -13,9 +13,8 @@
  * RX data flow:
  *   USART2_IRQHandler
  *     → hal_uart_stm32_irq_handler(USART2)
- *       → drv_uart_rx_isr_dispatch()
- *         → irq_desc chain: handle_simple_irq → _uart_rx_cb (uart_mgmt.c)
- *           → ringbuffer_putchar(rx_rb)        ← shell reads from here
+ *       → irq_desc chain: handle_simple_irq → _uart_rx_cb (uart_mgmt.c)
+ *         → ringbuffer_putchar(rx_rb)          ← shell reads from here
  *
  * TX data flow:
  *   _shell_write() → ringbuffer_put(tx_rb) → drv_uart_tx_kick()

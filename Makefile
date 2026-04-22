@@ -74,6 +74,7 @@ CC_OBJCPY					:= arm-none-eabi-objcopy
 CC_OPTIMIZATION				:= -O0 -g3 -c
 CC_EXTRA_FLAGS				:= --specs=nano.specs
 CC_INPUT_STD				:= -std=gnu99
+CPP_INPUT_STD				:= -std=gnu++14
 CC_WARNINGS					:= -Wall
 CC_TARGET_PROP				:= 
 CC_LINKER_INPUT				:= -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
@@ -91,7 +92,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := include arch irq drivers kernel mm ipc services drv_app  init 
+SUBDIRS := include arch irq drivers kernel mm ipc services drv_app shell init
 
 INCLUDES :=
 
@@ -344,15 +345,6 @@ $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
 	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
 	@echo '**********************************************'
 
-# Rule for .cpp files that are actually C code (e.g. ipc/ringbuffer.cpp)
-$(BUILD)/%.o: %.cpp | $(BUILD) $(AUTOCONF)
-	@echo '----------------------------------------------'
-	@echo 'Building C Source (cpp ext) $< ...'
-	@echo '----------------------'
-	@mkdir -p $(dir $@)
-	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -x c -c $< -o $@
-	@echo '**********************************************'
-
 # Rule for compiling app sources into build/app/
 $(BUILD)/app/%.o: $(APP_DIR)/%.c | $(BUILD) $(AUTOCONF)
 	@echo '----------------------------------------------'
@@ -360,6 +352,15 @@ $(BUILD)/app/%.o: $(APP_DIR)/%.c | $(BUILD) $(AUTOCONF)
 	@echo '----------------------'
 	@mkdir -p $(dir $@)
 	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) $(APP_INCLUDES) -c $< -o $@
+	@echo '**********************************************'
+
+# Rule for compiling app C++ sources into build/app/
+$(BUILD)/app/%.o: $(APP_DIR)/%.cpp | $(BUILD) $(AUTOCONF)
+	@echo '----------------------------------------------'
+	@echo 'Building App C++ Source $< ...'
+	@echo '----------------------'
+	@mkdir -p $(dir $@)
+	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_EXTRA_FLAGS) $(CPP_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) $(APP_INCLUDES) -c $< -o $@
 	@echo '**********************************************'
 
 # Create build directory

@@ -21,7 +21,7 @@
 #include <def_env_macros.h>
 #include <def_hw.h>
 #include <conf_os.h>
-#include <lib/ringbuffer.h>
+#include <ipc/ringbuffer.h>
 #include <ipc/mqueue.h>
 
 
@@ -35,11 +35,14 @@ extern "C" {
 
 #if (NO_OF_IIC > 0)
 
-void					drv_iic_update_handle(__TYPE_HW_UART_HANDLE_TYPE * handle, uint8_t dev_id);
-status_type				drv_iic_init(uint8_t dev_id);
-status_type				drv_iic_transmit(uint8_t dev_id, uint16_t device_address , uint8_t* data, uint16_t len);
-status_type				drv_iic_receive(uint8_t dev_id, uint16_t device_address, uint8_t* data, uint16_t len);
-status_type				drv_iic_device_ready(uint8_t dev_id, uint16_t device_address);
+int32_t drv_iic_transmit(uint8_t dev_id, uint16_t dev_addr, uint8_t reg_addr,
+                         uint8_t use_reg, const uint8_t *data, uint16_t len,
+                         uint32_t timeout_ms);
+int32_t drv_iic_receive(uint8_t dev_id, uint16_t dev_addr, uint8_t reg_addr,
+                        uint8_t use_reg, uint8_t *data, uint16_t len,
+                        uint32_t timeout_ms);
+int32_t drv_iic_is_device_ready(uint8_t dev_id, uint16_t dev_addr,
+                                uint32_t timeout_ms);
 
 
 

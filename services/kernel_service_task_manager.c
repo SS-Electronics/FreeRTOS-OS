@@ -25,37 +25,13 @@
  */
 
 #include <os/kernel_services.h>
+#include <os/kernel_task_mgr.h>
 #include <os/kernel.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <timers.h>
 
-/* ── Snapshot types ───────────────────────────────────────────────────────── */
-
-#define TASK_MGR_MAX_TASKS      32
 #define TASK_MGR_SCAN_PERIOD_MS 5000
-
-typedef struct {
-    TaskHandle_t    handle;
-    const char     *name;
-    eTaskState      state;
-    UBaseType_t     stack_hwm;   /* words remaining — lower = closer to overflow */
-    uint32_t        thread_id;
-} task_health_t;
-
-typedef struct {
-    task_health_t   tasks[TASK_MGR_MAX_TASKS];
-    uint8_t         task_count;
-
-    task_health_t   timer_task;
-    uint8_t         timer_task_valid;
-
-    size_t          heap_free;
-    size_t          heap_min_ever_free;
-
-    uint32_t        stack_overflow_count;
-    uint32_t        malloc_fail_count;
-} sys_health_t;
 
 /* ── Module state ─────────────────────────────────────────────────────────── */
 

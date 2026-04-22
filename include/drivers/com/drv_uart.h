@@ -21,7 +21,7 @@
 #include <def_env_macros.h>
 #include <def_hw.h>
 #include <conf_os.h>
-#include <lib/ringbuffer.h>
+#include <ipc/ringbuffer.h>
 #include <ipc/mqueue.h>
 #include <ipc/global_var.h>
 
@@ -33,9 +33,8 @@ extern "C" {
 
 #if (NO_OF_UART > 0)
 
-void					drv_serial_update_handle(__TYPE_HW_UART_HANDLE_TYPE * handle, uint8_t dev_id);
-status_type				drv_serial_init(uint8_t dev_id);
-status_type				drv_serial_transmit(uint8_t dev_id, uint8_t* data, uint16_t len);
+int32_t drv_serial_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len);
+int32_t drv_serial_receive(uint8_t dev_id, uint8_t *data, uint16_t len);
 
 
 #else // If there is no inclusion give the warning

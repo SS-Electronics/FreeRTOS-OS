@@ -25,6 +25,7 @@ include autoconf.mk
 
 
 INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/include
+INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Plus-CLI
 
 
 
@@ -42,6 +43,7 @@ obj-y += kernel/FreeRTOS-Kernel/timers.o
 obj-y += kernel/FreeRTOS-Kernel/event_groups.o
 obj-y += kernel/kernel_thread.o
 obj-y += kernel/FreeRTOS-Kernel/portable/MemMang/heap_4.o
+obj-y += kernel/FreeRTOS-Plus-CLI/FreeRTOS_CLI.o
 
 
 

@@ -38,6 +38,8 @@
                 "${workspaceFolder}/kernel",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/include",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F",
+                "${workspaceFolder}/kernel/FreeRTOS-Plus-CLI",
+                "${workspaceFolder}/include/shell",
                 "${workspaceFolder}/lib",
                 // Application (relative — only works when app/ is a sibling)
                 "${workspaceFolder}/../app",
@@ -100,6 +102,8 @@
                 "${workspaceFolder}/kernel",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/include",
                 "${workspaceFolder}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F",
+                "${workspaceFolder}/kernel/FreeRTOS-Plus-CLI",
+                "${workspaceFolder}/include/shell",
                 "${workspaceFolder}/lib",
                 "${workspaceFolder}/../app",
                 "${workspaceFolder}/../app/board",

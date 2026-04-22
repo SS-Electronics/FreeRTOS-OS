@@ -93,29 +93,16 @@ int32_t ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id,
 			case IPC_MQUEUE_TYPE_UART_HW:
 			{
 				struct ringbuffer *temp_buffer_handle =
-					(struct ringbuffer *)kmaloc(sizeof(struct ringbuffer));
+					ringbuffer_create((uint16_t)queue_size);
 
 				if(temp_buffer_handle != NULL)
 				{
-					uint8_t *rb_storage_ptr = (uint8_t *)kmaloc(queue_size);
-
-					if(rb_storage_ptr != NULL)
-					{
-						ringbuffer_init(temp_buffer_handle, rb_storage_ptr, queue_size);
-
-						new_node->mqueue.queue_id                   = mqueue_id_counter++;
-						mqueue_id                                   = new_node->mqueue.queue_id;
-						new_node->mqueue.queue_type                 = IPC_MQUEUE_TYPE_UART_HW;
-						new_node->mqueue.linked_hw_peripheral_id    = hardware_id;
-						new_node->mqueue.handle                     = (void *)temp_buffer_handle;
-						new_node->mqueue.free_rtos_queue_handle     = NULL;
-					}
-					else
-					{
-						kfree(temp_buffer_handle);
-						kfree(new_node);
-						new_node = NULL;
-					}
+					new_node->mqueue.queue_id                   = mqueue_id_counter++;
+					mqueue_id                                   = new_node->mqueue.queue_id;
+					new_node->mqueue.queue_type                 = IPC_MQUEUE_TYPE_UART_HW;
+					new_node->mqueue.linked_hw_peripheral_id    = hardware_id;
+					new_node->mqueue.handle                     = (void *)temp_buffer_handle;
+					new_node->mqueue.free_rtos_queue_handle     = NULL;
 				}
 				else
 				{
@@ -169,12 +156,8 @@ status_type ipc_mqueue_unregister(int32_t mqueue_id)
 					break;
 
 				case IPC_MQUEUE_TYPE_UART_HW:
-				{
-					struct ringbuffer *ptr = (struct ringbuffer *)pos->mqueue.handle;
-					kfree(ptr->buffer_ptr);
-					kfree(ptr);
+					ringbuffer_destroy((struct ringbuffer *)pos->mqueue.handle);
 					break;
-				}
 
 				default:
 					break;
