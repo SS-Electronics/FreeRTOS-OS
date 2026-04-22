@@ -7,13 +7,16 @@ Linux-style interrupt descriptor chain for FreeRTOS / bare-metal Cortex-M4.
 ## Table of Contents
 
 - [Overview](#overview)
-- [Dispatch Chain](#dispatch-chain)
+- [Common Dispatch Spine](#common-dispatch-spine)
+- [UART ISR Chain](#uart-isr-chain)
+- [I2C ISR Chain](#i2c-isr-chain)
+- [SPI ISR Chain](#spi-isr-chain)
+- [Task Notification Mechanism](#task-notification-mechanism)
 - [IRQ ID Space](#irq-id-space)
 - [Key Data Structures](#key-data-structures)
 - [Flow Handlers](#flow-handlers)
 - [Registration APIs](#registration-apis)
 - [Boot Sequence](#boot-sequence)
-- [Adding a New IRQ](#adding-a-new-irq)
 - [EXTI Example (app_main.c)](#exti-example)
 - [UART Echo Example](#uart-echo-example)
 - [IRQ Table Generator](#irq-table-generator)
@@ -28,6 +31,11 @@ target. Each software IRQ ID maps to a descriptor (`struct irq_desc`) that
 holds a chip object (`struct irq_chip`), a flow handler, and a singly-linked
 chain of `struct irqaction` nodes — one per registered driver callback.
 
+All peripheral HAL backends (UART, I2C, SPI) dispatch events exclusively
+through `drv_irq_dispatch_from_isr()` → `__do_IRQ_from_isr()` → subscriber
+chain. No HAL weak callbacks (`HAL_UART_RxCpltCallback`, etc.) are used; the
+MSP stubs are no-ops and all completion/error callbacks are no-op overrides.
+
 Two registration paths are available:
 
 | API | Signature | Use case |
@@ -39,32 +47,202 @@ Both ultimately insert an `irqaction` into the same `irq_desc` chain.
 
 ---
 
-## Dispatch Chain
+## Common Dispatch Spine
+
+Every peripheral feeds into the same spine once it calls
+`drv_irq_dispatch_from_isr`:
 
 ```
-CPU vector table (startup_stm32f411.s)
-  │
-  ▼  hal_it_stm32.c
-USARTx_IRQHandler()          — reads SR/CR1/CR3, no HAL state machine
-EXTI0_IRQHandler()           — clears EXTI_PR, dispatches pin mask
+drv_irq_dispatch_from_isr(irq_id, data, &hpt)     drivers/drv_irq.c
   │
   ▼
-drv_irq_dispatch_from_isr(irq_id, &data, &hpt)
-  │
-  ▼  drivers/drv_irq.c  →  irq/irq_desc.c
-__do_IRQ_from_isr(irq_id, data, pxHPT)
-  ├─ irq_to_desc(irq_id)              O(1) array lookup
-  ├─ depth check  (irq_disable() increments depth; skips dispatch if > 0)
-  └─ desc->handle_irq(desc, data, pxHPT)      flow handler
+__do_IRQ_from_isr(irq_id, data, pxHPT)            irq/irq_desc.c
+  ├─ irq_to_desc(irq_id)            O(1) array lookup
+  ├─ depth check  (skips if irq_disable() depth > 0)
+  └─ desc->handle_irq(desc, data, pxHPT)          flow handler
        │
        ▼  handle_irq_event()
-       irqaction->handler(irq, data, dev_id, pxHPT)   ← driver ISR #1
-       irqaction->next->handler(...)                   ← driver ISR #2  (chained)
+       irqaction->handler(irq, data, dev_id, pxHPT)   ← subscriber #1
+       irqaction->next->handler(...)                   ← subscriber #2 (chained)
        ...
        │
        ▼
-  portYIELD_FROM_ISR(*pxHPT)   (called by the HAL ISR after dispatch returns)
+  portYIELD_FROM_ISR(*pxHPT)   (called by the HAL handler after dispatch returns)
 ```
+
+---
+
+## UART ISR Chain
+
+UART uses direct register-level handling — no HAL state machine is invoked.
+The RXNE bit is enabled inside `stm32_uart_hw_init()`; no separate
+`start_rx_it` step is needed.
+
+```
+CPU vector table
+  │
+  ▼  stm32_exceptions.c
+USART1_IRQHandler()
+  └─ hal_uart_stm32_irq_handler(USART1)        hal_uart_stm32.c
+       reads SR / CR1 / CR3 directly
+       │
+       ├─ RXNE set (no errors)
+       │    byte = READ_REG(DR)                clears RXNE
+       │    drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(0), &byte, &hpt)
+       │      └─► _uart_rx_cb()               uart_mgmt.c
+       │               ringbuffer_putchar(rx_rb, byte)
+       │
+       ├─ RXNE set (with error flags)
+       │    byte = READ_REG(DR)                clears SR error flags
+       │    drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(0), &byte, &hpt)
+       │    drv_irq_dispatch_from_isr(IRQ_ID_UART_ERROR(0), &errorflags, &hpt)
+       │      └─► _uart_err_cb()              uart_mgmt.c
+       │
+       ├─ TXE set — TX ring buffer not empty
+       │    byte = ringbuffer_getchar(tx_rb)
+       │    WRITE_REG(DR, byte)
+       │
+       ├─ TXE set — TX ring buffer empty
+       │    CLEAR_BIT(CR1, TXEIE)
+       │    drv_irq_dispatch_from_isr(IRQ_ID_UART_TX_DONE(0), NULL, &hpt)
+       │
+       └─ TC set
+            CLEAR_BIT(CR1, TCIE)
+            drv_irq_dispatch_from_isr(IRQ_ID_UART_TX_DONE(0), NULL, &hpt)
+       │
+       ▼
+  portYIELD_FROM_ISR(hpt)
+```
+
+**RX notification:** `_uart_rx_cb` writes the byte directly into the IPC ring
+buffer. Tasks drain it with `uart_mgmt_read_byte()` (blocking) or
+`uart_mgmt_read_line()`.  No task wake-up occurs per byte; the ring buffer
+decouples ISR rate from task scheduling.
+
+---
+
+## I2C ISR Chain
+
+I2C uses two NVIC lines (EV + ER). The HAL state machine is kept for the
+complex I2C protocol handling; completion is detected by comparing
+`HAL_I2C_GetState()` before and after the HAL handler call, so no HAL weak
+callbacks are needed.
+
+```
+CPU vector table
+  │
+  ├─ I2C1_EV_IRQHandler()
+  │    └─ hal_iic_stm32_ev_irq_handler(I2C1)   hal_iic_stm32.c
+  │         prev = HAL_I2C_GetState()
+  │         HAL_I2C_EV_IRQHandler(&hi2c)        HAL state machine step
+  │         next = HAL_I2C_GetState()
+  │         │
+  │         └─ if next == READY && prev != READY  (transfer complete)
+  │              ├─ prev == BUSY_TX  →  drv_irq_dispatch_from_isr(IRQ_ID_I2C_TX_DONE(0), ...)
+  │              │    └─► _iic_done_cb()          iic_mgmt.c
+  │              │              vTaskNotifyGiveFromISR(h->notify_task, pxHPT)
+  │              └─ prev == BUSY_RX  →  drv_irq_dispatch_from_isr(IRQ_ID_I2C_RX_DONE(0), ...)
+  │                   └─► _iic_done_cb()          iic_mgmt.c
+  │                             vTaskNotifyGiveFromISR(h->notify_task, pxHPT)
+  │         portYIELD_FROM_ISR(hpt)
+  │
+  └─ I2C1_ER_IRQHandler()
+       └─ hal_iic_stm32_er_irq_handler(I2C1)   hal_iic_stm32.c
+            HAL_I2C_ER_IRQHandler(&hi2c)        resets state to READY
+            err = HAL_I2C_GetError()
+            drv_irq_dispatch_from_isr(IRQ_ID_I2C_ERROR(0), &err, &hpt)
+              └─► _iic_err_cb()                 iic_mgmt.c
+                        vTaskNotifyGiveFromISR(h->notify_task, pxHPT)
+            portYIELD_FROM_ISR(hpt)
+```
+
+`BUSY_TX` covers both `HAL_I2C_Master_Transmit_IT` and `HAL_I2C_Mem_Write_IT`
+(both set that state); `BUSY_RX` covers both receive variants.
+
+---
+
+## SPI ISR Chain
+
+SPI has a single NVIC line. The HAL state machine is kept for multi-interrupt
+operations; completion/error is detected by checking state and error code after
+the HAL handler returns.
+
+```
+CPU vector table
+  │
+  ▼
+SPI1_IRQHandler()
+  └─ hal_spi_stm32_irq_handler(SPI1)          hal_spi_stm32.c
+       prev = HAL_SPI_GetState()
+       HAL_SPI_IRQHandler(&hspi)               HAL state machine step
+       │
+       ├─ if GetState() != READY → return      multi-interrupt op, not done yet
+       │
+       └─ transfer complete:
+            err = HAL_SPI_GetError()
+            │
+            ├─ err != NONE
+            │    drv_irq_dispatch_from_isr(IRQ_ID_SPI_ERROR(0), &err, &hpt)
+            │      └─► _spi_err_cb()           spi_mgmt.c
+            │                vTaskNotifyGiveFromISR(h->notify_task, pxHPT)
+            │
+            └─ err == NONE
+                 ├─ prev == BUSY_TX    →  IRQ_ID_SPI_TX_DONE(0)
+                 ├─ prev == BUSY_RX    →  IRQ_ID_SPI_RX_DONE(0)
+                 └─ prev == BUSY_TX_RX →  IRQ_ID_SPI_TXRX_DONE(0)
+                      └─► _spi_done_cb()       spi_mgmt.c
+                                vTaskNotifyGiveFromISR(h->notify_task, pxHPT)
+       portYIELD_FROM_ISR(hpt)
+```
+
+---
+
+## Task Notification Mechanism
+
+Two distinct notification patterns are used depending on the peripheral:
+
+### UART RX — ring buffer (decoupled)
+
+```
+ISR context                         Task context
+───────────                         ────────────
+_uart_rx_cb()                       uart_mgmt_read_byte() / read_line()
+  ringbuffer_putchar(rx_rb, byte)     ringbuffer_getchar(rx_rb, &byte)
+                                      (blocks on semaphore if empty)
+```
+
+The ring buffer decouples ISR throughput from task scheduling. The producer
+(ISR) never blocks; the consumer (task) sleeps until data arrives.
+
+### I2C / SPI — direct task notification (coupled)
+
+```
+Management thread (task context)         ISR context
+────────────────────────────────         ───────────
+h->notify_task = xTaskGetCurrentTaskHandle()
+ops->transfer_it(...)          ────────► _spi_done_cb() / _iic_done_cb()
+ulTaskNotifyTake(pdTRUE, tmo)  ◄────────   vTaskNotifyGiveFromISR(h->notify_task, pxHPT)
+result = h->last_err                     portYIELD_FROM_ISR(hpt)
+h->notify_task = NULL
+```
+
+The management thread suspends on `ulTaskNotifyTake` after kicking the IT
+transfer. The ISR's subscriber callback wakes exactly that thread via
+`vTaskNotifyGiveFromISR`. One transfer completes before the next begins.
+
+### Subscribers registered at startup
+
+| IRQ ID | Subscriber | Registered in |
+|--------|-----------|---------------|
+| `IRQ_ID_UART_RX(n)` | `_uart_rx_cb` → `ringbuffer_putchar` | `uart_mgmt.c` |
+| `IRQ_ID_UART_ERROR(n)` | `_uart_err_cb` | `uart_mgmt.c` |
+| `IRQ_ID_I2C_TX_DONE(n)` | `_iic_done_cb` → `vTaskNotifyGiveFromISR` | `iic_mgmt.c` |
+| `IRQ_ID_I2C_RX_DONE(n)` | `_iic_done_cb` → `vTaskNotifyGiveFromISR` | `iic_mgmt.c` |
+| `IRQ_ID_I2C_ERROR(n)` | `_iic_err_cb`  → `vTaskNotifyGiveFromISR` | `iic_mgmt.c` |
+| `IRQ_ID_SPI_TX_DONE(n)` | `_spi_done_cb` → `vTaskNotifyGiveFromISR` | `spi_mgmt.c` |
+| `IRQ_ID_SPI_RX_DONE(n)` | `_spi_done_cb` → `vTaskNotifyGiveFromISR` | `spi_mgmt.c` |
+| `IRQ_ID_SPI_TXRX_DONE(n)` | `_spi_done_cb` → `vTaskNotifyGiveFromISR` | `spi_mgmt.c` |
+| `IRQ_ID_SPI_ERROR(n)` | `_spi_err_cb`  → `vTaskNotifyGiveFromISR` | `spi_mgmt.c` |
 
 ---
 
@@ -225,19 +403,21 @@ For new code, prefer `request_irq()` directly.
 main()
   └─ HAL_Init()
   └─ drv_rcc_clock_init()
-  └─ irq_hw_init_all()          ← generated from app/board/irq_table.xml
-       ├─ irq_desc_init_all()   — zero-fills table, sets handle_simple_irq + names
-       ├─ irq_set_chip_and_handler(IRQ_ID_UART_RX(0), irq_chip_nvic_get(), ...)
+  └─ board_clk_enable()          enables all RCC clocks (sys bus + peripherals + GPIO)
+  └─ irq_hw_init_all()           generated from app/board/irq_table.xml
+       ├─ irq_desc_init_all()    zero-fills table, sets handle_simple_irq + names
+       ├─ irq_set_chip_and_handler(IRQ_ID_UART_RX(0), irq_chip_nvic_get(), handle_simple_irq)
        ├─ irq_chip_nvic_bind_hwirq(IRQ_ID_UART_RX(0), USART1_IRQn, 2)
        │   └─ HAL_NVIC_SetPriority(USART1_IRQn, 2, 0)
        ├─ … (all peripherals from irq_table.xml)
-       └─ HAL_NVIC_SetPriority(SysTick_IRQn, 15, 0)   — core exceptions
-  └─ xTaskCreate(...)
+       └─ HAL_NVIC_SetPriority(SysTick_IRQn, 15, 0)
+  └─ xTaskCreate(uart_mgmt_thread, ...)   registers _uart_rx_cb / _uart_err_cb
+  └─ xTaskCreate(iic_mgmt_thread,  ...)   registers _iic_done_cb / _iic_err_cb
+  └─ xTaskCreate(spi_mgmt_thread,  ...)   registers _spi_done_cb / _spi_err_cb
   └─ vTaskStartScheduler()
 ```
 
-**`irq_hw_init_all()` must be called before any `request_irq()`.**  
-Management tasks call `request_irq()` / `irq_register()` at thread startup, which is safe because the scheduler hasn't dispatched interrupts yet.
+**`irq_hw_init_all()` must be called after `board_clk_enable()` and before any `request_irq()`.**
 
 ---
 
@@ -246,7 +426,7 @@ Management tasks call `request_irq()` / `irq_register()` at thread startup, whic
 `app/app_main.c` demonstrates a GPIO EXTI interrupt (BTN_USER, PA0):
 
 ```
-EXTI0_IRQHandler()                   hal_it_stm32.c
+EXTI0_IRQHandler()                   stm32_exceptions.c
   _EXTI_DISPATCH(GPIO_PIN_0, 0)
     __HAL_GPIO_EXTI_CLEAR_IT()
     drv_irq_dispatch_from_isr(IRQ_ID_EXTI(0), &pin, &hpt)
@@ -278,9 +458,9 @@ irq_register(IRQ_ID_UART_RX(UART_DEBUG), _echo_uart_rx_cb, NULL);
 ```
 
 `_echo_uart_rx_cb` is an `irq_notify_cb_t` (void return). `irq_register()` wraps
-it in a trampoline and registers it as an `irqaction`. The dispatch path is identical
-to the EXTI example above — `handle_irq_event()` calls the trampoline, which calls the
-original callback.
+it in a trampoline and appends it to the same descriptor chain as
+`_uart_rx_cb` (uart_mgmt). Both subscribers fire on every RXNE interrupt:
+`_uart_rx_cb` writes into the ring buffer; `_echo_uart_rx_cb` sends the echo.
 
 ---
 
@@ -323,8 +503,14 @@ XML schema at a glance:
 | `include/drivers/drv_irq.h` | Public driver API: `drv_irq_dispatch_from_isr`, `drv_irq_register` |
 | `drivers/drv_irq.c` | Thin wrappers: `drv_irq_dispatch_from_isr` → `__do_IRQ_from_isr` |
 | `include/drivers/hal/stm32/irq_chip_nvic.h` | NVIC chip declarations |
-| `drivers/hal/stm32/irq_chip_nvic.c` | NVIC `irq_chip` ops (HAL_NVIC_*) |
-| `drivers/hal/stm32/hal_it_stm32.c` | Hardware ISR bodies — call `drv_irq_dispatch_from_isr` |
+| `drivers/hal/stm32/irq_chip_nvic.c` | NVIC `irq_chip` ops (`HAL_NVIC_*`) |
+| `drivers/hal/stm32/hal_uart_stm32.c` | UART ISR — direct SR/DR register reads, no HAL state machine |
+| `drivers/hal/stm32/hal_iic_stm32.c` | I2C EV/ER ISRs — HAL state machine + pre/post state compare |
+| `drivers/hal/stm32/hal_spi_stm32.c` | SPI ISR — HAL state machine + pre/post state compare |
+| `drivers/hal/stm32/stm32_exceptions.c` | Hardware vector bodies — route to peripheral handlers |
+| `services/uart_mgmt.c` | Registers `_uart_rx_cb` / `_uart_err_cb`; ring-buffer consumer |
+| `services/iic_mgmt.c` | Registers `_iic_done_cb` / `_iic_err_cb`; `ulTaskNotifyTake` waiter |
+| `services/spi_mgmt.c` | Registers `_spi_done_cb` / `_spi_err_cb`; `ulTaskNotifyTake` waiter |
 | `app/board/irq_table.xml` | **Source of truth** — peripheral labels, NVIC priorities |
 | `scripts/gen_irq_table.py` | Generator: XML → `irq_table.c` + `irq_hw_init_generated.c` |
 | `app/board/irq_hw_init_generated.c` | **Generated** — `irq_hw_init_all()` |
