@@ -1,0 +1,63 @@
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/os/kernel.h:46: warning: multiple use of section label 'Data' while adding section, (first occurrence: /home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h, line 33)
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/os/kernel.h:128: warning: group Thread: ignoring title "diagnostic accessors" that does not match old title "apis"
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/os/kernel.h:128: warning: Refusing to add group Thread to itself
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/drv_app/gpio_app.h:57: warning: The following parameter of gpio_async_write(uint8_t gpio_id, uint8_t state) is not documented:
+  parameter 'gpio_id'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/drv_app/spi_app.h:39: warning: The following parameters of spi_sync_transfer(uint8_t bus_id, const uint8_t *tx, uint8_t *rx, uint16_t len, uint32_t timeout_ms) are not documented:
+  parameter 'bus_id'
+  parameter 'len'
+  parameter 'timeout_ms'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/drv_app/uart_app.h:69: warning: The following parameter of uart_async_read_byte(uint8_t dev_id, uint8_t *byte) is not documented:
+  parameter 'dev_id'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/drivers/hal/stm32/irq_chip_nvic.c:215: warning: argument 'irq' from the argument list of irq_chip_nvic_bind_hwirq has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/drivers/hal/stm32/irq_chip_nvic.c:215: warning: argument 'irqn' from the argument list of irq_chip_nvic_bind_hwirq has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/drivers/hal/stm32/irq_chip_nvic.c:215: warning: argument 'priority' from the argument list of irq_chip_nvic_bind_hwirq has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/drv_app/gpio_app.h:57: warning: The following parameter of gpio_async_write(uint8_t gpio_id, uint8_t state) is not documented:
+  parameter 'gpio_id'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/drv_app/spi_app.h:39: warning: The following parameters of spi_sync_transfer(uint8_t bus_id, const uint8_t *tx, uint8_t *rx, uint16_t len, uint32_t timeout_ms) are not documented:
+  parameter 'bus_id'
+  parameter 'len'
+  parameter 'timeout_ms'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/drv_app/uart_app.h:69: warning: The following parameter of uart_async_read_byte(uint8_t dev_id, uint8_t *byte) is not documented:
+  parameter 'dev_id'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/irq/irq_desc.h:197: warning: Found unknown command '@dev_id'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:85: warning: argument 'pointer' of command @param is not found in the argument list of INIT_LIST_NODE(ptr)
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/irq/irq_desc.h:197: warning: Found unknown command '@dev_id'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'thread_func' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'thread_name' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'thread_stack_depth' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'priority' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'thread_parameter' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'thread_id' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'thread_id' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/kernel/kernel_thread.c:186: warning: argument 'thread_id' of command @param is not found in the argument list of __attribute__((section(".os")))
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:205: warning: argument 'new' from the argument list of list_add has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:205: warning: argument 'prev' from the argument list of list_add has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:205: warning: argument 'next' from the argument list of list_add has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:215: warning: argument 'new' from the argument list of list_add_head has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:215: warning: argument 'head' from the argument list of list_add_head has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:223: warning: argument 'new' from the argument list of list_add_tail has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:223: warning: argument 'head' from the argument list of list_add_tail has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:231: warning: argument 'new' of command @param is not found in the argument list of list_delete(struct list_node *node)
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/mm/list.h:231: warning: argument 'head' of command @param is not found in the argument list of list_delete(struct list_node *node)
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/mm/list.c:39: warning: argument 'list' from the argument list of list_init has multiple @param documentation sections
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/include/os/kernel.h:102: warning: The following parameters of os_thread_create(thread_func_t thread_func, const char *const thread_name, uint32_t thread_stack_depth, uint32_t priority, void *const thread_parameter) are not documented:
+  parameter 'thread_func'
+  parameter 'thread_name'
+  parameter 'thread_stack_depth'
+  parameter 'thread_parameter'
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:13: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/OS_THREAD.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:14: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/QUEUE.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:15: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/DRIVERS.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:16: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/BOARD.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:17: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/DEV_MGMT.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:18: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/SHELL_CLI.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:19: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/IRQ.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:20: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/DMA.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:21: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/DEBUG.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:22: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/OS_INSIDE.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:140: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/OS_INSIDE.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:465: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/OS_THREAD.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:465: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/SHELL_CLI.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:514: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/DEBUG.md' for \ref command
+/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/README.md:533: warning: unable to resolve reference to '/home/subhajitroy005/Documents/Projects/Firmware/FreeRTOS-OS-App/FreeRTOS-OS/docs/OS_INSIDE.md' for \ref command

@@ -1,0 +1,5 @@
+var searchData=
+[
+  ['mcp3427_5fch_5f1_0',['MCP3427_CH_1',['../MCP3427__IIC_8h.html#a2de934100257ed020656b56f490f16daae3a35f2688d8e192942f36870b0d0898',1,'MCP3427_IIC.h']]],
+  ['mcp3427_5fch_5f2_1',['MCP3427_CH_2',['../MCP3427__IIC_8h.html#a2de934100257ed020656b56f490f16daa8694dcb6fc6ada904b3070eab9267c97',1,'MCP3427_IIC.h']]]
+];

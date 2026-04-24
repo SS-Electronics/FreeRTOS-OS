@@ -1,0 +1,21 @@
+var searchData=
+[
+  ['r0_0',['r0',['../structfault__frame__t.html#aa3f8346e34a81ded2bb8cbac6d898832',1,'fault_frame_t']]],
+  ['r1_1',['r1',['../structfault__frame__t.html#ab76d20b8326557cc772e381889b0b8ec',1,'fault_frame_t']]],
+  ['r12_2',['r12',['../structfault__frame__t.html#a736cd4caffd2131557e9d0810bd4144e',1,'fault_frame_t']]],
+  ['r2_3',['r2',['../structfault__frame__t.html#a5e9ba52c45410a4f609a3cba62d3354b',1,'fault_frame_t']]],
+  ['r3_4',['r3',['../structfault__frame__t.html#a1e159a4e6f3aa8c0cc598779b881f528',1,'fault_frame_t']]],
+  ['read_5',['read',['../structdrv__gpio__hal__ops.html#a7cf58f8b14d48b0d1f7f1f6a3520aab2',1,'drv_gpio_hal_ops']]],
+  ['read_5findex_6',['read_index',['../structringbuffer.html#ad5ca22f3e5cb30536178c1b55cfa2848',1,'ringbuffer']]],
+  ['read_5fmirror_7',['read_mirror',['../structringbuffer.html#ac5fd1cbc922c13389990543acd37343a',1,'ringbuffer']]],
+  ['receive_8',['receive',['../structdrv__uart__hal__ops.html#a0217946e1ee1a5a3894d2ba432f2f589',1,'drv_uart_hal_ops::receive'],['../structdrv__iic__hal__ops.html#afaeaa0d7c1bd447d06dfc32339c5f829',1,'drv_iic_hal_ops::receive'],['../structdrv__spi__hal__ops.html#a156ce0c938e421e25b25226c343a8154',1,'drv_spi_hal_ops::receive']]],
+  ['receive_5fit_9',['receive_it',['../structdrv__iic__hal__ops.html#a4ea074a58dff42c1d6539f07ea68c62d',1,'drv_iic_hal_ops::receive_it'],['../structdrv__spi__hal__ops.html#a29d8a3aa14cf08fb8a35d6c9f030a8f9',1,'drv_spi_hal_ops::receive_it']]],
+  ['refresh_10',['refresh',['../structdrv__wdg__hal__ops.html#ae99f729c2a64b3db443dabeb3ab32393',1,'drv_wdg_hal_ops']]],
+  ['reg_5faddr_11',['reg_addr',['../structtype__iic__pdu__struct.html#ac2029e2737613e9ae6b9288b46cfdd73',1,'type_iic_pdu_struct::reg_addr'],['../structiic__mgmt__msg__t.html#a45a1fcb8708b541ee2e786a5b2e602d9',1,'iic_mgmt_msg_t::reg_addr']]],
+  ['request_12',['request',['../structdma__slave__config__t.html#ac0110757963bb2d25367ce89dc6a1004',1,'dma_slave_config_t']]],
+  ['result_5fcode_13',['result_code',['../structiic__mgmt__msg__t.html#a58fa01fd5dd69bc3a52398b3858660bd',1,'iic_mgmt_msg_t::result_code'],['../structspi__mgmt__msg__t.html#a4b7f69987ebf38e4f33d9989da583e07',1,'spi_mgmt_msg_t::result_code'],['../structuart__mgmt__msg__t.html#af7a6e201f72c5df12f77465e489fdb1a',1,'uart_mgmt_msg_t::result_code']]],
+  ['result_5fnotify_14',['result_notify',['../structiic__mgmt__msg__t.html#a6bbaa6d90f0e79b87381440ab679db21',1,'iic_mgmt_msg_t::result_notify'],['../structspi__mgmt__msg__t.html#aed5a7572b4ec6af93d5753191103d390',1,'spi_mgmt_msg_t::result_notify'],['../structuart__mgmt__msg__t.html#ada18cc3c9b6b6862300f608fbec48ae8',1,'uart_mgmt_msg_t::result_notify']]],
+  ['resume_15',['resume',['../structdma__chan__hal__ops__t.html#a16e18578913fcc9bb0039d3763b3e11b',1,'dma_chan_hal_ops_t']]],
+  ['running_16',['running',['../structfsm__ctx.html#a9c2bde740249a77fa60abefa60d70940',1,'fsm_ctx']]],
+  ['rx_5fdata_17',['rx_data',['../structspi__mgmt__msg__t.html#a2356e79381e35552ddcc95f7f0c91512',1,'spi_mgmt_msg_t']]]
+];
