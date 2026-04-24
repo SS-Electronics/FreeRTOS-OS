@@ -283,6 +283,9 @@ $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H): $(BOARD_
 .PHONY: board-gen
 board-gen: $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H)
 	@echo "### Board: $(CONFIG_BOARD)  XML: $(BOARD_XML)"
+	@echo "### Regenerating IntelliSense configuration ..."
+	@bash scripts/gen_intellisense.sh $(patsubst "%",%,$(CONFIG_TARGET_MCU))
+	@echo "### IntelliSense done"
 else
 .PHONY: board-gen
 board-gen:

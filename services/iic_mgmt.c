@@ -19,7 +19,7 @@
 #include <services/iic_mgmt.h>
 
 #include <os/kernel.h>
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_iic.h>
 #include <board/board_config.h>
 #include <irq/irq_notify.h>
 
@@ -29,7 +29,7 @@
 #  include <drivers/com/hal/infineon/hal_iic_infineon.h>
 #endif
 
-#if (INC_SERVICE_IIC_MGMT == 1)
+#if (BOARD_IIC_COUNT > 0)
 
 static QueueHandle_t _mgmt_queue = NULL;
 
@@ -319,4 +319,4 @@ int32_t iic_mgmt_sync_receive(uint8_t bus_id, uint16_t dev_addr,
     return result;
 }
 
-#endif /* INC_SERVICE_IIC_MGMT == 1 */
+#endif /* BOARD_IIC_COUNT > 0 */

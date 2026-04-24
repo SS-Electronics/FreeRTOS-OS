@@ -84,7 +84,6 @@ SECTIONS
     . = ALIGN(4);
     __boot_text_start = .;
     KEEP(*(.boot))        /* code placed with __attribute__((section(".boot"))) */
-    KEEP(*(.boot*))       /* wildcard catch */
     __boot_text_end = .;
     . = ALIGN(4);
   } > FLASH_BOOT
@@ -98,7 +97,6 @@ SECTIONS
     . = ALIGN(4);
     __os_text_start = .;
     KEEP(*(.os))          /* code placed with __attribute__((section(".os"))) */
-    KEEP(*(.os*))
     __os_text_end = .;
     . = ALIGN(4);
   } > FLASH_OS
@@ -180,12 +178,11 @@ SECTIONS
   /* APP area in FLASH_APP                                               */
   /* ------------------------------------------------------------------ */
 
-  .app (NOLOAD) :
+  .app :
   {
     . = ALIGN(4);
     __app_text_start = .;
     KEEP(*(.app))         /* code placed with __attribute__((section(".app"))) */
-    KEEP(*(.app*))
     __app_text_end = .;
     . = ALIGN(4);
   } > FLASH_APP
@@ -199,7 +196,8 @@ SECTIONS
   /* ------------------------------------------------------------------   */
 
   /* Bootloader RAM section */
-.data_boot (NOLOAD) :
+__boot_data_lma = LOADADDR(.data_boot);
+.data_boot :
 {
   . = ALIGN(4);
   _sdata_boot = .;
@@ -208,16 +206,6 @@ SECTIONS
   _edata_boot = .;
 } > RAM AT > FLASH_BOOT
 
-/* Bootloader LMA in Flash */
-.boot_data_lma :
-{
-  . = ALIGN(4);
-  __boot_data_lma = .;
-  KEEP(*(SORT(.boot_data)))
-  . = ALIGN(4);
-  __boot_data_lma_end = .;
-} > FLASH_BOOT
-
   /* ------------------------------------------------------------------   */
   /*                    OS RAM + LMA                                    */
   /* Initialized data sections: runtime in RAM, load image in respective FLASH */
@@ -225,7 +213,8 @@ SECTIONS
   /* ------------------------------------------------------------------   */
 
   /* OS RAM section */
-.data_os (NOLOAD) :
+__os_data_lma = LOADADDR(.data_os);
+.data_os :
 {
   . = ALIGN(4);
   _sdata_os = .;
@@ -234,16 +223,6 @@ SECTIONS
   _edata_os = .;
 } > RAM AT > FLASH_OS
 
-/* OS LMA in Flash */
-.os_data_lma :
-{
-  . = ALIGN(4);
-  __os_data_lma = .;
-  KEEP(*(SORT(.os_data)))
-  . = ALIGN(4);
-  __os_data_lma_end = .;
-} > FLASH_OS
-
   /* ------------------------------------------------------------------   */
   /*                    APP RAM + LMA                                    */
   /* Initialized data sections: runtime in RAM, load image in respective FLASH */
@@ -251,7 +230,8 @@ SECTIONS
   /* ------------------------------------------------------------------   */
 
 /* App RAM section */
-.data_app (NOLOAD) :
+__app_data_lma = LOADADDR(.data_app);
+.data_app :
 {
   . = ALIGN(4);
   _sdata_app = .;
@@ -259,16 +239,6 @@ SECTIONS
   . = ALIGN(4);
   _edata_app = .;
 } > RAM AT > FLASH_APP
-
-/* App LMA in Flash */
-.app_data_lma :
-{
-  . = ALIGN(4);
-  __app_data_lma = .;
-  KEEP(*(SORT(.app_data)))
-  . = ALIGN(4);
-  __app_data_lma_end = .;
-} > FLASH_APP
 
 /* generic untagged data */
 _sidata = LOADADDR(.data_generic);
@@ -328,19 +298,16 @@ _sidata = LOADADDR(.data_generic);
 PROVIDE(__boot_text_start       = __boot_text_start);
 PROVIDE(__boot_text_end         = __boot_text_end);
 PROVIDE(__boot_data_lma         = __boot_data_lma);
-PROVIDE(__boot_data_lma_end     = __boot_data_lma_end);
 
 /* OS area in FLASH_OS */
 PROVIDE(__os_text_start         = __os_text_start);
 PROVIDE(__os_text_end           = __os_text_end);
 PROVIDE(__os_data_lma           = __os_data_lma);
-PROVIDE(__os_data_lma_end       = __os_data_lma_end);
 
 /* APP area in FLASH_APP */
 PROVIDE(__app_text_start        = __app_text_start);
 PROVIDE(__app_text_end          = __app_text_end);
 PROVIDE(__app_data_lma          = __app_data_lma);
-PROVIDE(__app_data_lma_end      = __app_data_lma_end);
 
 /* Generic .text/.data symbols */
 PROVIDE(__text_start            = __text_start);

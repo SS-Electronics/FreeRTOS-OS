@@ -11,7 +11,7 @@
  * unique dev_id assigned by the caller.
  */
 
-#include <drivers/drv_handle.h>
+#include <drivers/drv_gpio.h>
 #include <board/mcu_config.h>
 #include <def_err.h>
 

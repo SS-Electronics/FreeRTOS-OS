@@ -41,15 +41,15 @@
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
 #include <ipc/mqueue.h>
-#include <drivers/drv_handle.h>
 #include <drivers/timer/drv_time.h>
+#include <drivers/com/drv_uart.h>
 
 #include <task.h>
 #include <FreeRTOS_CLI.h>
 #include <shell/shell_task_mgmt.h>
 #include <board/board_config.h>
 
-#if (INC_SERVICE_OS_SHELL_MGMT == 1)
+#if (BOARD_UART_COUNT > 0)
 
 /* ── Built-in command forward declarations ────────────────────────────────── */
 
@@ -316,4 +316,4 @@ int32_t os_shell_mgmt_start(void)
     return (tid >= 0) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-#endif /* INC_SERVICE_OS_SHELL_MGMT == 1 */
+#endif /* BOARD_UART_COUNT > 0 */

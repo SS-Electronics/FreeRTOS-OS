@@ -21,6 +21,18 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
+void drv_cpu_interrupt_prio_set(void)
+{
+#if (__ARM_ARCH_7A__ == 0U)
+    NVIC_SetPriority(SVCall_IRQn, 0U);
+#endif
+}
+
+void reset_mcu(void)
+{
+    NVIC_SystemReset();
+}
+
 void drv_irq_enable(int32_t irqn, uint32_t preempt_priority)
 {
     HAL_NVIC_SetPriority((IRQn_Type)irqn, preempt_priority, 0);

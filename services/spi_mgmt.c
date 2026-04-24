@@ -18,7 +18,7 @@
 #include <services/spi_mgmt.h>
 
 #include <os/kernel.h>
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_spi.h>
 #include <board/board_config.h>
 #include <irq/irq_notify.h>
 

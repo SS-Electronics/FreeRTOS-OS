@@ -14,7 +14,7 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_iic.h>
 #include <drivers/com/hal/stm32/hal_iic_stm32.h>
 #include <drivers/drv_irq.h>
 #include <board/board_config.h>

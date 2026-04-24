@@ -41,6 +41,7 @@ extern "C" {
 
 
 status_t os_kernel_thread_register(void);
+int32_t  task_mgr_start(void);
 
 
 

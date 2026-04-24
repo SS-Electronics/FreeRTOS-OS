@@ -5,7 +5,7 @@
  */
 
 #include <drv_app/gpio_app.h>
-#include <drivers/drv_handle.h>
+#include <drivers/drv_gpio.h>
 
 /* ── Immediate (direct driver) ────────────────────────────────────────── */
 

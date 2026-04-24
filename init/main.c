@@ -49,6 +49,7 @@
 #include <os/kernel_syscall.h>
 #include <os/kernel_services.h>
 #include <drivers/cpu/drv_cpu.h>
+#include <drivers/drv_irq.h>
 #include <drivers/drv_rcc.h>
 #include <board/board_config.h>
 #include <board/irq_hw_init_generated.h>

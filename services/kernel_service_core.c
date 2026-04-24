@@ -20,12 +20,14 @@
 #include <os/kernel_services.h>
 #include <os/kernel.h>
 #include <services/gpio_mgmt.h>
+#include <services/os_shell_management.h>
 
-#if (INC_SERVICE_UART_MGMT == 1)
+
+#if (BOARD_UART_COUNT > 0)
 #  include <services/uart_mgmt.h>
 #endif
 
-#if (INC_SERVICE_IIC_MGMT == 1)
+#if (BOARD_IIC_COUNT > 0)
 #  include <services/iic_mgmt.h>
 #endif
 
@@ -38,22 +40,16 @@ status_t os_kernel_thread_register(void)
 {
     status_t status = OS_ERR_NONE;
 
-    /* Task health monitor */
-    if (os_thread_create(thread_task_mgmt, "task_mgr",
-                         PROC_SERVICE_TASK_MGMT_STACK_SIZE,
-                         PROC_SERVICE_TASK_MGMT_PRIORITY, NULL) < 0)
-        status |= OS_ERR_OP;
-
     /* GPIO management */
     if (gpio_mgmt_start() != OS_ERR_NONE)
         status |= OS_ERR_OP;
 
-#if (INC_SERVICE_UART_MGMT == 1)
+#if (BOARD_UART_COUNT > 0)
     if (uart_mgmt_start() != OS_ERR_NONE)
         status |= OS_ERR_OP;
 #endif
 
-#if (INC_SERVICE_IIC_MGMT == 1)
+#if (BOARD_IIC_COUNT > 0)
     if (iic_mgmt_start() != OS_ERR_NONE)
         status |= OS_ERR_OP;
 #endif
@@ -63,10 +59,13 @@ status_t os_kernel_thread_register(void)
         status |= OS_ERR_OP;
 #endif
 
-    /* Start interactive shell on UART_APP (USART2, PA2/PA3, /dev/ttyUSB0).
-     * The shell task delays TIME_OFFSET_OS_SHELL_MGMT ms internally so it
-     * waits for uart_mgmt to complete UART initialisation first. */
-    os_shell_mgmt_start();
+    /* Task health monitor */
+    if (task_mgr_start() != OS_ERR_NONE)
+        status |= OS_ERR_OP;
+
+    /* Shell — delays internally until uart_mgmt completes UART init */
+    if (os_shell_mgmt_start() != OS_ERR_NONE)
+        status |= OS_ERR_OP;
 
     return status;
 }

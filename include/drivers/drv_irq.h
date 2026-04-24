@@ -30,6 +30,11 @@
 extern "C" {
 #endif
 
+/* ── CPU / system control ────────────────────────────────────────────────── */
+
+void drv_cpu_interrupt_prio_set(void);
+void reset_mcu(void);
+
 /* ── NVIC control (vendor-specific) ─────────────────────────────────────── */
 
 /**

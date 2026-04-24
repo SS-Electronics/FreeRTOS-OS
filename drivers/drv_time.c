@@ -11,7 +11,7 @@
  * drv_timer_hal_ops_t and calls drv_timer_register() at startup.
  */
 
-#include <drivers/drv_handle.h>
+#include <drivers/timer/drv_time.h>
 #include <drivers/timer/drv_time.h>
 #include <board/mcu_config.h>
 #include <def_err.h>

@@ -8,7 +8,7 @@
  * Chip-select control is the caller's responsibility.
  */
 
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_spi.h>
 #include <board/mcu_config.h>   /* pulls board_device_ids.h → BOARD_SPI_COUNT */
 #include <def_err.h>
 

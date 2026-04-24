@@ -1,21 +1,40 @@
 /*
-# Copyright (C) 2024 Subhajit Roy
-# This file is part of RTOS OS project
-#
-# RTOS OS project is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# RTOS OS project is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-*/
+ * def_compiler.h — Compiler abstraction macros
+ *
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * Provides compiler-portability macros used across the OS and IPC layers.
+ * Section-placement attributes are in def_attributes.h.
+ */
 
-#ifndef FREERTOS_OS_INCLUDE_DEF_COMPILER_H_
-#define FREERTOS_OS_INCLUDE_DEF_COMPILER_H_
+#ifndef INCLUDE_DEF_COMPILER_H_
+#define INCLUDE_DEF_COMPILER_H_
 
+#include <def_attributes.h>
 
+/* ── Inline ────────────────────────────────────────────────────────────── */
+#ifndef INLINE
+#  define INLINE            __attribute__((always_inline)) static inline
+#endif
 
-#endif /* FREERTOS_OS_INCLUDE_DEF_COMPILER_H_ */
+/* ── Packed struct ─────────────────────────────────────────────────────── */
+#ifndef PACKED
+#  define PACKED            __attribute__((packed))
+#endif
+
+/* ── Weak symbol ───────────────────────────────────────────────────────── */
+#ifndef WEAK
+#  define WEAK              __attribute__((weak))
+#endif
+
+/* ── Alignment ─────────────────────────────────────────────────────────── */
+#ifndef ALIGNED
+#  define ALIGNED(n)        __attribute__((aligned(n)))
+#endif
+
+/* ── Unused suppression ────────────────────────────────────────────────── */
+#ifndef UNUSED
+#  define UNUSED(x)         ((void)(x))
+#endif
+
+#endif /* INCLUDE_DEF_COMPILER_H_ */

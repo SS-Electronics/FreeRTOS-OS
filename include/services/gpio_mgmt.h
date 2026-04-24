@@ -22,7 +22,7 @@
 #include <def_err.h>
 #include <board/mcu_config.h>
 #include <config/conf_os.h>
-#include <drivers/drv_handle.h>
+#include <drivers/drv_gpio.h>
 
 #include "FreeRTOS.h"
 #include "queue.h"

@@ -130,36 +130,9 @@ config NO_OF_IIC
     help
       STM32F411VET6 has I2C1, I2C2, I2C3.
 
-config INC_SERVICE_UART_MGMT
-    bool "Enable UART management service thread"
-    default y
-
-config INC_SERVICE_IIC_MGMT
-    bool "Enable I2C management service thread"
-    default y
-
-config INC_SERVICE_CAN_MGMT
-    bool "Enable CAN management service thread"
-    default n
-    help
-      STM32F411 does not have a CAN peripheral.
-      Only enable if porting to F405/F407.
-
-config INC_SERVICE_ETH_MGMT
-    bool "Enable Ethernet management service thread"
-    default n
-    help
-      STM32F411 does not have an Ethernet MAC.
-
-config INC_SERVICE_OS_SHELL_MGMT
-    bool "Enable OS shell service thread"
-    default y
-
-config INC_SERVICE_DIAGNOSTIC_MGMT
-    bool "Enable diagnostics service thread"
-    default n
-
 endmenu
+# Service threads (uart_mgmt, iic_mgmt, spi_mgmt, os_shell) are activated
+# automatically when BOARD_*_COUNT > 0 in the generated board_device_ids.h.
 
 
 # ─────────────────────────────────────────────────────────────────────────────

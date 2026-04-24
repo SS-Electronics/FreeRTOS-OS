@@ -7,7 +7,7 @@
 #include <services/gpio_mgmt.h>
 
 #include <os/kernel.h>
-#include <drivers/drv_handle.h>
+#include <drivers/drv_gpio.h>
 #include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)

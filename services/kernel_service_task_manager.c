@@ -13,6 +13,8 @@
  *       vApplicationStackOverflowHook  — configCHECK_FOR_STACK_OVERFLOW 2
  *       vApplicationIdleHook           — configUSE_IDLE_HOOK 1
  *       vApplicationMallocFailedHook   — configUSE_MALLOC_FAILED_HOOK 1
+ *       vApplicationGetIdleTaskMemory  — configSUPPORT_STATIC_ALLOCATION 1
+ *       vApplicationGetTimerTaskMemory — configSUPPORT_STATIC_ALLOCATION 1
  *
  * Configuration requirements in FreeRTOSConfig.h
  * ───────────────────────────────────────────────
@@ -108,6 +110,28 @@ const sys_health_t *task_mgr_get_health(void)
 
 /* ── FreeRTOS application hooks ───────────────────────────────────────────── */
 
+void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
+                                   StackType_t  **ppxIdleTaskStackBuffer,
+                                   configSTACK_DEPTH_TYPE *pulIdleTaskStackSize)
+{
+    static StaticTask_t _idle_tcb;
+    static StackType_t  _idle_stack[configMINIMAL_STACK_SIZE];
+    *ppxIdleTaskTCBBuffer   = &_idle_tcb;
+    *ppxIdleTaskStackBuffer = _idle_stack;
+    *pulIdleTaskStackSize   = configMINIMAL_STACK_SIZE;
+}
+
+void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
+                                    StackType_t  **ppxTimerTaskStackBuffer,
+                                    configSTACK_DEPTH_TYPE *pulTimerTaskStackSize)
+{
+    static StaticTask_t _timer_tcb;
+    static StackType_t  _timer_stack[configTIMER_TASK_STACK_DEPTH];
+    *ppxTimerTaskTCBBuffer   = &_timer_tcb;
+    *ppxTimerTaskStackBuffer = _timer_stack;
+    *pulTimerTaskStackSize   = configTIMER_TASK_STACK_DEPTH;
+}
+
 /*
  * Called by the idle task each time it runs (configUSE_IDLE_HOOK 1).
  * Must never attempt to block or call any API that might block.
@@ -138,6 +162,17 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 void vApplicationMallocFailedHook(void)
 {
     _malloc_fail_count++;
+}
+
+/* ── Service start ────────────────────────────────────────────────────────── */
+
+int32_t task_mgr_start(void)
+{
+    if (os_thread_create(thread_task_mgmt, "task_mgr",
+                         PROC_SERVICE_TASK_MGMT_STACK_SIZE,
+                         PROC_SERVICE_TASK_MGMT_PRIORITY, NULL) < 0)
+        return OS_ERR_OP;
+    return OS_ERR_NONE;
 }
 
 /* ── Background monitor task ──────────────────────────────────────────────── */

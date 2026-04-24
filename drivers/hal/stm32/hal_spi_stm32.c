@@ -14,7 +14,7 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
 
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_spi.h>
 #include <drivers/com/hal/stm32/hal_spi_stm32.h>
 #include <drivers/drv_irq.h>
 

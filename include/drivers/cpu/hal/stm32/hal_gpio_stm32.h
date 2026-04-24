@@ -11,7 +11,7 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
-#include <drivers/drv_handle.h>
+#include <drivers/drv_gpio.h>
 
 #ifdef __cplusplus
 extern "C" {

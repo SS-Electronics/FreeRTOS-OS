@@ -8,7 +8,7 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
-#include <drivers/drv_handle.h>
+#include <drivers/drv_gpio.h>
 #include <drivers/cpu/hal/stm32/hal_gpio_stm32.h>
 
 /* ── HAL ops implementations ──────────────────────────────────────────── */

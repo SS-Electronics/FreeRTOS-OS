@@ -7,7 +7,7 @@
  * drv_iic_hal_ops_t table bound at registration time by iic_mgmt.c.
  */
 
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_iic.h>
 #include <board/mcu_config.h>   /* pulls board_device_ids.h → BOARD_IIC_COUNT */
 #include <conf_os.h>
 #include <def_err.h>

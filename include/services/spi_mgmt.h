@@ -19,7 +19,7 @@
 #include <def_err.h>
 #include <board/mcu_config.h>
 #include <config/conf_os.h>
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_spi.h>
 
 #include "FreeRTOS.h"
 #include "queue.h"

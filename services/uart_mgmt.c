@@ -38,7 +38,7 @@
 #include <services/uart_mgmt.h>
 
 #include <os/kernel.h>
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_uart.h>
 #include <board/board_config.h>
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
@@ -52,7 +52,7 @@
 #  include <drivers/com/hal/infineon/hal_uart_infineon.h>
 #endif
 
-#if (INC_SERVICE_UART_MGMT == 1)
+#if (BOARD_UART_COUNT > 0)
 
 /* ── Private state ────────────────────────────────────────────────────────── */
 
@@ -251,4 +251,4 @@ int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte)
     return (ringbuffer_getchar(rb, byte) > 0U) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-#endif /* INC_SERVICE_UART_MGMT == 1 */
+#endif /* BOARD_UART_COUNT > 0 */

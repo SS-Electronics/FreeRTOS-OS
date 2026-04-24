@@ -8,7 +8,7 @@
 #include <services/iic_mgmt.h>
 #include <def_err.h>
 
-#if (INC_SERVICE_IIC_MGMT == 1)
+#if (BOARD_IIC_COUNT > 0)
 
 /* ── Synchronous ──────────────────────────────────────────────────────── */
 
@@ -53,7 +53,7 @@ int32_t iic_async_receive(uint8_t bus_id, uint16_t dev_addr,
                                   data, len);
 }
 
-#else /* INC_SERVICE_IIC_MGMT == 0 — provide no-op stubs */
+#else /* BOARD_IIC_COUNT == 0 — provide no-op stubs */
 
 int32_t iic_sync_transmit(uint8_t b, uint16_t d, uint8_t r, uint8_t u,
                            const uint8_t *p, uint16_t l, uint32_t t)
@@ -74,4 +74,4 @@ int32_t iic_async_receive(uint8_t b, uint16_t d, uint8_t r, uint8_t u,
                            uint8_t *p, uint16_t l)
 { (void)b;(void)d;(void)r;(void)u;(void)p;(void)l; return OS_ERR_OP; }
 
-#endif /* INC_SERVICE_IIC_MGMT */
+#endif /* BOARD_IIC_COUNT > 0 */

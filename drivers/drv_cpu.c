@@ -11,23 +11,9 @@
  *      calls drv_wdg_register() at startup.
  */
 
-#include <drivers/drv_handle.h>
+#include <drivers/cpu/drv_cpu.h>
 #include <board/mcu_config.h>
 #include <def_err.h>
-
-/* ── CPU / NVIC utilities ─────────────────────────────────────────────── */
-
-void drv_cpu_interrupt_prio_set(void)
-{
-#if (__ARM_ARCH_7A__ == 0U)
-    NVIC_SetPriority(SVCall_IRQn, 0U);
-#endif
-}
-
-void reset_mcu(void)
-{
-    NVIC_SystemReset();
-}
 
 /* ── Watchdog driver ──────────────────────────────────────────────────── */
 
@@ -78,27 +64,3 @@ void              drv_wdg_refresh(void)     {}
 #endif /* CONFIG_MCU_WDG_EN */
 
 /* Fault handlers are defined in drivers/hal/stm32/stm32_exceptions.c */
-
-/* ── FreeRTOS static allocation hooks ────────────────────────────────────── */
-
-void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
-                                   StackType_t  **ppxIdleTaskStackBuffer,
-                                   configSTACK_DEPTH_TYPE *pulIdleTaskStackSize)
-{
-    static StaticTask_t _idle_tcb;
-    static StackType_t  _idle_stack[configMINIMAL_STACK_SIZE];
-    *ppxIdleTaskTCBBuffer   = &_idle_tcb;
-    *ppxIdleTaskStackBuffer = _idle_stack;
-    *pulIdleTaskStackSize   = configMINIMAL_STACK_SIZE;
-}
-
-void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
-                                    StackType_t  **ppxTimerTaskStackBuffer,
-                                    configSTACK_DEPTH_TYPE *pulTimerTaskStackSize)
-{
-    static StaticTask_t _timer_tcb;
-    static StackType_t  _timer_stack[configTIMER_TASK_STACK_DEPTH];
-    *ppxTimerTaskTCBBuffer   = &_timer_tcb;
-    *ppxTimerTaskStackBuffer = _timer_stack;
-    *pulTimerTaskStackSize   = configTIMER_TASK_STACK_DEPTH;
-}

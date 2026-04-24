@@ -19,15 +19,6 @@
 #define OS_KERNEL_FREERTOS      1
 #define OS_KERNEL_SELECT        OS_KERNEL_FREERTOS
 
-/* ── Service layer activation — driven by Kconfig ────────────────────── */
-#define INC_SERVICE_UART_MGMT           CONFIG_INC_SERVICE_UART_MGMT
-#define INC_SERVICE_OS_SHELL_MGMT       CONFIG_INC_SERVICE_OS_SHELL_MGMT
-/* Not yet in Kconfig — keep as compile-time constants */
-#define INC_SERVICE_CAN_MGMT            (0)
-#define INC_SERVICE_IIC_MGMT            (0)
-#define INC_SERVICE_ETH_MGMT            (0)
-#define INC_SERVICE_DIAGNOSTIC_MGMT     (0)
-
 /* ── Protocol stack configuration ───────────────────────────────────── */
 #define ISOBUS_STACK_EN                 (1)
 #define CANOPEN_STACK_EN                (0)

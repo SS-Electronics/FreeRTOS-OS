@@ -11,7 +11,7 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_I2C_MODULE_ENABLED)
 
-#include <drivers/drv_handle.h>
+#include <drivers/com/drv_iic.h>
 
 #ifdef __cplusplus
 extern "C" {
