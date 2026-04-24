@@ -1,0 +1,5 @@
+<map id="spi_mgmt_sync_receive" name="spi_mgmt_sync_receive">
+<area shape="rect" id="Node000001" title="Blocking receive&#45;only (tx clocked as 0xFF)." alt="" coords="187,5,365,31"/>
+<area shape="rect" id="Node000002" href="$spi__app_8c.html#a8a1de480be5a4d331daa769bb6907703" title="Blocking receive&#45;only. TX line clocked with 0xFF dummy bytes." alt="" coords="5,5,139,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="173,21,139,21,139,15,173,15"/>
+</map>

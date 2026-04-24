@@ -1,0 +1,33 @@
+<map id="def_env_macros.h" name="def_env_macros.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="316,5,457,31"/>
+<area shape="rect" id="Node000002" href="$drv__iic_8h.html" title=" " alt="" coords="5,152,83,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="348,39,72,154,70,149,345,34"/>
+<area shape="rect" id="Node000003" href="$drv__uart_8h.html" title=" " alt="" coords="107,152,195,177"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="358,40,171,154,168,149,355,36"/>
+<area shape="rect" id="Node000004" href="$ipc__types_8h.html" title=" " alt="" coords="535,79,631,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="432,33,552,76,550,81,430,38"/>
+<area shape="rect" id="Node000005" href="$mqueue_8h.html" title=" " alt="" coords="423,79,510,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="411,38,455,76,452,80,408,42"/>
+<area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="410,103,267,125,95,155,83,157,82,152,94,149,266,120,409,98"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="410,108,195,156,194,151,409,103"/>
+<area shape="rect" id="Node000006" href="$init_8h.html" title=" " alt="" coords="538,233,593,258"/>
+<area shape="poly" id="edge7_Node000005_Node000006" title=" " alt="" coords="524,105,604,128,636,140,653,150,659,163,658,176,643,200,618,220,591,235,589,230,615,215,639,196,653,175,653,164,649,154,634,145,603,133,523,110"/>
+<area shape="rect" id="Node000007" href="$kernel__services_8h.html" title=" " alt="" coords="715,152,850,177"/>
+<area shape="poly" id="edge8_Node000005_Node000007" title=" " alt="" coords="524,103,732,149,731,155,523,108"/>
+<area shape="rect" id="Node000010" href="$main_8c.html" title=" " alt="" coords="979,233,1045,258"/>
+<area shape="poly" id="edge13_Node000005_Node000010" title=" " alt="" coords="524,101,621,112,698,116,773,124,815,134,864,150,929,185,997,230,994,235,926,190,862,154,814,139,772,129,698,121,621,117,523,107"/>
+<area shape="rect" id="Node000011" href="$mqueue_8c.html" title=" " alt="" coords="926,152,1013,177"/>
+<area shape="poly" id="edge14_Node000005_Node000011" title=" " alt="" coords="524,101,633,117,717,126,907,149,926,153,925,158,906,155,717,131,632,122,523,107"/>
+<area shape="rect" id="Node000012" href="$os__shell__management_8c.html" title=" " alt="" coords="219,152,399,177"/>
+<area shape="poly" id="edge15_Node000005_Node000012" title=" " alt="" coords="430,112,336,154,334,149,428,107"/>
+<area shape="rect" id="Node000013" href="$syscalls_8c.html" title=" " alt="" coords="424,152,509,177"/>
+<area shape="poly" id="edge16_Node000005_Node000013" title=" " alt="" coords="469,118,469,152,464,152,464,118"/>
+<area shape="rect" id="Node000014" href="$uart__mgmt_8c.html" title=" " alt="" coords="534,152,639,177"/>
+<area shape="poly" id="edge17_Node000005_Node000014" title=" " alt="" coords="499,109,568,149,566,154,497,113"/>
+<area shape="poly" id="edge9_Node000007_Node000006" title=" " alt="" coords="731,184,605,228,589,235,587,230,603,223,729,179"/>
+<area shape="rect" id="Node000008" href="$kernel__service__core_8c.html" title=" " alt="" coords="792,233,955,258"/>
+<area shape="poly" id="edge10_Node000007_Node000008" title=" " alt="" coords="808,184,862,230,858,234,805,188"/>
+<area shape="rect" id="Node000009" href="$kernel__service__task__manager_8c.html" title=" " alt="" coords="617,225,767,265"/>
+<area shape="poly" id="edge11_Node000007_Node000009" title=" " alt="" coords="761,188,716,227,712,223,757,184"/>
+<area shape="poly" id="edge12_Node000007_Node000010" title=" " alt="" coords="835,179,968,223,986,230,984,235,966,228,833,184"/>
+</map>

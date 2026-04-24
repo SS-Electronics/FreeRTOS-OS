@@ -1,0 +1,9 @@
+<map id="dma_error_callback" name="dma_error_callback">
+<area shape="rect" id="Node000001" title=" " alt="" coords="321,31,472,56"/>
+<area shape="rect" id="Node000002" href="$hal__dma__stm32_8c.html#a5b15eb61eb2b8ebce42fbf717b1244c5" title=" " alt="" coords="164,31,273,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="307,46,274,46,274,41,307,41"/>
+<area shape="rect" id="Node000003" href="$hal__dma__stm32_8c.html#a203873983dd8e25dcf61692a31d21662" title=" " alt="" coords="13,5,108,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="150,35,108,28,109,23,151,30"/>
+<area shape="rect" id="Node000004" href="$hal__dma__stm32_8c.html#aff2b00b9ecd0e15a4db199aabddceda0" title=" " alt="" coords="5,55,116,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="151,56,116,62,116,56,150,51"/>
+</map>

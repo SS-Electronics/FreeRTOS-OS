@@ -1,0 +1,5 @@
+<map id="drv_rcc_gpio_clk_en" name="drv_rcc_gpio_clk_en">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,13,159,38"/>
+<area shape="rect" id="Node000002" href="$hal__rcc__stm32_8c.html#a3c540db79eba716884d52d4a3eaeec1b" title="Enable GPIO port clock." alt="" coords="207,5,357,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="159,23,193,23,193,28,159,28"/>
+</map>

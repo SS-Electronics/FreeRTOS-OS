@@ -1,0 +1,5 @@
+<map id="list_add_tail" name="list_add_tail">
+<area shape="rect" id="Node000001" title="Add a new node at the tail of the list." alt="" coords="5,5,107,31"/>
+<area shape="rect" id="Node000002" href="$group__list__api.html#gab1766e25461b90b75aa3360245547452" title="add a node in between two nodes." alt="" coords="155,5,228,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,15,141,15,141,21,107,21"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="_hal_to_os_err" name="_hal_to_os_err">
+<area shape="rect" id="Node000001" title=" " alt="" coords="216,169,332,195"/>
+<area shape="rect" id="Node000002" href="$hal__iic__stm32_8c.html#a3c69faf6c6f1c5db47ec200c81c54651" title=" " alt="" coords="9,5,164,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,158,222,101,196,70,166,44,145,33,148,28,170,40,200,66,226,97,263,156"/>
+<area shape="rect" id="Node000003" href="$hal__iic__stm32_8c.html#aed2aa84ea7710109eb5cfa905e9c3b6e" title=" " alt="" coords="17,55,156,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="249,161,213,127,167,95,138,82,140,78,169,90,216,123,253,157"/>
+<area shape="rect" id="Node000004" href="$hal__iic__stm32_8c.html#a9506dd62840e5eaff6ae10ab8c2d36aa" title=" " alt="" coords="10,105,163,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="218,168,152,147,153,142,219,163"/>
+<area shape="rect" id="Node000005" href="$hal__iic__stm32_8c.html#a6c95ed83a2830647a4b0c4ac64adbf0c" title=" " alt="" coords="17,169,157,195"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="202,185,157,185,157,179,202,179"/>
+<area shape="rect" id="Node000006" href="$hal__iic__stm32_8c.html#a5c7d4922bcf5b205bf5833156228da75" title=" " alt="" coords="9,219,165,244"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="213,201,137,221,135,216,211,196"/>
+<area shape="rect" id="Node000007" href="$hal__iic__stm32_8c.html#a3f10e3028eb98f53d6379074072d6b38" title=" " alt="" coords="13,268,160,293"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="248,206,212,232,169,258,137,270,135,266,167,253,209,228,245,201"/>
+<area shape="rect" id="Node000008" href="$hal__iic__stm32_8c.html#a86e50f8c8eda510a4967f909b47cc3a5" title=" " alt="" coords="5,317,168,343"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="260,208,223,258,198,284,169,307,144,320,141,315,167,302,194,280,219,254,256,205"/>
+</map>

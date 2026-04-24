@@ -1,0 +1,7 @@
+<map id="stm32_spi_hw_deinit" name="stm32_spi_hw_deinit">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,31,164,56"/>
+<area shape="rect" id="Node000002" href="$hal__spi__stm32_8c.html#a9a7e98037cefbcb2f089be7b32a1886b" title=" " alt="" coords="215,5,331,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="164,30,201,25,201,30,164,35"/>
+<area shape="rect" id="Node000003" href="$drv__irq_8c.html#a47f4190f7fd2ebf2c92813857106ac50" title="Disable an interrupt line." alt="" coords="212,55,333,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="164,51,199,55,198,61,164,56"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="gpio_read" name="gpio_read">
+<area shape="rect" id="Node000001" title="Read current logical state of a GPIO pin." alt="" coords="5,5,92,31"/>
+<area shape="rect" id="Node000002" href="$drv__gpio_8c.html#a0c96221e67620454c2c8f08c9a785524" title=" " alt="" coords="140,5,297,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="92,15,126,15,126,21,92,21"/>
+</map>

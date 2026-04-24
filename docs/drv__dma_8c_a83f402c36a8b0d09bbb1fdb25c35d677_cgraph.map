@@ -1,0 +1,9 @@
+<map id="dma_release_chan" name="dma_release_chan">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,31,149,56"/>
+<area shape="rect" id="Node000002" href="$drv__dma_8c.html#aa1c797ead001222bc7a8ccb68d12c956" title=" " alt="" coords="197,31,387,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="150,41,184,41,184,46,150,46"/>
+<area shape="rect" id="Node000003" href="$drv__dma_8c.html#ae80f74a7ebc0a8083170f7a78550b04d" title=" " alt="" coords="435,5,527,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="387,28,421,23,422,29,387,33"/>
+<area shape="rect" id="Node000004" href="$group__list__api.html#ga42ec4f71d5c7199de9b75f81b3f4e8ed" title="Delete a node from the list." alt="" coords="435,55,526,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="387,53,422,57,421,63,387,58"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="drv_spi_get_handle" name="drv_spi_get_handle">
+<area shape="rect" id="Node000001" title=" " alt="" coords="249,5,397,31"/>
+<area shape="rect" id="Node000002" href="$hal__spi__stm32_8c.html#a502fc75767c7ebbec7885a7798f2b665" title="Called from SPIx_IRQHandler to dispatch HAL_SPI_IRQHandler to whichever generic handle owns instance." alt="" coords="5,5,201,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="236,21,201,21,201,15,236,15"/>
+</map>

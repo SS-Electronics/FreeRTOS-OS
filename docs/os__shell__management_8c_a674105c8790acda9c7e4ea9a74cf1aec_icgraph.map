@@ -1,0 +1,16 @@
+<map id="_shell_write" name="_shell_write">
+<area shape="rect" id="Node000001" title=" " alt="" coords="967,56,1067,81"/>
+<area shape="rect" id="Node000002" href="$os__shell__management_8c.html#a038e91f0ffdf433bba8536c74ef958d9" title=" " alt="" coords="781,5,908,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="959,55,888,33,889,28,960,49"/>
+<area shape="rect" id="Node000003" href="$os__shell__management_8c.html#a5b7eb0bbbac6bbc8febc3cf4a41932f5" title=" " alt="" coords="605,81,723,107"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="953,76,723,93,723,87,953,71"/>
+<area shape="rect" id="Node000007" href="$os__shell__management_8c.html#a4dcab531b1b38b06384ff4035db371da" title=" " alt="" coords="771,107,919,132"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="960,88,889,109,888,104,959,83"/>
+<area shape="rect" id="Node000004" href="$os__shell__management_8c.html#a8fae79f71d15477bc1251891e977e46e" title="Create and start the OS shell management task." alt="" coords="399,81,557,107"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="592,97,557,97,557,91,592,91"/>
+<area shape="rect" id="Node000005" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,81,351,107"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="385,97,351,97,351,91,385,91"/>
+<area shape="rect" id="Node000006" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,81,112,107"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="146,97,112,97,112,91,146,91"/>
+<area shape="poly" id="edge7_Node000007_Node000003" title=" " alt="" coords="757,110,723,105,724,100,757,104"/>
+</map>

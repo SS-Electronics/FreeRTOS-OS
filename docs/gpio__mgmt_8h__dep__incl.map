@@ -1,0 +1,11 @@
+<map id="gpio_mgmt.h" name="gpio_mgmt.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="122,5,230,31"/>
+<area shape="rect" id="Node000002" href="$gpio__app_8h.html" title=" " alt="" coords="5,79,99,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="146,40,74,81,71,76,143,35"/>
+<area shape="rect" id="Node000004" href="$gpio__mgmt_8c.html" title=" " alt="" coords="123,79,229,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="179,44,179,79,173,79,173,44"/>
+<area shape="rect" id="Node000005" href="$kernel__service__core_8c.html" title=" " alt="" coords="253,79,416,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="215,34,310,76,308,81,213,39"/>
+<area shape="rect" id="Node000003" href="$gpio__app_8c.html" title=" " alt="" coords="6,152,98,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="55,118,55,152,49,152,49,118"/>
+</map>

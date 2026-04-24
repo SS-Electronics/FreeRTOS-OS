@@ -1,0 +1,21 @@
+<map id="list_delete" name="list_delete">
+<area shape="rect" id="Node000001" title="Delete a node from the list." alt="" coords="787,105,877,131"/>
+<area shape="rect" id="Node000002" href="$drv__dma_8c.html#a0adc2fd6fab28e2e68c0a9876f14b180" title=" " alt="" coords="543,31,739,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="797,101,738,71,699,59,700,53,740,66,800,96"/>
+<area shape="rect" id="Node000007" href="$drv__dma_8c.html#aa1c797ead001222bc7a8ccb68d12c956" title=" " alt="" coords="546,80,735,105"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="773,113,735,108,736,103,773,108"/>
+<area shape="rect" id="Node000009" href="$irq__desc_8c.html#a62938807635ece657b67ecad3550a7c3" title=" " alt="" coords="605,129,677,155"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="773,128,677,140,677,135,773,123"/>
+<area shape="rect" id="Node000010" href="$mqueue_8c.html#a35e33eddc9a274c42cb45d56f4d3ea0f" title=" " alt="" coords="553,179,728,204"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="800,140,740,170,704,181,702,176,738,165,798,135"/>
+<area shape="rect" id="Node000003" href="$drv__dma_8c.html#a98fb2a47d76acc4facd0d271f3896738" title=" " alt="" coords="315,31,495,56"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="529,46,495,46,495,41,529,41"/>
+<area shape="rect" id="Node000004" href="$hal__dma__stm32_8c.html#a40fcd1481855f18e0dd34bec27af7f65" title=" " alt="" coords="164,31,267,56"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="301,46,267,46,267,41,301,41"/>
+<area shape="rect" id="Node000005" href="$hal__dma__stm32_8c.html#a203873983dd8e25dcf61692a31d21662" title=" " alt="" coords="13,5,108,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="150,35,108,28,108,23,151,30"/>
+<area shape="rect" id="Node000006" href="$hal__dma__stm32_8c.html#aff2b00b9ecd0e15a4db199aabddceda0" title=" " alt="" coords="5,55,116,80"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="151,56,117,61,116,56,150,51"/>
+<area shape="rect" id="Node000008" href="$drv__dma_8c.html#a83f402c36a8b0d09bbb1fdb25c35d677" title=" " alt="" coords="333,80,477,105"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="532,95,477,95,477,90,532,90"/>
+</map>

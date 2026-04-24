@@ -1,0 +1,16 @@
+<map id="os_thread_create" name="os_thread_create">
+<area shape="rect" id="Node000001" title=" " alt="" coords="605,81,740,107"/>
+<area shape="rect" id="Node000002" href="$gpio__mgmt_8c.html#a7beb78991c70b9fc3165c93ce5b7ff6b" title=" " alt="" coords="411,5,545,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="625,79,511,33,513,28,627,74"/>
+<area shape="rect" id="Node000003" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,81,351,107"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="591,97,351,97,351,91,591,91"/>
+<area shape="rect" id="Node000005" href="$os__shell__management_8c.html#a8fae79f71d15477bc1251891e977e46e" title="Create and start the OS shell management task." alt="" coords="399,107,557,132"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="592,107,558,112,557,106,592,102"/>
+<area shape="rect" id="Node000006" href="$uart__mgmt_8c.html#a8e8f570b41df4e77ed5acfbeaef25423" title="Create and start the UART management thread." alt="" coords="413,156,543,181"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="632,115,558,146,522,158,520,153,556,141,630,110"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="428,38,294,84,293,79,426,33"/>
+<area shape="rect" id="Node000004" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,81,112,107"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="146,97,112,97,112,91,146,91"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="385,111,350,107,351,102,385,106"/>
+<area shape="poly" id="edge8_Node000006_Node000003" title=" " alt="" coords="423,154,398,146,292,109,294,104,400,141,425,149"/>
+</map>

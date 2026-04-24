@@ -1,0 +1,7 @@
+<map id="hal_rcc_stm32_periph_clk_en" name="hal_rcc_stm32_periph_clk_en">
+<area shape="rect" id="Node000001" title="Enable peripheral clock." alt="" coords="371,5,535,45"/>
+<area shape="rect" id="Node000002" href="$drv__rcc_8c.html#a34ae13cd829b4e89b28f080845a9bb17" title=" " alt="" coords="156,13,323,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="357,28,323,28,323,23,357,23"/>
+<area shape="rect" id="Node000003" href="$hal__timebase__stm32_8c.html#a879cdb21ef051eb81ec51c18147397d5" title=" " alt="" coords="5,13,108,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="142,28,108,28,108,23,142,23"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="_shell_write" name="_shell_write">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,55,105,80"/>
+<area shape="rect" id="Node000002" href="$drv__handle_8h.html#aaf5f1e74e6ff221acda9679b5a054c8f" title=" " alt="" coords="178,5,309,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="104,52,180,32,181,37,105,57"/>
+<area shape="rect" id="Node000003" href="$mqueue_8c.html#ae54fde83faac5a815d0afa0be0ceb447" title=" " alt="" coords="153,55,333,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="105,65,140,65,140,70,105,70"/>
+<area shape="rect" id="Node000004" href="$ringbuffer_8c.html#ab0175d641c6489e01eb1f11eb161307a" title=" " alt="" coords="173,104,314,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="105,77,181,98,180,103,104,83"/>
+<area shape="rect" id="Node000005" href="$ringbuffer_8c.html#abc6b533f80fb18ade4151b188f827c23" title=" " alt="" coords="381,104,467,129"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="315,114,368,114,368,119,315,119"/>
+<area shape="rect" id="Node000006" href="$ringbuffer_8c.html#a0d9be0bc18b041c2946fd11f840206e9" title=" " alt="" coords="515,104,584,129"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="467,114,501,114,501,119,467,119"/>
+</map>

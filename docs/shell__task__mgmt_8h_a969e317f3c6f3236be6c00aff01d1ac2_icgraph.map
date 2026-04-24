@@ -1,0 +1,11 @@
+<map id="shell_task_mgmt_register_cmds" name="shell_task_mgmt_register_cmds">
+<area shape="rect" id="Node000001" title=" " alt="" coords="771,5,1004,31"/>
+<area shape="rect" id="Node000002" href="$os__shell__management_8c.html#a5b7eb0bbbac6bbc8febc3cf4a41932f5" title=" " alt="" coords="605,5,723,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="757,21,723,21,723,15,757,15"/>
+<area shape="rect" id="Node000003" href="$os__shell__management_8c.html#a8fae79f71d15477bc1251891e977e46e" title="Create and start the OS shell management task." alt="" coords="399,5,557,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="592,21,557,21,557,15,592,15"/>
+<area shape="rect" id="Node000004" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,5,351,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="385,21,351,21,351,15,385,15"/>
+<area shape="rect" id="Node000005" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,5,112,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="146,21,112,21,112,15,146,15"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="spi_async_transmit" name="spi_async_transmit">
+<area shape="rect" id="Node000001" title="Non&#45;blocking transmit&#45;only. Returns immediately after queuing." alt="" coords="5,5,153,31"/>
+<area shape="rect" id="Node000002" href="$spi__mgmt_8h.html#a62e009754685cc12f4f3c2d2079d3f5c" title="Non&#45;blocking transmit&#45;only (fire and forget)." alt="" coords="201,5,396,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="153,15,188,15,188,21,153,21"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="gpio_mgmt_start" name="gpio_mgmt_start">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,129,139,155"/>
+<area shape="rect" id="Node000002" href="$gpio__mgmt_8c.html#a2f7aa8d4452bd40df6190f1027d25c20" title=" " alt="" coords="187,104,332,129"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="139,130,173,126,173,131,139,136"/>
+<area shape="rect" id="Node000008" href="$group__Thread.html#ga21ff81ef0bcb5564ba8ee6c5a0da2acc" title=" " alt="" coords="192,153,327,179"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="139,148,179,153,178,158,139,153"/>
+<area shape="rect" id="Node000003" href="$drv__gpio_8c.html#a0c96221e67620454c2c8f08c9a785524" title=" " alt="" coords="393,5,550,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="276,102,321,71,379,40,398,32,400,37,381,44,324,75,279,106"/>
+<area shape="rect" id="Node000004" href="$drv__gpio_8c.html#a72d83c6bed1bb43b771c47d2de6417d3" title=" " alt="" coords="404,55,539,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="314,101,402,81,403,86,315,107"/>
+<area shape="rect" id="Node000005" href="$hal__gpio__stm32_8c.html#abcec079fb8a1cf67b382f5378299a8ef" title="Return pointer to the STM32 GPIO HAL ops table." alt="" coords="380,104,563,129"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="332,114,366,114,366,119,332,119"/>
+<area shape="rect" id="Node000006" href="$hal__gpio__stm32_8c.html#ad2d190ad23771d78c159360bc6f14264" title="Populate the hardware context in a generic GPIO handle." alt="" coords="395,154,547,194"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="308,127,385,148,383,153,306,132"/>
+<area shape="rect" id="Node000007" href="$group__Thread.html#gaf16424e47477714927313ecec2821eec" title=" " alt="" coords="407,219,536,244"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="313,127,334,139,350,155,358,172,366,189,382,204,395,212,393,216,378,208,362,192,353,175,345,158,330,143,310,132"/>
+</map>

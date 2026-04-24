@@ -1,0 +1,23 @@
+<map id="kfree" name="kfree">
+<area shape="rect" id="Node000001" title=" " alt="" coords="743,131,799,156"/>
+<area shape="rect" id="Node000002" href="$kernel__thread_8c.html#a50c699f62ea35510879d318e5a956029" title="A generic thread create api." alt="" coords="571,5,677,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="754,120,729,81,712,61,693,44,673,33,675,28,696,40,716,57,733,78,759,117"/>
+<area shape="rect" id="Node000003" href="$irq__desc_8c.html#aa58e675170de727bc88cd6b735c022c2" title=" " alt="" coords="573,55,675,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="736,126,693,102,654,82,656,78,696,97,738,121"/>
+<area shape="rect" id="Node000005" href="$mqueue_8c.html#a24352a9ab122f2913f5c92467d5bc676" title=" " alt="" coords="339,131,497,156"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="729,146,497,146,497,141,729,141"/>
+<area shape="rect" id="Node000008" href="$mqueue_8c.html#a35e33eddc9a274c42cb45d56f4d3ea0f" title=" " alt="" coords="331,232,505,257"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="744,167,696,195,648,212,599,224,506,240,505,235,598,219,647,206,694,190,741,162"/>
+<area shape="rect" id="Node000009" href="$ringbuffer_8c.html#a85a94391518dcb013756001945f97cd1" title=" " alt="" coords="557,156,691,181"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="730,153,691,160,690,155,729,148"/>
+<area shape="rect" id="Node000010" href="$ringbuffer_8c.html#a27581e7a4c0aaa05f77b6e6dd86b3177" title=" " alt="" coords="553,257,695,283"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="757,170,731,205,696,240,663,260,660,255,693,236,727,202,752,167"/>
+<area shape="rect" id="Node000004" href="$irq__desc_8c.html#a62938807635ece657b67ecad3550a7c3" title=" " alt="" coords="382,55,454,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="559,70,454,70,454,65,559,65"/>
+<area shape="rect" id="Node000006" href="$main_8c.html#aa675774b79cc01e2a386c7caf4fbdf03" title=" " alt="" coords="160,131,283,156"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="325,146,283,146,283,141,325,141"/>
+<area shape="rect" id="Node000007" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,131,112,156"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="147,146,112,146,112,141,147,141"/>
+<area shape="poly" id="edge9_Node000009_Node000005" title=" " alt="" coords="543,161,497,156,498,150,544,156"/>
+<area shape="poly" id="edge11_Node000010_Node000008" title=" " alt="" coords="539,262,505,258,506,253,540,257"/>
+</map>

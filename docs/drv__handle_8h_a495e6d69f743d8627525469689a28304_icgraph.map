@@ -1,0 +1,13 @@
+<map id="drv_uart_get_handle" name="drv_uart_get_handle">
+<area shape="rect" id="Node000001" title=" " alt="" coords="772,42,927,67"/>
+<area shape="rect" id="Node000002" href="$hal__uart__stm32_8c.html#a6b69ed104eb5d662230497d7ac2881a6" title="Called from the USARTx_IRQHandler to dispatch HAL_UART_IRQHandler to whichever generic handle owns in..." alt="" coords="577,5,724,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="758,44,724,39,725,34,759,39"/>
+<area shape="rect" id="Node000003" href="$uart__mgmt_8c.html#af8eff33b840c2e11d5bd889fd97c705a" title=" " alt="" coords="579,70,722,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="758,70,722,75,722,70,758,65"/>
+<area shape="rect" id="Node000004" href="$uart__mgmt_8c.html#a8e8f570b41df4e77ed5acfbeaef25423" title="Create and start the UART management thread." alt="" coords="399,70,529,95"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="566,85,530,85,530,80,566,80"/>
+<area shape="rect" id="Node000005" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,70,351,95"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="385,85,351,85,351,80,385,80"/>
+<area shape="rect" id="Node000006" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,70,112,95"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="146,85,112,85,112,80,146,80"/>
+</map>

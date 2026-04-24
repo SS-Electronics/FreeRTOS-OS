@@ -1,0 +1,5 @@
+<map id="gpio_async_toggle" name="gpio_async_toggle">
+<area shape="rect" id="Node000001" title="Toggle pin state (non&#45;blocking)." alt="" coords="5,5,148,31"/>
+<area shape="rect" id="Node000002" href="$gpio__mgmt_8c.html#a8d268b481e655c3432922cda545b6625" title="Post a GPIO command (non&#45;blocking, delay_ms = 0 for immediate)." alt="" coords="196,5,327,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="148,15,182,15,182,21,148,21"/>
+</map>

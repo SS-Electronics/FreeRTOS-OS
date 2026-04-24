@@ -1,0 +1,23 @@
+<map id="ipc_queues_init" name="ipc_queues_init">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,81,128,107"/>
+<area shape="rect" id="Node000002" href="$mqueue_8c.html#a873322f98cefc36f436c51802b74c9b4" title=" " alt="" coords="191,31,320,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="114,79,193,57,195,62,116,84"/>
+<area shape="rect" id="Node000004" href="$mqueue_8c.html#a24352a9ab122f2913f5c92467d5bc676" title=" " alt="" coords="176,105,335,131"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="129,99,163,104,162,109,128,104"/>
+<area shape="rect" id="Node000003" href="$group__list__api.html#ga9e661d1dcd51bd4eb3951488574058b0" title="Initialize a list node [ Doubly circular]." alt="" coords="414,5,485,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="320,32,400,22,400,27,321,38"/>
+<area shape="rect" id="Node000005" href="$os_2kernel__mem_8h.html#ab750d6dec279a17969f64507edde0767" title=" " alt="" coords="593,105,649,131"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="335,115,579,115,579,121,335,121"/>
+<area shape="rect" id="Node000006" href="$os_2kernel__mem_8h.html#a2b55f9d76c0a87c16c336ec837a80101" title=" " alt="" coords="585,205,656,231"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="275,129,322,161,352,177,384,190,432,203,483,211,572,216,571,221,482,216,431,208,382,195,350,182,319,165,272,133"/>
+<area shape="rect" id="Node000007" href="$group__list__api.html#gafb58231c241f9acee99a56aaa1b98cec" title="Add a new node at the tail of the list." alt="" coords="399,55,500,80"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="304,103,386,81,387,86,306,108"/>
+<area shape="rect" id="Node000009" href="$ringbuffer_8c.html#a85a94391518dcb013756001945f97cd1" title=" " alt="" coords="383,156,516,181"/>
+<area shape="poly" id="edge8_Node000004_Node000009" title=" " alt="" coords="306,128,387,150,386,155,304,133"/>
+<area shape="rect" id="Node000008" href="$group__list__api.html#gab1766e25461b90b75aa3360245547452" title="add a node in between two nodes." alt="" coords="584,55,657,80"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="500,65,570,65,570,70,500,70"/>
+<area shape="poly" id="edge9_Node000009_Node000005" title=" " alt="" coords="492,153,579,127,581,132,494,158"/>
+<area shape="poly" id="edge10_Node000009_Node000006" title=" " alt="" coords="495,179,573,202,571,207,493,184"/>
+<area shape="rect" id="Node000010" href="$ringbuffer_8c.html#a8752f9288f9de94cc6f1a454b38c289d" title=" " alt="" coords="564,156,677,181"/>
+<area shape="poly" id="edge11_Node000009_Node000010" title=" " alt="" coords="516,166,550,166,550,171,516,171"/>
+</map>

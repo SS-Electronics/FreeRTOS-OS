@@ -1,0 +1,7 @@
+<map id="drv_iic_get_handle" name="drv_iic_get_handle">
+<area shape="rect" id="Node000001" title=" " alt="" coords="212,45,356,70"/>
+<area shape="rect" id="Node000002" href="$hal__iic__stm32_8c.html#a2cbe166e3c3ea0291b648d3e747a7dc5" title="Called from I2Cx_ER_IRQHandler to dispatch HAL_I2C_ER_IRQHandler to whichever generic handle owns ins..." alt="" coords="7,5,163,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="198,46,162,40,163,35,199,41"/>
+<area shape="rect" id="Node000003" href="$hal__iic__stm32_8c.html#af651223af8184f72b0eedf902dcfb2cc" title="Called from I2Cx_EV_IRQHandler to dispatch HAL_I2C_EV_IRQHandler to whichever generic handle owns ins..." alt="" coords="5,69,164,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="199,74,165,79,164,74,198,68"/>
+</map>

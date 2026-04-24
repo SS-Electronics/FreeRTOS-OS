@@ -1,0 +1,9 @@
+<map id="free_irq" name="free_irq">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,31,77,56"/>
+<area shape="rect" id="Node000002" href="$irq__desc_8c.html#aa58e675170de727bc88cd6b735c022c2" title=" " alt="" coords="125,5,228,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="77,34,111,27,112,33,78,39"/>
+<area shape="rect" id="Node000004" href="$group__list__api.html#ga42ec4f71d5c7199de9b75f81b3f4e8ed" title="Delete a node from the list." alt="" coords="131,55,222,80"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="78,47,118,54,117,60,77,52"/>
+<area shape="rect" id="Node000003" href="$os_2kernel__mem_8h.html#ab750d6dec279a17969f64507edde0767" title=" " alt="" coords="276,5,332,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="228,15,262,15,262,21,228,21"/>
+</map>

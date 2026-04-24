@@ -1,0 +1,13 @@
+<map id="drv_rcc.h" name="drv_rcc.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="219,5,301,31"/>
+<area shape="rect" id="Node000002" href="$drv__rcc_8c.html" title=" " alt="" coords="5,79,85,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,37,81,81,79,76,212,32"/>
+<area shape="rect" id="Node000003" href="$hal__rcc__stm32_8h.html" title=" " alt="" coords="109,79,237,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="237,41,189,81,186,76,234,37"/>
+<area shape="rect" id="Node000005" href="$hal__timebase__stm32_8c.html" title=" " alt="" coords="262,79,431,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="286,37,334,76,331,81,283,41"/>
+<area shape="rect" id="Node000006" href="$main_8c.html" title=" " alt="" coords="456,79,523,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="311,32,457,77,455,82,309,37"/>
+<area shape="rect" id="Node000004" href="$hal__rcc__stm32_8c.html" title="STM32 RCC + CMSIS system initialization backend." alt="" coords="110,152,237,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="176,118,176,152,171,152,171,118"/>
+</map>

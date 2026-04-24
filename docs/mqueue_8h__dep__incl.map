@@ -1,0 +1,27 @@
+<map id="mqueue.h" name="mqueue.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="399,5,486,31"/>
+<area shape="rect" id="Node000002" href="$drv__iic_8h.html" title=" " alt="" coords="5,79,83,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="386,31,95,81,83,84,82,79,94,76,385,26"/>
+<area shape="rect" id="Node000003" href="$drv__uart_8h.html" title=" " alt="" coords="107,79,195,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="386,36,195,82,194,77,385,31"/>
+<area shape="rect" id="Node000004" href="$init_8h.html" title=" " alt="" coords="86,159,141,185"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="387,36,324,55,258,81,185,123,130,161,127,157,182,118,256,76,322,50,385,31"/>
+<area shape="rect" id="Node000005" href="$kernel__services_8h.html" title=" " alt="" coords="270,79,405,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="416,41,356,81,353,76,413,36"/>
+<area shape="rect" id="Node000008" href="$main_8c.html" title=" " alt="" coords="528,159,595,185"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="449,43,457,73,471,102,504,135,539,157,537,162,501,139,467,106,452,75,444,45"/>
+<area shape="rect" id="Node000009" href="$mqueue_8c.html" title=" " alt="" coords="481,79,567,104"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="468,38,512,76,509,80,464,42"/>
+<area shape="rect" id="Node000010" href="$os__shell__management_8c.html" title=" " alt="" coords="591,79,771,104"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="495,32,643,76,642,81,493,37"/>
+<area shape="rect" id="Node000011" href="$syscalls_8c.html" title=" " alt="" coords="796,79,881,104"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="500,26,784,76,796,78,795,84,784,81,499,31"/>
+<area shape="rect" id="Node000012" href="$uart__mgmt_8c.html" title=" " alt="" coords="906,79,1011,104"/>
+<area shape="poly" id="edge13_Node000001_Node000012" title=" " alt="" coords="500,23,894,76,906,78,906,83,893,81,499,29"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="285,110,154,154,137,162,135,157,152,150,283,105"/>
+<area shape="rect" id="Node000006" href="$kernel__service__core_8c.html" title=" " alt="" coords="165,159,328,185"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="315,115,262,161,258,157,312,111"/>
+<area shape="rect" id="Node000007" href="$kernel__service__task__manager_8c.html" title=" " alt="" coords="353,152,503,192"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="363,111,408,150,404,154,359,115"/>
+<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="388,106,517,149,536,157,534,162,515,155,386,111"/>
+</map>

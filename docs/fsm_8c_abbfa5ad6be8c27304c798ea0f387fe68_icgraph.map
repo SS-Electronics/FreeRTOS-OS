@@ -1,0 +1,7 @@
+<map id="queue_push" name="queue_push">
+<area shape="rect" id="Node000001" title="Append an event to the tail of the internal queue." alt="" coords="224,31,324,56"/>
+<area shape="rect" id="Node000002" href="$fsm_8c.html#aa8590e43a569ebdfe6e26d6f8c663252" title="Post an event from task / thread context." alt="" coords="36,5,145,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,37,145,28,146,23,211,32"/>
+<area shape="rect" id="Node000003" href="$fsm_8c.html#aaa5026b4a05e5d3fd26364d10e4bc646" title="Post an event from an ISR." alt="" coords="5,55,176,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="211,54,176,59,176,54,210,49"/>
+</map>

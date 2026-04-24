@@ -1,0 +1,7 @@
+<map id="_alloc_action" name="_alloc_action">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,31,112,56"/>
+<area shape="rect" id="Node000002" href="$os_2kernel__mem_8h.html#a2b55f9d76c0a87c16c336ec837a80101" title=" " alt="" coords="160,5,231,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,31,146,24,147,30,113,36"/>
+<area shape="rect" id="Node000003" href="$group__list__api.html#ga9e661d1dcd51bd4eb3951488574058b0" title="Initialize a list node [ Doubly circular]." alt="" coords="160,55,231,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="113,50,147,56,146,61,112,55"/>
+</map>

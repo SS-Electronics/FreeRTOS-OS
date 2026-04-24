@@ -1,0 +1,5 @@
+<map id="nvic_irq_disable" name="nvic_irq_disable">
+<area shape="rect" id="Node000001" title="Disable IRQ line." alt="" coords="169,5,296,31"/>
+<area shape="rect" id="Node000002" href="$irq__chip__nvic_8c.html#abe5d18c048a853fa6e2d5bcc948be8f9" title="Mask IRQ (disable delivery)" alt="" coords="5,5,121,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="156,21,122,21,122,15,156,15"/>
+</map>

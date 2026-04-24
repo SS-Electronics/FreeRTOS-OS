@@ -1,0 +1,5 @@
+<map id="uart_mgmt_get_queue" name="uart_mgmt_get_queue">
+<area shape="rect" id="Node000001" title="Return the management queue handle." alt="" coords="200,5,369,31"/>
+<area shape="rect" id="Node000002" href="$uart__app_8c.html#a436868e16733b7cfb030efb7616fdab7" title="Transmit data over UART and block until the transfer completes." alt="" coords="5,5,152,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="186,21,152,21,152,15,186,15"/>
+</map>

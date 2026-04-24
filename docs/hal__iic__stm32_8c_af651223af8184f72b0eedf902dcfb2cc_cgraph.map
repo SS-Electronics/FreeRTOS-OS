@@ -1,0 +1,11 @@
+<map id="hal_iic_stm32_ev_irq_handler" name="hal_iic_stm32_ev_irq_handler">
+<area shape="rect" id="Node000001" title="Called from I2Cx_EV_IRQHandler to dispatch HAL_I2C_EV_IRQHandler to whichever generic handle owns ins..." alt="" coords="5,23,164,63"/>
+<area shape="rect" id="Node000002" href="$drv__handle_8h.html#a1983afbd310179c3bb8777277f8f863d" title=" " alt="" coords="235,5,379,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="164,32,221,25,222,30,164,37"/>
+<area shape="rect" id="Node000003" href="$drv__irq_8c.html#a104acd29a44e0545013a32f6585963e3" title="Dispatch an IRQ event from ISR context. Each registered callback receives pxHPT so it can accumulate ..." alt="" coords="212,55,403,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="164,49,199,53,198,58,164,55"/>
+<area shape="rect" id="Node000004" href="$irq__desc_8c.html#ad30e8177b86aac1c40b8181fc0927b3c" title=" " alt="" coords="451,55,593,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="403,65,437,65,437,70,403,70"/>
+<area shape="rect" id="Node000005" href="$irq__desc_8c.html#aaef6f6dd8053daf49e96ef43997f43bd" title=" " alt="" coords="641,55,737,80"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="594,65,628,65,628,70,594,70"/>
+</map>

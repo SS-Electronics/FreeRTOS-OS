@@ -1,0 +1,12 @@
+<map id="hal_rcc_stm32.h" name="hal_rcc_stm32.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="38,5,166,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="44,152,114,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="70,33,38,52,23,65,12,80,9,97,16,113,30,129,48,142,44,147,26,133,11,116,4,97,7,78,19,61,35,47,68,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="22,79,181,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="104,31,104,65,99,65,99,31"/>
+<area shape="rect" id="Node000004" href="$drv__rcc_8h.html" title=" " alt="" coords="206,79,336,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="130,28,232,71,230,76,128,33"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="241,107,124,149,122,144,239,102"/>
+<area shape="rect" id="Node000005" href="$def__err_8h.html" title=" " alt="" coords="232,152,310,177"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="274,104,274,138,268,138,268,104"/>
+</map>

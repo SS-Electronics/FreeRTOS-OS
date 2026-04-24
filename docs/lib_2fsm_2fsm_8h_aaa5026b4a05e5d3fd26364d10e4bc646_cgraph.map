@@ -1,0 +1,7 @@
+<map id="fsm_dispatch_from_isr" name="fsm_dispatch_from_isr">
+<area shape="rect" id="Node000001" title="Post an event from an ISR." alt="" coords="5,31,176,56"/>
+<area shape="rect" id="Node000002" href="$fsm_8c.html#aebcae94c699557da5986dbede335802e" title=" " alt="" coords="224,5,353,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,30,210,25,211,31,177,35"/>
+<area shape="rect" id="Node000003" href="$fsm_8c.html#abbfa5ad6be8c27304c798ea0f387fe68" title="Append an event to the tail of the internal queue." alt="" coords="239,55,339,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="177,51,225,57,224,62,176,56"/>
+</map>

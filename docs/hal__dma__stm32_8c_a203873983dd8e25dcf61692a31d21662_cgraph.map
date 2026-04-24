@@ -1,0 +1,18 @@
+<map id="_dma_start" name="_dma_start">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,31,100,56"/>
+<area shape="rect" id="Node000002" href="$hal__dma__stm32_8c.html#a40fcd1481855f18e0dd34bec27af7f65" title=" " alt="" coords="151,5,254,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="100,33,137,26,138,32,101,38"/>
+<area shape="rect" id="Node000007" href="$hal__dma__stm32_8c.html#a5b15eb61eb2b8ebce42fbf717b1244c5" title=" " alt="" coords="148,55,257,80"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="101,48,135,54,134,59,100,53"/>
+<area shape="rect" id="Node000003" href="$drv__dma_8c.html#a98fb2a47d76acc4facd0d271f3896738" title=" " alt="" coords="305,5,485,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="254,15,292,15,292,21,254,21"/>
+<area shape="rect" id="Node000004" href="$drv__dma_8c.html#ae80f74a7ebc0a8083170f7a78550b04d" title=" " alt="" coords="585,55,677,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="457,28,572,52,571,58,456,33"/>
+<area shape="rect" id="Node000005" href="$drv__dma_8c.html#a0adc2fd6fab28e2e68c0a9876f14b180" title=" " alt="" coords="533,5,729,31"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="486,15,520,15,520,21,486,21"/>
+<area shape="rect" id="Node000006" href="$group__list__api.html#ga42ec4f71d5c7199de9b75f81b3f4e8ed" title="Delete a node from the list." alt="" coords="777,5,868,31"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="730,15,764,15,764,21,730,21"/>
+<area shape="rect" id="Node000008" href="$drv__dma_8c.html#a174b15cf2c7b78b0fb99be21103c3b12" title=" " alt="" coords="320,55,471,80"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="257,65,306,65,306,70,257,70"/>
+<area shape="poly" id="edge8_Node000008_Node000004" title=" " alt="" coords="471,65,572,65,572,70,471,70"/>
+</map>

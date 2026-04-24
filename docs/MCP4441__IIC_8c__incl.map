@@ -1,0 +1,21 @@
+<map id="MCP4441_IIC.c" name="MCP4441_IIC.c">
+<area shape="rect" id="Node000001" title=" " alt="" coords="657,5,775,31"/>
+<area shape="rect" id="Node000002" href="$MCP4441__IIC_8h.html" title=" " alt="" coords="657,79,775,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="719,31,719,65,713,65,713,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,152,160,192"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="657,100,447,119,174,155,173,149,447,114,656,95"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="184,152,325,192"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="656,103,516,124,339,155,338,149,515,119,656,98"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="349,152,525,192"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="676,107,518,151,516,146,675,101"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="550,159,698,185"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="704,106,650,152,646,148,701,102"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="722,159,897,185"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="731,102,787,148,783,152,728,106"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="921,159,1119,185"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="761,101,963,153,962,159,760,107"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="1143,152,1287,192"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="776,97,932,118,1129,149,1129,154,931,123,775,102"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="1311,152,1455,192"/>
+<area shape="poly" id="edge9_Node000002_Node000010" title=" " alt="" coords="776,94,1001,112,1147,128,1297,149,1296,154,1146,134,1000,118,775,99"/>
+</map>

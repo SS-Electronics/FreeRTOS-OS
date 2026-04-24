@@ -1,0 +1,5 @@
+<map id="spi_mgmt_sync_transfer" name="spi_mgmt_sync_transfer">
+<area shape="rect" id="Node000001" title="Blocking full&#45;duplex transfer (TX + RX simultaneously)." alt="" coords="189,5,372,31"/>
+<area shape="rect" id="Node000002" href="$spi__app_8c.html#ab02082ba13415702b173976569c297a1" title="Blocking full&#45;duplex transfer (TX and RX simultaneously)." alt="" coords="5,5,141,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,21,142,21,142,15,176,15"/>
+</map>

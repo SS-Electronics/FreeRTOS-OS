@@ -1,0 +1,21 @@
+<map id="drv_irq_register" name="drv_irq_register">
+<area shape="rect" id="Node000001" title="Register a callback for a software IRQ ID. Thin wrapper over irq_register() — upper layers include on..." alt="" coords="5,55,129,80"/>
+<area shape="rect" id="Node000002" href="$irq__notify_8c.html#a88ce0c4278f16ca232b715dff43ec969" title="Register a callback for a generic IRQ ID. Call from task context before interrupts fire...." alt="" coords="177,55,273,80"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,65,164,65,164,70,130,70"/>
+<area shape="rect" id="Node000003" href="$irq__notify_8c.html#a854bc11942113795c21bf83e08b564ae" title=" " alt="" coords="324,5,463,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="268,52,335,32,337,37,270,57"/>
+<area shape="rect" id="Node000004" href="$irq__notify_8c.html#a7faff0a2928451eb3d1965fb159ea580" title=" " alt="" coords="321,55,465,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="274,65,307,65,307,70,274,70"/>
+<area shape="rect" id="Node000005" href="$irq__desc_8c.html#ab32b689bb2b7d1960aa47f19d9d65e90" title=" " alt="" coords="346,104,441,129"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="270,77,337,97,335,102,268,83"/>
+<area shape="rect" id="Node000006" href="$irq__desc_8c.html#a0041385040c05835d54aca9c83340f87" title=" " alt="" coords="513,79,620,104"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="440,107,499,98,500,104,441,112"/>
+<area shape="rect" id="Node000009" href="$group__list__api.html#gafb58231c241f9acee99a56aaa1b98cec" title="Add a new node at the tail of the list." alt="" coords="516,128,617,153"/>
+<area shape="poly" id="edge8_Node000005_Node000009" title=" " alt="" coords="441,121,502,129,501,134,440,126"/>
+<area shape="rect" id="Node000007" href="$os_2kernel__mem_8h.html#a2b55f9d76c0a87c16c336ec837a80101" title=" " alt="" coords="669,29,740,55"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="602,76,655,57,657,62,604,81"/>
+<area shape="rect" id="Node000008" href="$group__list__api.html#ga9e661d1dcd51bd4eb3951488574058b0" title="Initialize a list node [ Doubly circular]." alt="" coords="669,79,740,104"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="620,89,656,89,656,94,620,94"/>
+<area shape="rect" id="Node000010" href="$group__list__api.html#gab1766e25461b90b75aa3360245547452" title="add a node in between two nodes." alt="" coords="668,128,741,153"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="618,138,654,138,654,143,618,143"/>
+</map>

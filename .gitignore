@@ -7,9 +7,9 @@
 *.obj
 *.elf
 
-# Linker output
+# Linker output (scoped to /build/ so Doxygen image maps in docs/ are not blocked)
 *.ilk
-*.map
+/build/*.map
 *.exp
 
 # Precompiled Headers

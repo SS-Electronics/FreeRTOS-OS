@@ -1,0 +1,9 @@
+<map id="drv_irq_disable" name="drv_irq_disable">
+<area shape="rect" id="Node000001" title="Disable an interrupt line." alt="" coords="220,55,341,80"/>
+<area shape="rect" id="Node000002" href="$hal__iic__stm32_8c.html#a3c69faf6c6f1c5db47ec200c81c54651" title=" " alt="" coords="11,5,166,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="217,54,139,33,140,28,218,49"/>
+<area shape="rect" id="Node000003" href="$hal__spi__stm32_8c.html#a89e313999ed40bcf217bb5193ca1f753" title=" " alt="" coords="9,55,168,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="207,70,168,70,168,65,207,65"/>
+<area shape="rect" id="Node000004" href="$hal__uart__stm32_8c.html#a8e2813f8cafd9656d2d4be93ba7df60a" title=" " alt="" coords="5,104,172,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="218,86,140,106,139,101,217,81"/>
+</map>

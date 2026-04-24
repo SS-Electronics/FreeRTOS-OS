@@ -1,0 +1,11 @@
+<map id="drv_gpio_register" name="drv_gpio_register">
+<area shape="rect" id="Node000001" title=" " alt="" coords="773,5,908,31"/>
+<area shape="rect" id="Node000002" href="$gpio__mgmt_8c.html#a2f7aa8d4452bd40df6190f1027d25c20" title=" " alt="" coords="580,5,725,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="759,21,726,21,726,15,759,15"/>
+<area shape="rect" id="Node000003" href="$gpio__mgmt_8c.html#a7beb78991c70b9fc3165c93ce5b7ff6b" title=" " alt="" coords="399,5,532,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="567,21,532,21,532,15,567,15"/>
+<area shape="rect" id="Node000004" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,5,351,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="385,21,351,21,351,15,385,15"/>
+<area shape="rect" id="Node000005" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,5,112,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="146,21,112,21,112,15,146,15"/>
+</map>

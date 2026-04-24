@@ -1,0 +1,11 @@
+<map id="hal_spi_stm32_irq_handler" name="hal_spi_stm32_irq_handler">
+<area shape="rect" id="Node000001" title="Called from SPIx_IRQHandler to dispatch HAL_SPI_IRQHandler to whichever generic handle owns instance." alt="" coords="5,31,201,56"/>
+<area shape="rect" id="Node000002" href="$drv__irq_8c.html#a104acd29a44e0545013a32f6585963e3" title="Dispatch an IRQ event from ISR context. Each registered callback receives pxHPT so it can accumulate ..." alt="" coords="249,5,440,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="201,30,236,27,236,32,202,36"/>
+<area shape="rect" id="Node000005" href="$drv__handle_8h.html#a496c23b971f5c2d6e6143fa37729d6fb" title=" " alt="" coords="271,55,419,80"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="202,50,257,56,257,61,201,56"/>
+<area shape="rect" id="Node000003" href="$irq__desc_8c.html#ad30e8177b86aac1c40b8181fc0927b3c" title=" " alt="" coords="488,5,631,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="440,15,474,15,474,21,440,21"/>
+<area shape="rect" id="Node000004" href="$irq__desc_8c.html#aaef6f6dd8053daf49e96ef43997f43bd" title=" " alt="" coords="679,5,775,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="631,15,665,15,665,21,631,21"/>
+</map>

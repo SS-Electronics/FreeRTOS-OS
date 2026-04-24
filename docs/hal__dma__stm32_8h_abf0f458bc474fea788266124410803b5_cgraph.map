@@ -1,0 +1,9 @@
+<map id="hal_dma_stm32_init" name="hal_dma_stm32_init">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,160,31"/>
+<area shape="rect" id="Node000002" href="$drv__dma_8c.html#a07ff6a90408aa434a89427323a523334" title=" " alt="" coords="208,5,367,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,15,194,15,194,21,160,21"/>
+<area shape="rect" id="Node000003" href="$group__list__api.html#gafb58231c241f9acee99a56aaa1b98cec" title="Add a new node at the tail of the list." alt="" coords="415,5,516,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="367,15,401,15,401,21,367,21"/>
+<area shape="rect" id="Node000004" href="$group__list__api.html#gab1766e25461b90b75aa3360245547452" title="add a node in between two nodes." alt="" coords="564,5,637,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="516,15,550,15,550,21,516,21"/>
+</map>

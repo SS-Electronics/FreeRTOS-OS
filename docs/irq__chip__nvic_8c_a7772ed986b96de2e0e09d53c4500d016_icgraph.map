@@ -1,0 +1,5 @@
+<map id="nvic_irq_enable" name="nvic_irq_enable">
+<area shape="rect" id="Node000001" title="Enable IRQ line." alt="" coords="185,5,309,31"/>
+<area shape="rect" id="Node000002" href="$irq__chip__nvic_8c.html#a8b5c5770893bf8dee18d87ac5c2bfc7a" title="Unmask IRQ (enable delivery)" alt="" coords="5,5,137,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="171,21,137,21,137,15,171,15"/>
+</map>

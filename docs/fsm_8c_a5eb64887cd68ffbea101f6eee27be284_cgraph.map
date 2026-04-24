@@ -1,0 +1,11 @@
+<map id="fsm_run" name="fsm_run">
+<area shape="rect" id="Node000001" title="Process all pending events — call this in your task loop." alt="" coords="5,80,80,105"/>
+<area shape="rect" id="Node000002" href="$fsm_8c.html#a4d3aadd348e4b34191cb7cdc66153e6f" title="Walk down from &#39;ancestor&#39; to &#39;target&#39; calling on_entry." alt="" coords="128,5,296,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="61,78,91,58,127,40,145,32,147,37,129,44,93,63,63,82"/>
+<area shape="rect" id="Node000003" href="$fsm_8c.html#ae71454993499fc4591711ea6b4e71538" title="Walk up the parent chain calling on_exit until &#39;stop&#39;." alt="" coords="151,55,273,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="80,85,136,76,137,81,81,90"/>
+<area shape="rect" id="Node000004" href="$fsm_8c.html#ab3913b4ca5be1e70c7b18949f67aea4b" title="Find the Lowest Common Ancestor (LCA) of states a and b." alt="" coords="175,104,249,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="81,95,162,107,161,112,80,101"/>
+<area shape="rect" id="Node000005" href="$fsm_8c.html#a5f657e2bd363c3cddd83764eae9e25e4" title="Remove and return the event at the head of the queue." alt="" coords="165,153,259,179"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="65,103,129,138,153,147,151,152,127,143,62,108"/>
+</map>

@@ -1,0 +1,36 @@
+<map id="irq_notify.h" name="irq_notify.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="561,5,654,31"/>
+<area shape="rect" id="Node000002" href="$drv__irq_8h.html" title=" " alt="" coords="568,79,647,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="610,44,610,79,605,79,605,44"/>
+<area shape="rect" id="Node000007" href="$iic__mgmt_8c.html" title=" " alt="" coords="671,79,765,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="638,36,701,76,698,81,635,40"/>
+<area shape="rect" id="Node000008" href="$irq__desc_8h.html" title=" " alt="" coords="357,79,445,104"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="562,38,435,81,433,76,560,33"/>
+<area shape="rect" id="Node000013" href="$irq__notify_8c.html" title=" " alt="" coords="452,152,544,177"/>
+<area shape="poly" id="edge14_Node000001_Node000013" title=" " alt="" coords="590,43,559,80,508,153,503,150,555,77,586,39"/>
+<area shape="rect" id="Node000014" href="$irq__table_8h.html" title=" " alt="" coords="139,79,230,104"/>
+<area shape="poly" id="edge15_Node000001_Node000014" title=" " alt="" coords="547,32,231,85,230,80,546,27"/>
+<area shape="rect" id="Node000015" href="$spi__mgmt_8c.html" title=" " alt="" coords="790,79,889,104"/>
+<area shape="poly" id="edge17_Node000001_Node000015" title=" " alt="" coords="658,32,803,76,801,81,657,37"/>
+<area shape="rect" id="Node000016" href="$uart__mgmt_8c.html" title=" " alt="" coords="913,79,1019,104"/>
+<area shape="poly" id="edge18_Node000001_Node000016" title=" " alt="" coords="668,29,914,77,913,82,667,34"/>
+<area shape="rect" id="Node000003" href="$drv__irq_8c.html" title=" " alt="" coords="568,152,647,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="610,118,610,152,605,152,605,118"/>
+<area shape="rect" id="Node000004" href="$hal__iic__stm32_8c.html" title=" " alt="" coords="671,152,794,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="641,108,713,149,711,154,638,113"/>
+<area shape="rect" id="Node000005" href="$hal__spi__stm32_8c.html" title=" " alt="" coords="819,152,945,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="661,104,838,149,837,155,659,109"/>
+<area shape="rect" id="Node000006" href="$hal__uart__stm32_8c.html" title=" " alt="" coords="969,152,1104,177"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="661,101,969,151,969,156,660,107"/>
+<area shape="poly" id="edge8_Node000008_Node000003" title=" " alt="" coords="448,106,575,149,573,154,446,111"/>
+<area shape="rect" id="Node000009" href="$hal__timebase__stm32_8c.html" title=" " alt="" coords="116,152,285,177"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="356,111,234,154,232,149,355,106"/>
+<area shape="rect" id="Node000010" href="$irq__chip__nvic_8h.html" title=" " alt="" coords="309,152,428,177"/>
+<area shape="poly" id="edge10_Node000008_Node000010" title=" " alt="" coords="392,118,376,153,371,151,387,116"/>
+<area shape="rect" id="Node000012" href="$irq__desc_8c.html" title=" " alt="" coords="5,152,92,177"/>
+<area shape="poly" id="edge12_Node000008_Node000012" title=" " alt="" coords="344,107,104,155,93,157,92,152,103,149,342,101"/>
+<area shape="poly" id="edge13_Node000008_Node000013" title=" " alt="" coords="429,110,484,150,481,154,426,114"/>
+<area shape="rect" id="Node000011" href="$irq__chip__nvic_8c.html" title="NVIC&#45;backed irq_chip implementation for ARM Cortex&#45;M (STM32)" alt="" coords="309,225,428,251"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="371,191,371,225,366,225,366,191"/>
+<area shape="poly" id="edge16_Node000014_Node000012" title=" " alt="" coords="152,113,72,154,70,149,150,108"/>
+</map>

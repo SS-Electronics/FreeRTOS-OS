@@ -1,0 +1,11 @@
+<map id="drv_irq_dispatch_from_isr" name="drv_irq_dispatch_from_isr">
+<area shape="rect" id="Node000001" title="Dispatch an IRQ event from ISR context. Each registered callback receives pxHPT so it can accumulate ..." alt="" coords="249,106,440,131"/>
+<area shape="rect" id="Node000002" href="$hal__iic__stm32_8c.html#a2cbe166e3c3ea0291b648d3e747a7dc5" title="Called from I2Cx_ER_IRQHandler to dispatch HAL_I2C_ER_IRQHandler to whichever generic handle owns ins..." alt="" coords="25,5,181,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="303,103,200,60,167,48,169,43,202,55,305,98"/>
+<area shape="rect" id="Node000003" href="$hal__iic__stm32_8c.html#af651223af8184f72b0eedf902dcfb2cc" title="Called from I2Cx_EV_IRQHandler to dispatch HAL_I2C_EV_IRQHandler to whichever generic handle owns ins..." alt="" coords="24,69,183,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="235,108,183,102,183,96,236,103"/>
+<area shape="rect" id="Node000004" href="$hal__spi__stm32_8c.html#a502fc75767c7ebbec7885a7798f2b665" title="Called from SPIx_IRQHandler to dispatch HAL_SPI_IRQHandler to whichever generic handle owns instance." alt="" coords="5,134,201,159"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="236,134,202,138,201,133,235,129"/>
+<area shape="rect" id="Node000005" href="$hal__uart__stm32_8c.html#a6b69ed104eb5d662230497d7ac2881a6" title="Called from the USARTx_IRQHandler to dispatch HAL_UART_IRQHandler to whichever generic handle owns in..." alt="" coords="30,184,177,224"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="297,139,202,173,164,186,163,181,200,168,295,134"/>
+</map>

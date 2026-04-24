@@ -1,0 +1,37 @@
+<map id="irq_chip_nvic.c" name="irq_chip_nvic.c">
+<area shape="rect" id="Node000001" title="NVIC&#45;backed irq_chip implementation for ARM Cortex&#45;M (STM32)" alt="" coords="216,5,335,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="63,86,213,111"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="256,33,171,81,169,77,254,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="237,86,314,111"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="278,31,278,72,273,72,273,31"/>
+<area shape="rect" id="Node000004" href="$irq__chip__nvic_8h.html" title=" " alt="" coords="338,79,495,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="297,29,372,70,369,74,295,33"/>
+<area shape="rect" id="Node000005" href="$irq__desc_8h.html" title=" " alt="" coords="362,167,471,192"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="419,119,419,153,414,153,414,119"/>
+<area shape="rect" id="Node000006" href="$def__std_8h.html" title=" " alt="" coords="279,313,362,339"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="385,194,351,213,336,226,324,241,316,270,318,299,312,300,311,270,320,239,332,222,348,209,382,190"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="409,313,505,339"/>
+<area shape="poly" id="edge13_Node000005_Node000014" title=" " alt="" coords="423,192,452,299,447,301,417,193"/>
+<area shape="rect" id="Node000015" href="$irq__notify_8h.html" title=" " alt="" coords="494,240,609,265"/>
+<area shape="poly" id="edge14_Node000005_Node000015" title=" " alt="" coords="440,190,518,231,516,236,437,194"/>
+<area shape="rect" id="Node000017" href="$list_8h.html" title="All linked list operation functions definitions and macros." alt="" coords="335,240,419,265"/>
+<area shape="poly" id="edge17_Node000005_Node000017" title=" " alt="" coords="412,194,392,229,388,227,408,191"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="5,387,76,412"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="279,340,90,388,89,383,278,335"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="100,387,168,412"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="292,341,178,384,176,379,290,336"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="193,387,259,412"/>
+<area shape="poly" id="edge8_Node000006_Node000009" title=" " alt="" coords="307,341,254,380,251,376,304,337"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="284,387,357,412"/>
+<area shape="poly" id="edge9_Node000006_Node000010" title=" " alt="" coords="323,339,323,373,318,373,318,339"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="382,387,446,412"/>
+<area shape="poly" id="edge10_Node000006_Node000011" title=" " alt="" coords="337,337,390,376,386,380,334,341"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="471,387,541,412"/>
+<area shape="poly" id="edge11_Node000006_Node000012" title=" " alt="" coords="351,336,464,379,462,384,349,341"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="565,387,652,412"/>
+<area shape="poly" id="edge12_Node000006_Node000013" title=" " alt="" coords="363,335,553,382,552,387,362,340"/>
+<area shape="poly" id="edge16_Node000015_Node000014" title=" " alt="" coords="538,267,485,307,482,303,535,263"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="529,313,681,339"/>
+<area shape="poly" id="edge15_Node000015_Node000016" title=" " alt="" coords="562,264,590,301,586,304,558,267"/>
+<area shape="poly" id="edge18_Node000017_Node000006" title=" " alt="" coords="370,267,340,304,336,301,365,264"/>
+</map>

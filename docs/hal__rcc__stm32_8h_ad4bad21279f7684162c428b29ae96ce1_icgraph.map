@@ -1,0 +1,5 @@
+<map id="hal_rcc_stm32_pwr_clk_en" name="hal_rcc_stm32_pwr_clk_en">
+<area shape="rect" id="Node000001" title=" " alt="" coords="192,5,388,31"/>
+<area shape="rect" id="Node000002" href="$hal__rcc__stm32_8c.html#a389ff9d07a543b383d357b5d53c2fc69" title="Initialize system clock tree." alt="" coords="5,5,144,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="178,21,144,21,144,15,178,15"/>
+</map>

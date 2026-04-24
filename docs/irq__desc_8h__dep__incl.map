@@ -1,0 +1,15 @@
+<map id="irq_desc.h" name="irq_desc.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="317,5,405,31"/>
+<area shape="rect" id="Node000002" href="$drv__irq_8c.html" title=" " alt="" coords="5,79,84,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="304,35,85,84,84,79,302,30"/>
+<area shape="rect" id="Node000003" href="$hal__timebase__stm32_8c.html" title=" " alt="" coords="108,79,277,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="322,38,221,81,219,76,320,34"/>
+<area shape="rect" id="Node000004" href="$irq__chip__nvic_8h.html" title=" " alt="" coords="301,79,420,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="363,44,363,79,358,79,358,44"/>
+<area shape="rect" id="Node000006" href="$irq__desc_8c.html" title=" " alt="" coords="444,79,531,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="394,35,468,76,465,81,392,40"/>
+<area shape="rect" id="Node000007" href="$irq__notify_8c.html" title=" " alt="" coords="555,79,647,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="413,32,563,76,561,81,412,37"/>
+<area shape="rect" id="Node000005" href="$irq__chip__nvic_8c.html" title="NVIC&#45;backed irq_chip implementation for ARM Cortex&#45;M (STM32)" alt="" coords="301,152,420,177"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="363,118,363,152,358,152,358,118"/>
+</map>

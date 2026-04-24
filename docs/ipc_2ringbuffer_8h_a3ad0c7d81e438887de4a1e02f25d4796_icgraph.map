@@ -1,0 +1,17 @@
+<map id="ringbuffer_getchar" name="ringbuffer_getchar">
+<area shape="rect" id="Node000001" title=" " alt="" coords="827,31,968,56"/>
+<area shape="rect" id="Node000002" href="$os__shell__management_8c.html#a5b7eb0bbbac6bbc8febc3cf4a41932f5" title=" " alt="" coords="637,5,754,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="812,35,754,28,754,23,813,30"/>
+<area shape="rect" id="Node000006" href="$uart__mgmt_8c.html#aa83680295a6822a437bc349e63451236" title="Read one byte from the UART RX ring buffer." alt="" coords="612,55,779,80"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="813,56,779,60,779,55,813,51"/>
+<area shape="rect" id="Node000003" href="$os__shell__management_8c.html#a8fae79f71d15477bc1251891e977e46e" title="Create and start the OS shell management task." alt="" coords="402,5,561,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="623,21,561,21,561,15,623,15"/>
+<area shape="rect" id="Node000004" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,5,351,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="388,21,351,21,351,15,388,15"/>
+<area shape="rect" id="Node000005" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,5,112,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="146,21,112,21,112,15,146,15"/>
+<area shape="rect" id="Node000007" href="$uart__app_8c.html#af8629c1a7d2b90c4b857d1ab5ab812fd" title="Read one byte from the RX ring buffer without blocking." alt="" coords="399,55,564,80"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="598,70,564,70,564,65,598,65"/>
+<area shape="rect" id="Node000008" href="$uart__app_8c.html#a2705fba771080d1a41e60a74e6e56926" title="Receive exactly len bytes from the UART RX ring buffer, blocking until all bytes arrive or timeout ex..." alt="" coords="411,104,551,129"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="627,86,538,107,537,101,626,81"/>
+</map>

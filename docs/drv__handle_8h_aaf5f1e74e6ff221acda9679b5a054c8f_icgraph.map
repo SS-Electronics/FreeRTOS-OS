@@ -1,0 +1,18 @@
+<map id="drv_uart_tx_kick" name="drv_uart_tx_kick">
+<area shape="rect" id="Node000001" title=" " alt="" coords="960,81,1091,107"/>
+<area shape="rect" id="Node000002" href="$os__shell__management_8c.html#a674105c8790acda9c7e4ea9a74cf1aec" title=" " alt="" coords="812,56,912,81"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="946,84,912,79,913,74,947,79"/>
+<area shape="rect" id="Node000009" href="$syscalls_8c.html#ae9112526a914a06994511bdf3095b0a9" title=" " alt="" coords="832,105,892,131"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="947,108,893,116,892,111,946,103"/>
+<area shape="rect" id="Node000003" href="$os__shell__management_8c.html#a038e91f0ffdf433bba8536c74ef958d9" title=" " alt="" coords="627,5,753,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="804,55,733,33,735,28,806,49"/>
+<area shape="rect" id="Node000004" href="$os__shell__management_8c.html#a5b7eb0bbbac6bbc8febc3cf4a41932f5" title=" " alt="" coords="451,81,568,107"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="798,76,568,93,568,87,798,71"/>
+<area shape="rect" id="Node000008" href="$os__shell__management_8c.html#a4dcab531b1b38b06384ff4035db371da" title=" " alt="" coords="616,107,764,132"/>
+<area shape="poly" id="edge6_Node000002_Node000008" title=" " alt="" coords="806,88,735,109,733,104,804,83"/>
+<area shape="rect" id="Node000005" href="$os__shell__management_8c.html#a8fae79f71d15477bc1251891e977e46e" title="Create and start the OS shell management task." alt="" coords="244,81,403,107"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="437,97,403,97,403,91,437,91"/>
+<area shape="rect" id="Node000006" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="5,81,196,107"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="230,97,196,97,196,91,230,91"/>
+<area shape="poly" id="edge7_Node000008_Node000004" title=" " alt="" coords="602,110,568,105,569,100,603,104"/>
+</map>

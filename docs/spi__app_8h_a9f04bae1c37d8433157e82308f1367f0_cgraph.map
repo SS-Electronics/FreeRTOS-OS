@@ -1,0 +1,5 @@
+<map id="spi_async_transfer" name="spi_async_transfer">
+<area shape="rect" id="Node000001" title="Non&#45;blocking full&#45;duplex transfer. Returns immediately after queuing." alt="" coords="5,5,149,31"/>
+<area shape="rect" id="Node000002" href="$spi__mgmt_8h.html#aca995473f0e5668c8f7d4f8dccf1ff63" title="Non&#45;blocking full&#45;duplex transfer (caller manages buffer lifetime)." alt="" coords="197,5,388,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="149,15,183,15,183,21,149,21"/>
+</map>

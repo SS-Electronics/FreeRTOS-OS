@@ -1,0 +1,5 @@
+<map id="fsm_lca" name="fsm_lca">
+<area shape="rect" id="Node000001" title="Find the Lowest Common Ancestor (LCA) of states a and b." alt="" coords="128,5,201,31"/>
+<area shape="rect" id="Node000002" href="$fsm_8c.html#a5eb64887cd68ffbea101f6eee27be284" title="Process all pending events — call this in your task loop." alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="114,21,80,21,80,15,114,15"/>
+</map>

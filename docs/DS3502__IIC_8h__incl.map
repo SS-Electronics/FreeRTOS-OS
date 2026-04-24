@@ -1,0 +1,19 @@
+<map id="DS3502_IIC.h" name="DS3502_IIC.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="662,5,770,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,160,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="662,26,452,46,174,81,173,76,451,40,661,21"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="184,79,325,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="662,29,520,50,339,81,338,76,519,45,661,24"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="349,79,525,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="676,33,518,78,516,72,675,28"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="550,86,698,111"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="704,33,650,79,646,75,701,29"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="722,86,897,111"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="731,29,787,75,783,79,728,33"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="921,86,1119,111"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="761,28,963,80,962,85,760,33"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="1143,79,1287,119"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="771,23,928,44,1130,76,1129,81,927,49,770,28"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="1311,79,1455,119"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="770,20,996,39,1144,55,1297,76,1297,81,1144,60,996,44,770,25"/>
+</map>

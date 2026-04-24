@@ -1,0 +1,27 @@
+<map id="list_add_tail" name="list_add_tail">
+<area shape="rect" id="Node000001" title="Add a new node at the tail of the list." alt="" coords="784,104,885,129"/>
+<area shape="rect" id="Node000002" href="$kernel__thread_8c.html#a50c699f62ea35510879d318e5a956029" title="A generic thread create api." alt="" coords="603,5,710,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="808,97,775,70,735,44,708,33,710,28,737,40,778,65,812,93"/>
+<area shape="rect" id="Node000003" href="$drv__dma_8c.html#a07ff6a90408aa434a89427323a523334" title=" " alt="" coords="577,55,736,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="774,103,703,83,704,78,776,98"/>
+<area shape="rect" id="Node000005" href="$drv__dma_8c.html#a735ba435471da145df7fe16048f6b50b" title=" " alt="" coords="583,104,730,129"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="770,119,730,119,730,114,770,114"/>
+<area shape="rect" id="Node000006" href="$mqueue_8c.html#a24352a9ab122f2913f5c92467d5bc676" title=" " alt="" coords="577,153,736,179"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="776,136,704,156,703,151,774,131"/>
+<area shape="rect" id="Node000009" href="$irq__desc_8c.html#ab32b689bb2b7d1960aa47f19d9d65e90" title=" " alt="" coords="609,203,704,228"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="810,141,777,167,737,192,705,206,703,201,735,188,774,163,807,137"/>
+<area shape="rect" id="Node000004" href="$hal__dma__stm32_8c.html#abf0f458bc474fea788266124410803b5" title=" " alt="" coords="375,55,529,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="564,70,530,70,530,65,564,65"/>
+<area shape="rect" id="Node000007" href="$main_8c.html#aa675774b79cc01e2a386c7caf4fbdf03" title=" " alt="" coords="391,153,513,179"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="564,169,514,169,514,163,564,163"/>
+<area shape="rect" id="Node000008" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="202,153,309,179"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="377,169,309,169,309,163,377,163"/>
+<area shape="rect" id="Node000010" href="$irq__notify_8c.html#a88ce0c4278f16ca232b715dff43ec969" title="Register a callback for a generic IRQ ID. Call from task context before interrupts fire...." alt="" coords="404,203,500,228"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="595,218,500,218,500,213,595,213"/>
+<area shape="rect" id="Node000011" href="$drv__irq_8c.html#aa6d6a8b2c4fbd552e34f19094702effa" title="Register a callback for a software IRQ ID. Thin wrapper over irq_register() — upper layers include on..." alt="" coords="193,203,317,228"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="390,218,318,218,318,213,390,213"/>
+<area shape="rect" id="Node000012" href="$uart__mgmt_8c.html#af8eff33b840c2e11d5bd889fd97c705a" title=" " alt="" coords="184,252,327,277"/>
+<area shape="poly" id="edge11_Node000010_Node000012" title=" " alt="" coords="391,233,307,255,306,249,390,228"/>
+<area shape="rect" id="Node000013" href="$uart__mgmt_8c.html#a8e8f570b41df4e77ed5acfbeaef25423" title="Create and start the UART management thread." alt="" coords="5,252,136,277"/>
+<area shape="poly" id="edge12_Node000012_Node000013" title=" " alt="" coords="170,267,136,267,136,262,170,262"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="gpio_mgmt_post" name="gpio_mgmt_post">
+<area shape="rect" id="Node000001" title="Post a GPIO command (non&#45;blocking, delay_ms = 0 for immediate)." alt="" coords="208,104,339,129"/>
+<area shape="rect" id="Node000002" href="$gpio__app_8c.html#a69bd6fa45a28f0cfc797a7a795db53ec" title="Clear pin to its inactive state (non&#45;blocking)." alt="" coords="15,5,150,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="243,98,204,70,159,44,130,33,132,28,161,40,207,66,246,93"/>
+<area shape="rect" id="Node000003" href="$gpio__app_8c.html#a4daaf3a20acc4645ea4487f61d4fd5b4" title="Schedule a GPIO command with an optional pre&#45;execution delay." alt="" coords="5,55,160,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="210,103,132,83,134,78,211,98"/>
+<area shape="rect" id="Node000004" href="$gpio__app_8c.html#a7f3f6bb3fd0155ba5d5ade602ca1456f" title="Set pin to its active state (non&#45;blocking)." alt="" coords="21,104,144,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="194,119,144,119,144,114,194,114"/>
+<area shape="rect" id="Node000005" href="$gpio__app_8c.html#a54da8fd1087b1cb3ecaa3efc289a159e" title="Toggle pin state (non&#45;blocking)." alt="" coords="11,153,154,179"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="211,135,134,156,132,151,210,130"/>
+<area shape="rect" id="Node000006" href="$gpio__app_8c.html#abf4276aa23621fb4e5e684fefe12c2d0" title="Write an explicit 0/1 level to the pin (non&#45;blocking)." alt="" coords="15,203,150,228"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="246,140,207,167,161,192,130,205,128,200,159,188,204,162,243,136"/>
+</map>

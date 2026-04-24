@@ -1,0 +1,11 @@
+<map id="uart_mgmt_read_byte" name="uart_mgmt_read_byte">
+<area shape="rect" id="Node000001" title="Read one byte from the UART RX ring buffer." alt="" coords="5,31,172,56"/>
+<area shape="rect" id="Node000002" href="$mqueue_8c.html#ae54fde83faac5a815d0afa0be0ceb447" title=" " alt="" coords="220,5,400,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="172,31,206,27,207,32,172,36"/>
+<area shape="rect" id="Node000003" href="$ringbuffer_8c.html#a3ad0c7d81e438887de4a1e02f25d4796" title=" " alt="" coords="239,55,381,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="172,50,226,56,225,61,172,55"/>
+<area shape="rect" id="Node000004" href="$ringbuffer_8c.html#abc6b533f80fb18ade4151b188f827c23" title=" " alt="" coords="448,55,533,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="381,65,434,65,434,70,381,70"/>
+<area shape="rect" id="Node000005" href="$ringbuffer_8c.html#a0d9be0bc18b041c2946fd11f840206e9" title=" " alt="" coords="581,55,651,80"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="534,65,568,65,568,70,534,70"/>
+</map>

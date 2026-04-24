@@ -1,0 +1,13 @@
+<map id="printk" name="printk">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,55,65,80"/>
+<area shape="rect" id="Node000002" href="$drv__time_8c.html#ad486c49db2d9475c1064dd88370fee4e" title=" " alt="" coords="113,5,260,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="65,55,133,33,135,38,67,60"/>
+<area shape="rect" id="Node000003" href="$drv__handle_8h.html#aaf5f1e74e6ff221acda9679b5a054c8f" title=" " alt="" coords="121,55,252,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="66,65,108,65,108,70,66,70"/>
+<area shape="rect" id="Node000004" href="$ringbuffer_8c.html#ab0175d641c6489e01eb1f11eb161307a" title=" " alt="" coords="116,104,257,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="67,74,135,97,133,102,65,79"/>
+<area shape="rect" id="Node000005" href="$ringbuffer_8c.html#abc6b533f80fb18ade4151b188f827c23" title=" " alt="" coords="308,104,393,129"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="257,114,294,114,294,119,257,119"/>
+<area shape="rect" id="Node000006" href="$ringbuffer_8c.html#a0d9be0bc18b041c2946fd11f840206e9" title=" " alt="" coords="441,104,511,129"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="394,114,428,114,428,119,394,119"/>
+</map>

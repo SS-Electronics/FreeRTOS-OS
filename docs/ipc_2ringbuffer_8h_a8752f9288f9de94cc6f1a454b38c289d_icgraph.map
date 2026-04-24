@@ -1,0 +1,11 @@
+<map id="ringbuffer_init" name="ringbuffer_init">
+<area shape="rect" id="Node000001" title=" " alt="" coords="719,5,832,31"/>
+<area shape="rect" id="Node000002" href="$ringbuffer_8c.html#a85a94391518dcb013756001945f97cd1" title=" " alt="" coords="537,5,671,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="705,21,671,21,671,15,705,15"/>
+<area shape="rect" id="Node000003" href="$mqueue_8c.html#a24352a9ab122f2913f5c92467d5bc676" title=" " alt="" coords="331,5,489,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="523,21,490,21,490,15,523,15"/>
+<area shape="rect" id="Node000004" href="$main_8c.html#aa675774b79cc01e2a386c7caf4fbdf03" title=" " alt="" coords="160,5,283,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="317,21,283,21,283,15,317,15"/>
+<area shape="rect" id="Node000005" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,5,112,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="147,21,112,21,112,15,147,15"/>
+</map>

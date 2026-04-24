@@ -1,0 +1,7 @@
+<map id="drv_irq_dispatch_from_isr" name="drv_irq_dispatch_from_isr">
+<area shape="rect" id="Node000001" title="Dispatch an IRQ event from ISR context. Each registered callback receives pxHPT so it can accumulate ..." alt="" coords="5,5,196,31"/>
+<area shape="rect" id="Node000002" href="$irq__desc_8c.html#ad30e8177b86aac1c40b8181fc0927b3c" title=" " alt="" coords="244,5,387,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,15,230,15,230,21,196,21"/>
+<area shape="rect" id="Node000003" href="$irq__desc_8c.html#aaef6f6dd8053daf49e96ef43997f43bd" title=" " alt="" coords="435,5,531,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="387,15,421,15,421,21,387,21"/>
+</map>

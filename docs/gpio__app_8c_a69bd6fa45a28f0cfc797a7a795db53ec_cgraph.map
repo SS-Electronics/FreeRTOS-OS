@@ -1,0 +1,5 @@
+<map id="gpio_async_clear" name="gpio_async_clear">
+<area shape="rect" id="Node000001" title="Clear pin to its inactive state (non&#45;blocking)." alt="" coords="5,5,140,31"/>
+<area shape="rect" id="Node000002" href="$gpio__mgmt_8c.html#a8d268b481e655c3432922cda545b6625" title="Post a GPIO command (non&#45;blocking, delay_ms = 0 for immediate)." alt="" coords="188,5,319,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="140,15,174,15,174,21,140,21"/>
+</map>

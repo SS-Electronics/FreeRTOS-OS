@@ -1,0 +1,7 @@
+<map id="_hal_rcc_stm32_register" name="_hal_rcc_stm32_register">
+<area shape="rect" id="Node000001" title="Register RCC HAL backend." alt="" coords="347,5,527,31"/>
+<area shape="rect" id="Node000002" href="$drv__rcc_8c.html#af3054c6c88fc3ec074b229ef07cd5f99" title=" " alt="" coords="160,5,299,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="333,21,299,21,299,15,333,15"/>
+<area shape="rect" id="Node000003" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,5,112,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="146,21,112,21,112,15,146,15"/>
+</map>

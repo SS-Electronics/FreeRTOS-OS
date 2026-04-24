@@ -1,0 +1,22 @@
+<map id="__attribute__" name="__attribute__">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,132,112,157"/>
+<area shape="rect" id="Node000002" href="$stm32__exceptions_8c.html#a355a951e28f1b54c179512940f0ebc58" title=" " alt="" coords="169,5,277,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="69,130,107,91,158,48,180,35,183,39,162,52,111,95,73,134"/>
+<area shape="rect" id="Node000003" href="$stm32__exceptions_8c.html#adeba1bdf56c3dfdf25b559d239a20fa5" title=" " alt="" coords="359,132,453,157"/>
+<area shape="poly" id="edge12_Node000001_Node000003" title=" " alt="" coords="77,130,114,109,159,91,195,84,223,82,287,91,332,105,372,123,370,128,330,110,286,97,223,88,195,90,161,97,116,113,80,134"/>
+<area shape="rect" id="Node000005" href="$stm32__exceptions_8c.html#a5a89ec4d89244f315ab463585315ec83" title=" " alt="" coords="169,107,277,132"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="112,134,155,127,156,132,113,139"/>
+<area shape="rect" id="Node000006" href="$stm32__exceptions_8c.html#af224de80cf3e8cfdabed770e4d84ae0f" title=" " alt="" coords="160,156,287,181"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="113,150,147,155,146,160,112,155"/>
+<area shape="rect" id="Node000007" href="$stm32__exceptions_8c.html#aef351fcfb1f969875723de22d10bc253" title=" " alt="" coords="169,205,277,231"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="87,155,161,190,178,198,176,203,159,195,85,160"/>
+<area shape="rect" id="Node000008" href="$stm32__exceptions_8c.html#a39ae5a6cf613bcc076cf5b7957eefd0d" title=" " alt="" coords="335,207,477,232"/>
+<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="70,156,105,200,131,223,161,241,186,249,212,253,265,253,315,245,358,234,360,239,316,251,265,259,211,258,185,254,159,246,128,228,102,204,66,159"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="254,29,288,48,339,85,382,121,379,125,336,89,285,52,251,33"/>
+<area shape="rect" id="Node000004" href="$stm32__exceptions_8c.html#a8d37bcc361b4d040ca56e527236c46b7" title=" " alt="" coords="525,183,640,208"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="452,155,525,176,524,181,450,160"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="278,124,345,134,344,139,277,129"/>
+<area shape="poly" id="edge7_Node000006_Node000003" title=" " alt="" coords="287,158,344,150,345,155,287,163"/>
+<area shape="poly" id="edge9_Node000007_Node000003" title=" " alt="" coords="255,203,359,160,361,165,257,208"/>
+<area shape="poly" id="edge11_Node000008_Node000004" title=" " alt="" coords="477,207,511,202,512,208,478,212"/>
+</map>

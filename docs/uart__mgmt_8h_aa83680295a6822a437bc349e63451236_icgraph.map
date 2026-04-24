@@ -1,0 +1,7 @@
+<map id="uart_mgmt_read_byte" name="uart_mgmt_read_byte">
+<area shape="rect" id="Node000001" title="Read one byte from the UART RX ring buffer." alt="" coords="219,31,385,56"/>
+<area shape="rect" id="Node000002" href="$uart__app_8c.html#af8629c1a7d2b90c4b857d1ab5ab812fd" title="Read one byte from the RX ring buffer without blocking." alt="" coords="5,5,171,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,35,170,30,171,25,205,29"/>
+<area shape="rect" id="Node000003" href="$uart__app_8c.html#a2705fba771080d1a41e60a74e6e56926" title="Receive exactly len bytes from the UART RX ring buffer, blocking until all bytes arrive or timeout ex..." alt="" coords="18,55,158,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="205,57,158,62,158,57,204,52"/>
+</map>

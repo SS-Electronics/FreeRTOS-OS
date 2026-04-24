@@ -1,0 +1,7 @@
+<map id="iic_mgmt.h" name="iic_mgmt.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="52,5,147,31"/>
+<area shape="rect" id="Node000002" href="$iic__app_8c.html" title=" " alt="" coords="5,79,84,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="84,43,56,80,51,77,80,40"/>
+<area shape="rect" id="Node000003" href="$iic__mgmt_8c.html" title=" " alt="" coords="108,79,203,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="119,40,148,77,144,80,115,43"/>
+</map>

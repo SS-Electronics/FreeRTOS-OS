@@ -1,0 +1,30 @@
+<map id="hal_dma_stm32.h" name="hal_dma_stm32.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="423,5,562,31"/>
+<area shape="rect" id="Node000002" href="$drv__dma_8h.html" title=" " alt="" coords="221,79,394,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="464,33,351,76,349,71,462,28"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="418,79,567,104"/>
+<area shape="poly" id="edge13_Node000001_Node000013" title=" " alt="" coords="495,31,495,65,490,65,490,31"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="591,79,669,104"/>
+<area shape="poly" id="edge14_Node000001_Node000014" title=" " alt="" coords="516,28,597,70,594,75,514,33"/>
+<area shape="rect" id="Node000003" href="$def__std_8h.html" title=" " alt="" coords="279,225,362,251"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="293,106,278,120,264,138,256,157,258,176,272,198,291,215,288,219,268,201,253,178,250,156,259,135,274,117,290,102"/>
+<area shape="rect" id="Node000011" href="$def__err_8h.html" title=" " alt="" coords="268,152,347,177"/>
+<area shape="poly" id="edge10_Node000002_Node000011" title=" " alt="" coords="310,104,310,138,305,138,305,104"/>
+<area shape="rect" id="Node000012" href="$list_8h.html" title="All linked list operation functions definitions and macros." alt="" coords="371,152,455,177"/>
+<area shape="poly" id="edge11_Node000002_Node000012" title=" " alt="" coords="326,102,386,142,383,147,323,106"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,299,76,324"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="279,252,90,300,89,295,278,247"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="100,299,168,324"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="292,253,178,296,176,291,290,248"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="193,299,259,324"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="307,253,254,292,251,288,304,249"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="284,299,357,324"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="323,251,323,285,318,285,318,251"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="382,299,446,324"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="337,249,390,288,386,292,334,253"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="471,299,541,324"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="351,248,464,291,462,296,349,253"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="565,299,652,324"/>
+<area shape="poly" id="edge9_Node000003_Node000010" title=" " alt="" coords="363,247,553,294,552,299,362,252"/>
+<area shape="poly" id="edge12_Node000012_Node000003" title=" " alt="" coords="400,179,348,219,345,215,396,175"/>
+</map>

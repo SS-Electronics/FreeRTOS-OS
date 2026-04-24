@@ -1,0 +1,9 @@
+<map id="ringbuffer_create" name="ringbuffer_create">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,55,139,80"/>
+<area shape="rect" id="Node000002" href="$os_2kernel__mem_8h.html#ab750d6dec279a17969f64507edde0767" title=" " alt="" coords="215,5,271,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="116,52,201,27,203,32,118,57"/>
+<area shape="rect" id="Node000003" href="$os_2kernel__mem_8h.html#a2b55f9d76c0a87c16c336ec837a80101" title=" " alt="" coords="208,55,279,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="139,65,194,65,194,70,139,70"/>
+<area shape="rect" id="Node000004" href="$ringbuffer_8c.html#a8752f9288f9de94cc6f1a454b38c289d" title=" " alt="" coords="187,104,300,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="118,77,185,97,184,102,116,83"/>
+</map>

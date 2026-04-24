@@ -1,0 +1,9 @@
+<map id="uart_mgmt_thread" name="uart_mgmt_thread">
+<area shape="rect" id="Node000001" title=" " alt="" coords="577,5,720,31"/>
+<area shape="rect" id="Node000002" href="$uart__mgmt_8c.html#a8e8f570b41df4e77ed5acfbeaef25423" title="Create and start the UART management thread." alt="" coords="399,5,529,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="563,21,530,21,530,15,563,15"/>
+<area shape="rect" id="Node000003" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,5,351,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="385,21,351,21,351,15,385,15"/>
+<area shape="rect" id="Node000004" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,5,112,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="146,21,112,21,112,15,146,15"/>
+</map>

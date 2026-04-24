@@ -1,0 +1,23 @@
+<map id="os_thread_delay" name="os_thread_delay">
+<area shape="rect" id="Node000001" title=" " alt="" coords="799,80,928,105"/>
+<area shape="rect" id="Node000002" href="$os__shell__management_8c.html#a5b7eb0bbbac6bbc8febc3cf4a41932f5" title=" " alt="" coords="619,5,737,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="822,76,750,44,719,33,720,28,752,40,824,71"/>
+<area shape="rect" id="Node000006" href="$gpio__mgmt_8c.html#a2f7aa8d4452bd40df6190f1027d25c20" title=" " alt="" coords="605,55,751,80"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="785,85,750,80,751,75,786,79"/>
+<area shape="rect" id="Node000008" href="$uart__mgmt_8c.html#af8eff33b840c2e11d5bd889fd97c705a" title=" " alt="" coords="607,104,749,129"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="786,105,750,110,749,105,785,100"/>
+<area shape="rect" id="Node000010" href="$uart__app_8c.html#a2705fba771080d1a41e60a74e6e56926" title="Receive exactly len bytes from the UART RX ring buffer, blocking until all bytes arrive or timeout ex..." alt="" coords="608,153,748,179"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="823,113,752,143,717,156,716,151,750,138,820,108"/>
+<area shape="rect" id="Node000003" href="$os__shell__management_8c.html#a8fae79f71d15477bc1251891e977e46e" title="Create and start the OS shell management task." alt="" coords="399,5,557,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="606,21,558,21,558,15,606,15"/>
+<area shape="rect" id="Node000004" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,55,351,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="408,36,314,57,313,52,406,31"/>
+<area shape="rect" id="Node000005" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,55,112,80"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="146,70,112,70,112,65,146,65"/>
+<area shape="rect" id="Node000007" href="$gpio__mgmt_8c.html#a7beb78991c70b9fc3165c93ce5b7ff6b" title=" " alt="" coords="411,55,545,80"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="591,70,545,70,545,65,591,65"/>
+<area shape="poly" id="edge7_Node000007_Node000004" title=" " alt="" coords="398,70,351,70,351,65,398,65"/>
+<area shape="rect" id="Node000009" href="$uart__mgmt_8c.html#a8e8f570b41df4e77ed5acfbeaef25423" title="Create and start the UART management thread." alt="" coords="413,104,543,129"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="593,119,544,119,544,114,593,114"/>
+<area shape="poly" id="edge10_Node000009_Node000004" title=" " alt="" coords="406,104,313,83,314,77,408,98"/>
+</map>

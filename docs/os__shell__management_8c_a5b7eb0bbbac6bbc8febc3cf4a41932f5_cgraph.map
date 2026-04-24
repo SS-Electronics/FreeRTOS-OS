@@ -1,0 +1,28 @@
+<map id="_os_shell_task" name="_os_shell_task">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,181,123,207"/>
+<area shape="rect" id="Node000002" href="$os__shell__management_8c.html#a63ab3e9917ce5b451d7db14187564113" title=" " alt="" coords="232,5,343,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="68,180,81,150,103,112,132,73,169,40,193,28,218,21,219,26,195,33,172,44,136,76,107,115,86,153,73,182"/>
+<area shape="rect" id="Node000003" href="$os__shell__management_8c.html#a4dcab531b1b38b06384ff4035db371da" title=" " alt="" coords="213,55,361,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="74,179,113,139,140,116,169,97,206,82,208,86,172,102,143,121,117,143,78,183"/>
+<area shape="rect" id="Node000004" href="$os__shell__management_8c.html#a674105c8790acda9c7e4ea9a74cf1aec" title=" " alt="" coords="473,105,573,131"/>
+<area shape="poly" id="edge8_Node000001_Node000004" title=" " alt="" coords="89,179,126,162,170,147,247,132,325,123,459,115,459,121,325,128,248,137,171,153,128,167,91,184"/>
+<area shape="rect" id="Node000006" href="$mqueue_8c.html#ae54fde83faac5a815d0afa0be0ceb447" title=" " alt="" coords="641,156,821,181"/>
+<area shape="poly" id="edge9_Node000001_Node000006" title=" " alt="" coords="123,189,628,170,628,175,123,194"/>
+<area shape="rect" id="Node000010" href="$group__Thread.html#gaf16424e47477714927313ecec2821eec" title=" " alt="" coords="223,207,352,232"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="123,198,209,208,208,213,122,203"/>
+<area shape="rect" id="Node000011" href="$syscalls_8c.html#a1c0b4afcbe4d9f5c21ef438f3bcf3e4c" title=" " alt="" coords="230,256,345,281"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="89,204,127,224,172,242,217,254,216,260,170,247,125,229,86,209"/>
+<area shape="rect" id="Node000012" href="$ringbuffer_8c.html#a3ad0c7d81e438887de4a1e02f25d4796" title=" " alt="" coords="452,281,593,307"/>
+<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="76,205,113,251,141,274,172,292,206,303,243,311,317,317,388,314,449,306,450,312,388,320,317,322,242,316,205,308,170,296,137,278,110,254,72,209"/>
+<area shape="rect" id="Node000013" href="$shell__task__mgmt_8c.html#a969e317f3c6f3236be6c00aff01d1ac2" title=" " alt="" coords="171,357,404,383"/>
+<area shape="poly" id="edge14_Node000001_Node000013" title=" " alt="" coords="73,206,109,269,138,305,172,336,200,350,197,355,169,340,134,309,105,271,69,208"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="348,78,460,102,459,107,347,83"/>
+<area shape="rect" id="Node000005" href="$drv__handle_8h.html#aaf5f1e74e6ff221acda9679b5a054c8f" title=" " alt="" coords="666,57,797,83"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="572,104,662,83,663,88,573,109"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="573,127,666,150,664,155,572,133"/>
+<area shape="rect" id="Node000007" href="$ringbuffer_8c.html#ab0175d641c6489e01eb1f11eb161307a" title=" " alt="" coords="661,107,802,132"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="573,116,647,116,647,121,573,121"/>
+<area shape="rect" id="Node000008" href="$ringbuffer_8c.html#abc6b533f80fb18ade4151b188f827c23" title=" " alt="" coords="869,183,955,208"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="790,130,822,141,882,173,879,177,820,146,788,135"/>
+<area shape="poly" id="edge13_Node000012_Node000008" title=" " alt="" coords="573,279,855,207,856,212,574,284"/>
+</map>

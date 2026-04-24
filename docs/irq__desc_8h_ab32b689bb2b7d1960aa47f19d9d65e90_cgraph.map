@@ -1,0 +1,13 @@
+<map id="request_irq" name="request_irq">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,80,100,105"/>
+<area shape="rect" id="Node000002" href="$irq__desc_8c.html#a0041385040c05835d54aca9c83340f87" title=" " alt="" coords="148,55,255,80"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="100,82,134,76,135,81,101,87"/>
+<area shape="rect" id="Node000005" href="$group__list__api.html#gafb58231c241f9acee99a56aaa1b98cec" title="Add a new node at the tail of the list." alt="" coords="151,104,252,129"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="101,98,138,104,137,109,100,103"/>
+<area shape="rect" id="Node000003" href="$os_2kernel__mem_8h.html#a2b55f9d76c0a87c16c336ec837a80101" title=" " alt="" coords="304,5,375,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="237,52,290,33,292,38,238,57"/>
+<area shape="rect" id="Node000004" href="$group__list__api.html#ga9e661d1dcd51bd4eb3951488574058b0" title="Initialize a list node [ Doubly circular]." alt="" coords="304,55,375,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="255,65,290,65,290,70,255,70"/>
+<area shape="rect" id="Node000006" href="$group__list__api.html#gab1766e25461b90b75aa3360245547452" title="add a node in between two nodes." alt="" coords="303,104,376,129"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="252,114,289,114,289,119,252,119"/>
+</map>

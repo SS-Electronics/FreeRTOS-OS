@@ -1,0 +1,13 @@
+<map id="irq_register" name="irq_register">
+<area shape="rect" id="Node000001" title="Register a callback for a generic IRQ ID. Call from task context before interrupts fire...." alt="" coords="768,31,864,56"/>
+<area shape="rect" id="Node000002" href="$drv__irq_8c.html#aa6d6a8b2c4fbd552e34f19094702effa" title="Register a callback for a software IRQ ID. Thin wrapper over irq_register() — upper layers include on..." alt="" coords="587,5,711,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="754,37,711,30,711,25,755,31"/>
+<area shape="rect" id="Node000003" href="$uart__mgmt_8c.html#af8eff33b840c2e11d5bd889fd97c705a" title=" " alt="" coords="577,55,720,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="755,55,721,60,720,54,754,49"/>
+<area shape="rect" id="Node000004" href="$uart__mgmt_8c.html#a8e8f570b41df4e77ed5acfbeaef25423" title="Create and start the UART management thread." alt="" coords="399,55,529,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="563,70,530,70,530,65,563,65"/>
+<area shape="rect" id="Node000005" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="160,55,351,80"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="385,70,351,70,351,65,385,65"/>
+<area shape="rect" id="Node000006" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="5,55,112,80"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="146,70,112,70,112,65,146,65"/>
+</map>

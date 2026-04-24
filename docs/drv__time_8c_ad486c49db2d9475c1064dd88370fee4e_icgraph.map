@@ -1,0 +1,7 @@
+<map id="drv_time_get_ticks" name="drv_time_get_ticks">
+<area shape="rect" id="Node000001" title=" " alt="" coords="184,31,331,56"/>
+<area shape="rect" id="Node000002" href="$os__shell__management_8c.html#aabfad572a8b660d3b0a6c3a0c3416182" title=" " alt="" coords="5,5,136,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="170,34,136,29,137,24,171,29"/>
+<area shape="rect" id="Node000003" href="$syscalls_8c.html#ae9112526a914a06994511bdf3095b0a9" title=" " alt="" coords="41,55,101,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="171,57,101,66,100,61,170,52"/>
+</map>

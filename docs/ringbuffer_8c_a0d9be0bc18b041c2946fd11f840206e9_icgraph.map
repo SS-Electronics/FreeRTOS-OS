@@ -1,0 +1,47 @@
+<map id="_status" name="_status">
+<area shape="rect" id="Node000001" title=" " alt="" coords="1203,212,1272,237"/>
+<area shape="rect" id="Node000002" href="$ringbuffer_8c.html#abc6b533f80fb18ade4151b188f827c23" title=" " alt="" coords="1035,133,1121,159"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1207,206,1153,174,1120,160,1122,155,1156,169,1209,202"/>
+<area shape="rect" id="Node000023" href="$ringbuffer_8c.html#a41af8be9a44c894b45ce7f26af9ab646" title=" " alt="" coords="1001,183,1155,208"/>
+<area shape="poly" id="edge21_Node000001_Node000023" title=" " alt="" coords="1189,219,1147,211,1148,205,1190,213"/>
+<area shape="rect" id="Node000024" href="$ringbuffer_8c.html#a68ff4765b12cd916b977e92751caa2ed" title=" " alt="" coords="1007,233,1149,273"/>
+<area shape="poly" id="edge22_Node000001_Node000024" title=" " alt="" coords="1190,236,1149,243,1148,238,1189,230"/>
+<area shape="rect" id="Node000025" href="$ringbuffer_8c.html#a45e5598f7defea13781160a122defcda" title=" " alt="" coords="1012,297,1144,323"/>
+<area shape="poly" id="edge23_Node000001_Node000025" title=" " alt="" coords="1212,249,1156,287,1126,300,1124,295,1153,282,1209,244"/>
+<area shape="rect" id="Node000003" href="$ringbuffer_8c.html#ad0cff7710b47171c42be6b621f5f0245" title=" " alt="" coords="805,5,953,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="1054,126,1009,85,952,44,927,33,929,28,955,40,1012,80,1057,122"/>
+<area shape="rect" id="Node000004" href="$ringbuffer_8c.html#ab4188a990f89ed844defa8ee50049671" title=" " alt="" coords="823,55,936,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="1036,130,952,94,921,83,923,78,954,89,1039,125"/>
+<area shape="rect" id="Node000005" href="$ringbuffer_8c.html#a3ad0c7d81e438887de4a1e02f25d4796" title=" " alt="" coords="809,104,950,129"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="1021,140,950,130,951,124,1022,135"/>
+<area shape="rect" id="Node000013" href="$ringbuffer_8c.html#a196e803edf76a774be3c2c33c338a21a" title=" " alt="" coords="809,154,950,194"/>
+<area shape="poly" id="edge10_Node000002_Node000013" title=" " alt="" coords="1022,156,951,167,950,161,1021,151"/>
+<area shape="rect" id="Node000014" href="$ringbuffer_8c.html#a22f7f922ef4c2f6cfec06cea5a294c1d" title=" " alt="" coords="823,219,936,244"/>
+<area shape="poly" id="edge11_Node000002_Node000014" title=" " alt="" coords="1023,165,1003,174,979,191,955,208,925,221,923,216,952,204,976,186,1000,169,1021,160"/>
+<area shape="rect" id="Node000015" href="$ringbuffer_8c.html#ab0175d641c6489e01eb1f11eb161307a" title=" " alt="" coords="809,285,950,311"/>
+<area shape="poly" id="edge12_Node000002_Node000015" title=" " alt="" coords="1024,161,1003,173,986,193,979,214,971,235,955,258,934,275,912,288,910,283,931,271,951,255,967,233,974,212,982,191,1000,169,1021,157"/>
+<area shape="rect" id="Node000006" href="$os__shell__management_8c.html#a5b7eb0bbbac6bbc8febc3cf4a41932f5" title=" " alt="" coords="212,195,329,220"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="813,104,757,94,648,74,561,55,521,51,478,53,432,64,379,84,344,108,316,139,294,170,280,196,276,193,290,168,311,135,340,104,376,80,430,59,477,48,521,45,562,49,649,68,758,89,814,98"/>
+<area shape="rect" id="Node000010" href="$uart__mgmt_8c.html#aa83680295a6822a437bc349e63451236" title="Read one byte from the UART RX ring buffer." alt="" coords="591,104,757,129"/>
+<area shape="poly" id="edge7_Node000005_Node000010" title=" " alt="" coords="795,119,757,119,757,114,795,114"/>
+<area shape="rect" id="Node000007" href="$os__shell__management_8c.html#a8fae79f71d15477bc1251891e977e46e" title="Create and start the OS shell management task." alt="" coords="5,195,164,220"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="198,210,164,210,164,205,198,205"/>
+<area shape="rect" id="Node000011" href="$uart__app_8c.html#af8629c1a7d2b90c4b857d1ab5ab812fd" title="Read one byte from the RX ring buffer without blocking." alt="" coords="377,95,543,120"/>
+<area shape="poly" id="edge8_Node000010_Node000011" title=" " alt="" coords="577,115,543,114,543,108,577,110"/>
+<area shape="rect" id="Node000012" href="$uart__app_8c.html#a2705fba771080d1a41e60a74e6e56926" title="Receive exactly len bytes from the UART RX ring buffer, blocking until all bytes arrive or timeout ex..." alt="" coords="390,144,530,169"/>
+<area shape="poly" id="edge9_Node000010_Node000012" title=" " alt="" coords="592,135,529,147,528,141,591,129"/>
+<area shape="rect" id="Node000016" href="$os__shell__management_8c.html#a674105c8790acda9c7e4ea9a74cf1aec" title=" " alt="" coords="624,245,724,271"/>
+<area shape="poly" id="edge13_Node000015_Node000016" title=" " alt="" coords="799,285,724,270,725,265,800,280"/>
+<area shape="rect" id="Node000019" href="$uart__mgmt_8c.html#a92576ac01ea62a4da3a4bb9c598d8e7b" title=" " alt="" coords="625,295,723,320"/>
+<area shape="poly" id="edge18_Node000015_Node000019" title=" " alt="" coords="795,304,723,308,723,302,795,299"/>
+<area shape="rect" id="Node000022" href="$syscalls_8c.html#ae9112526a914a06994511bdf3095b0a9" title=" " alt="" coords="644,344,704,369"/>
+<area shape="poly" id="edge20_Node000015_Node000022" title=" " alt="" coords="822,317,705,351,703,346,820,312"/>
+<area shape="poly" id="edge15_Node000016_Node000006" title=" " alt="" coords="609,248,542,237,329,214,330,209,543,231,610,243"/>
+<area shape="rect" id="Node000017" href="$os__shell__management_8c.html#a038e91f0ffdf433bba8536c74ef958d9" title=" " alt="" coords="397,245,523,271"/>
+<area shape="poly" id="edge14_Node000016_Node000017" title=" " alt="" coords="610,261,523,261,523,255,610,255"/>
+<area shape="rect" id="Node000018" href="$os__shell__management_8c.html#a4dcab531b1b38b06384ff4035db371da" title=" " alt="" coords="386,295,534,320"/>
+<area shape="poly" id="edge16_Node000016_Node000018" title=" " alt="" coords="611,275,516,297,515,292,610,270"/>
+<area shape="poly" id="edge17_Node000018_Node000006" title=" " alt="" coords="392,293,376,286,324,254,285,222,288,218,327,249,379,281,394,288"/>
+<area shape="rect" id="Node000020" href="$uart__mgmt_8c.html#af8eff33b840c2e11d5bd889fd97c705a" title=" " alt="" coords="389,344,531,369"/>
+<area shape="poly" id="edge19_Node000019_Node000020" title=" " alt="" coords="613,324,516,347,515,341,612,319"/>
+</map>

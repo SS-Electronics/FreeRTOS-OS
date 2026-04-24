@@ -1,0 +1,5 @@
+<map id="_stm32_clock_init" name="_stm32_clock_init">
+<area shape="rect" id="Node000001" title="Initialize system clock tree." alt="" coords="5,5,144,31"/>
+<area shape="rect" id="Node000002" href="$hal__rcc__stm32_8c.html#ad4bad21279f7684162c428b29ae96ce1" title=" " alt="" coords="192,5,388,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="144,15,178,15,178,21,144,21"/>
+</map>

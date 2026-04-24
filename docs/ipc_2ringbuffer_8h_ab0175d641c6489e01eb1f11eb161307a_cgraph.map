@@ -1,0 +1,7 @@
+<map id="ringbuffer_putchar" name="ringbuffer_putchar">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,147,31"/>
+<area shape="rect" id="Node000002" href="$ringbuffer_8c.html#abc6b533f80fb18ade4151b188f827c23" title=" " alt="" coords="195,5,280,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="147,15,181,15,181,21,147,21"/>
+<area shape="rect" id="Node000003" href="$ringbuffer_8c.html#a0d9be0bc18b041c2946fd11f840206e9" title=" " alt="" coords="328,5,397,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="280,15,315,15,315,21,280,21"/>
+</map>

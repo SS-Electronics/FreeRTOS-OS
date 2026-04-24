@@ -1,0 +1,21 @@
+<map id="list_init" name="list_init">
+<area shape="rect" id="Node000001" title="Initialize a list node [ Doubly circular]." alt="" coords="699,79,769,104"/>
+<area shape="rect" id="Node000002" href="$irq__desc_8c.html#a0041385040c05835d54aca9c83340f87" title=" " alt="" coords="533,29,639,55"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="685,78,624,57,626,52,686,73"/>
+<area shape="rect" id="Node000010" href="$mqueue_8c.html#a873322f98cefc36f436c51802b74c9b4" title=" " alt="" coords="521,79,651,104"/>
+<area shape="poly" id="edge6_Node000001_Node000010" title=" " alt="" coords="685,94,651,94,651,89,685,89"/>
+<area shape="rect" id="Node000012" href="$irq__desc_8c.html#a6f6124af8d1d870a3f18c7df5151f638" title=" " alt="" coords="523,128,649,153"/>
+<area shape="poly" id="edge9_Node000001_Node000012" title=" " alt="" coords="686,110,626,130,624,125,685,105"/>
+<area shape="rect" id="Node000003" href="$irq__desc_8c.html#ab32b689bb2b7d1960aa47f19d9d65e90" title=" " alt="" coords="365,29,459,55"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="519,45,460,45,460,39,519,39"/>
+<area shape="rect" id="Node000004" href="$irq__notify_8c.html#a88ce0c4278f16ca232b715dff43ec969" title="Register a callback for a generic IRQ ID. Call from task context before interrupts fire...." alt="" coords="201,29,297,55"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="351,45,297,45,297,39,351,39"/>
+<area shape="rect" id="Node000005" href="$drv__irq_8c.html#aa6d6a8b2c4fbd552e34f19094702effa" title="Register a callback for a software IRQ ID. Thin wrapper over irq_register() — upper layers include on..." alt="" coords="15,5,139,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="187,36,138,29,139,24,188,31"/>
+<area shape="rect" id="Node000006" href="$uart__mgmt_8c.html#af8eff33b840c2e11d5bd889fd97c705a" title=" " alt="" coords="5,55,148,80"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="188,54,149,59,148,54,187,48"/>
+<area shape="rect" id="Node000011" href="$main_8c.html#aa675774b79cc01e2a386c7caf4fbdf03" title=" " alt="" coords="351,79,473,104"/>
+<area shape="poly" id="edge7_Node000010_Node000011" title=" " alt="" coords="507,94,474,94,474,89,507,89"/>
+<area shape="rect" id="Node000009" href="$main_8c.html#ab1eba6ea917a2135efde6edb0de4baef" title=" " alt="" coords="196,79,303,104"/>
+<area shape="poly" id="edge8_Node000011_Node000009" title=" " alt="" coords="337,94,303,94,303,89,337,89"/>
+</map>

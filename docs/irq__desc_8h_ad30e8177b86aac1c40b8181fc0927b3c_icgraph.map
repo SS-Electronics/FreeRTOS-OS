@@ -1,0 +1,17 @@
+<map id="__do_IRQ_from_isr" name="__do_IRQ_from_isr">
+<area shape="rect" id="Node000001" title=" " alt="" coords="488,163,631,189"/>
+<area shape="rect" id="Node000002" href="$drv__irq_8c.html#a104acd29a44e0545013a32f6585963e3" title="Dispatch an IRQ event from ISR context. Each registered callback receives pxHPT so it can accumulate ..." alt="" coords="249,106,440,131"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="497,162,439,147,393,134,394,129,441,141,499,157"/>
+<area shape="rect" id="Node000007" href="$hal__timebase__stm32_8c.html#a5142615641d5f58eee704795cdf20e2a" title=" " alt="" coords="265,156,424,196"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="474,179,424,179,424,173,474,173"/>
+<area shape="rect" id="Node000008" href="$irq__notify_8c.html#a7460231c5dcb390c511a5ce7310bd417" title="Dispatch notification from ISR context. Each registered callback receives the same pxHPT pointer so t..." alt="" coords="273,221,417,246"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="499,195,441,211,394,223,393,218,439,205,497,190"/>
+<area shape="rect" id="Node000003" href="$hal__iic__stm32_8c.html#a2cbe166e3c3ea0291b648d3e747a7dc5" title="Called from I2Cx_ER_IRQHandler to dispatch HAL_I2C_ER_IRQHandler to whichever generic handle owns ins..." alt="" coords="25,5,181,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="303,103,200,60,167,48,169,43,202,55,305,98"/>
+<area shape="rect" id="Node000004" href="$hal__iic__stm32_8c.html#af651223af8184f72b0eedf902dcfb2cc" title="Called from I2Cx_EV_IRQHandler to dispatch HAL_I2C_EV_IRQHandler to whichever generic handle owns ins..." alt="" coords="24,69,183,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="235,108,183,102,183,96,236,103"/>
+<area shape="rect" id="Node000005" href="$hal__spi__stm32_8c.html#a502fc75767c7ebbec7885a7798f2b665" title="Called from SPIx_IRQHandler to dispatch HAL_SPI_IRQHandler to whichever generic handle owns instance." alt="" coords="5,134,201,159"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="236,134,202,138,201,133,235,129"/>
+<area shape="rect" id="Node000006" href="$hal__uart__stm32_8c.html#a6b69ed104eb5d662230497d7ac2881a6" title="Called from the USARTx_IRQHandler to dispatch HAL_UART_IRQHandler to whichever generic handle owns in..." alt="" coords="30,184,177,224"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="274,138,250,146,227,160,203,174,172,186,170,181,200,170,224,155,248,142,273,133"/>
+</map>

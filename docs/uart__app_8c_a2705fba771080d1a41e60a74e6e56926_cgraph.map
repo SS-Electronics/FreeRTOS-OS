@@ -1,0 +1,15 @@
+<map id="uart_sync_receive" name="uart_sync_receive">
+<area shape="rect" id="Node000001" title="Receive exactly len bytes from the UART RX ring buffer, blocking until all bytes arrive or timeout ex..." alt="" coords="5,31,145,56"/>
+<area shape="rect" id="Node000002" href="$group__Thread.html#gaf16424e47477714927313ecec2821eec" title=" " alt="" coords="212,5,341,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="145,32,198,25,199,30,146,37"/>
+<area shape="rect" id="Node000003" href="$uart__mgmt_8c.html#aa83680295a6822a437bc349e63451236" title="Read one byte from the UART RX ring buffer." alt="" coords="193,55,360,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="146,49,180,53,179,58,145,54"/>
+<area shape="rect" id="Node000004" href="$mqueue_8c.html#ae54fde83faac5a815d0afa0be0ceb447" title=" " alt="" coords="408,29,588,55"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="360,55,394,51,395,56,360,60"/>
+<area shape="rect" id="Node000005" href="$ringbuffer_8c.html#a3ad0c7d81e438887de4a1e02f25d4796" title=" " alt="" coords="427,79,569,104"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="360,74,414,80,413,85,360,79"/>
+<area shape="rect" id="Node000006" href="$ringbuffer_8c.html#abc6b533f80fb18ade4151b188f827c23" title=" " alt="" coords="636,79,721,104"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="569,89,622,89,622,94,569,94"/>
+<area shape="rect" id="Node000007" href="$ringbuffer_8c.html#a0d9be0bc18b041c2946fd11f840206e9" title=" " alt="" coords="769,79,839,104"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="722,89,756,89,756,94,722,94"/>
+</map>

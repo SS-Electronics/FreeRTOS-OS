@@ -1,0 +1,13 @@
+<map id="_notify_trampoline" name="_notify_trampoline">
+<area shape="rect" id="Node000001" title=" " alt="" coords="757,31,901,56"/>
+<area shape="rect" id="Node000002" href="$irq__notify_8c.html#a88ce0c4278f16ca232b715dff43ec969" title="Register a callback for a generic IRQ ID. Call from task context before interrupts fire...." alt="" coords="613,31,709,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="743,46,710,46,710,41,743,41"/>
+<area shape="rect" id="Node000003" href="$drv__irq_8c.html#aa6d6a8b2c4fbd552e34f19094702effa" title="Register a callback for a software IRQ ID. Thin wrapper over irq_register() — upper layers include on..." alt="" coords="432,5,556,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="600,37,556,30,557,25,600,31"/>
+<area shape="rect" id="Node000004" href="$uart__mgmt_8c.html#af8eff33b840c2e11d5bd889fd97c705a" title=" " alt="" coords="423,55,565,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="600,55,566,60,565,54,600,49"/>
+<area shape="rect" id="Node000005" href="$uart__mgmt_8c.html#a8e8f570b41df4e77ed5acfbeaef25423" title="Create and start the UART management thread." alt="" coords="244,55,375,80"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="409,70,375,70,375,65,409,65"/>
+<area shape="rect" id="Node000006" href="$kernel__service__core_8c.html#a77b96ca30dab7f5f8e84daae1ed8f183" title=" " alt="" coords="5,55,196,80"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="231,70,196,70,196,65,231,65"/>
+</map>

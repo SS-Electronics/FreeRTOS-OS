@@ -1,0 +1,7 @@
+<map id="irq_notify" name="irq_notify">
+<area shape="rect" id="Node000001" title="Dispatch notification to all registered callbacks (task context). pxHPT is passed as NULL — callbacks..." alt="" coords="5,5,88,31"/>
+<area shape="rect" id="Node000002" href="$irq__desc_8c.html#aad293c8a451bcfc8824fba41ef042a7d" title=" " alt="" coords="136,5,219,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="88,15,122,15,122,21,88,21"/>
+<area shape="rect" id="Node000003" href="$irq__desc_8c.html#aaef6f6dd8053daf49e96ef43997f43bd" title=" " alt="" coords="267,5,363,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="219,15,253,15,253,21,219,21"/>
+</map>
