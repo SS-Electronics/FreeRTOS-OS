@@ -16,7 +16,7 @@
 #include <def_err.h>
 #include <board/mcu_config.h>
 #include <config/conf_os.h>
-#include <drivers/com/drv_iic.h>
+#include <drivers/drv_iic.h>
 
 #include "FreeRTOS.h"
 #include "queue.h"

@@ -11,7 +11,7 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
 
-#include <drivers/com/drv_iic.h>
+#include <drivers/drv_iic.h>
 
 #ifdef __cplusplus
 extern "C" {

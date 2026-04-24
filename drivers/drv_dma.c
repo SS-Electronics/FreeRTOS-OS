@@ -1,32 +1,72 @@
 /*
- * drv_dma.c — DMA engine core
- *
- * This file is part of FreeRTOS-OS Project.
- *
- * Responsibilities
- * ────────────────
- *  1. Device registry   : dma_register_device()
- *  2. Channel allocation: dma_request_chan() / dma_release_chan()
- *  3. Descriptor pool   : static per-channel pool of DMA_DESC_POOL_SIZE
- *  4. Pending queue     : dmaengine_submit() / dma_async_issue_pending()
- *  5. ISR dispatch      : dma_complete_callback() / dma_error_callback()
- *
- * All HAL-specific work is delegated through dma_chan_hal_ops_t; this file
- * is vendor-agnostic.
- */
+File:        drv_dma.c
+Author:      Subhajit Roy  
+             subhajitroy005@gmail.com 
 
-#include <drivers/dma/drv_dma.h>
-#include <string.h>
+Module:      drivers/dma
+Info:        DMA engine core implementation (device registry, channel management,
+             descriptor handling, scheduling, and ISR dispatch)              
+Dependency:  drv_dma.h, list.h
+
+This file is part of FreeRTOS-OS Project.
+
+FreeRTOS-OS is free software: you can redistribute it and/or 
+modify it under the terms of the GNU General Public License 
+as published by the Free Software Foundation, either version 
+3 of the License, or (at your option) any later version.
+
+FreeRTOS-OS is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License 
+along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
+/**
+ * @file drv_dma.c
+ * @brief Generic DMA engine core (vendor-agnostic)
+ *
+ * Responsibilities:
+ *  - Device registry
+ *  - Channel allocation and lifecycle management
+ *  - Descriptor pool management
+ *  - Transfer submission and scheduling
+ *  - ISR completion/error dispatch
+ *
+ * All hardware-specific operations are delegated via dma_chan_hal_ops_t.
+ */
+#include <def_attributes.h>
+#include <def_compiler.h>
+#include <def_std.h>
+#include <def_err.h>
+#include <drivers/drv_dma.h>
+#include <os/kernel.h>
+#include <mm/list.h>
+
 
 /* ── Global device registry ──────────────────────────────────────────────── */
 
+/** @brief Global list of registered DMA devices */
+__SECTION_OS_DATA __USED
 static LIST_NODE_HEAD(_dev_list);
+
+/** @brief Number of registered DMA devices */
+__SECTION_OS_DATA __USED
 static uint8_t _dev_count = 0;
 
-/* ── Cookie allocator (monotonic, wraps safely) ──────────────────────────── */
+/* ── Cookie allocator ───────────────────────────────────────────────────── */
 
+/** @brief Next cookie value */
+__SECTION_OS_DATA __USED
 static dma_cookie_t _next_cookie = DMA_MIN_COOKIE;
 
+/**
+ * @brief Allocate a unique DMA cookie
+ * @return Cookie identifier
+ */
+__SECTION_OS __USED
 static dma_cookie_t _cookie_alloc(void)
 {
     dma_cookie_t c = _next_cookie++;
@@ -35,8 +75,12 @@ static dma_cookie_t _cookie_alloc(void)
     return c;
 }
 
-/* ── Per-channel descriptor pool ─────────────────────────────────────────── */
+/* ── Descriptor pool ────────────────────────────────────────────────────── */
 
+/**
+ * @brief Allocate descriptor from channel pool
+ */
+__SECTION_OS __USED
 static dma_async_tx_descriptor_t *_desc_alloc(dma_chan_t *chan)
 {
     for (int i = 0; i < DMA_DESC_POOL_SIZE; i++)
@@ -52,13 +96,24 @@ static dma_async_tx_descriptor_t *_desc_alloc(dma_chan_t *chan)
     return NULL;
 }
 
+/**
+ * @brief Free descriptor back to pool
+ */
+__SECTION_OS __USED
 static void _desc_free(dma_async_tx_descriptor_t *desc)
 {
     desc->state = DMA_DESC_FREE;
 }
 
-/* ── dma_register_device ─────────────────────────────────────────────────── */
+/* ── Device registration ────────────────────────────────────────────────── */
 
+/**
+ * @brief Register a DMA controller
+ *
+ * @param dev Pointer to DMA device structure
+ * @return OS_ERR_NONE on success
+ */
+__SECTION_OS __USED
 int32_t dma_register_device(dma_device_t *dev)
 {
     if (!dev || !dev->ops || _dev_count >= DMA_MAX_DEVICES)
@@ -67,12 +122,14 @@ int32_t dma_register_device(dma_device_t *dev)
     for (uint8_t i = 0; i < dev->nr_channels && i < DMA_MAX_CHANNELS; i++)
     {
         dma_chan_t *ch   = &dev->channels[i];
+
         ch->device       = dev;
         ch->chan_id      = i;
         ch->state        = DMA_CHAN_IDLE;
         ch->cookie       = 0;
         ch->completed_cookie = 0;
         ch->active_desc  = NULL;
+
         INIT_LIST_NODE(&ch->pending);
 
         for (int j = 0; j < DMA_DESC_POOL_SIZE; j++)
@@ -84,219 +141,90 @@ int32_t dma_register_device(dma_device_t *dev)
 
     list_add_tail(&dev->list, &_dev_list);
     _dev_count++;
+
     return OS_ERR_NONE;
 }
 
-/* ── dma_request_chan ────────────────────────────────────────────────────── */
+/* ── Channel allocation ─────────────────────────────────────────────────── */
 
+/**
+ * @brief Request a DMA channel by name and ID
+ */
+__SECTION_OS __USED
 dma_chan_t *dma_request_chan(const char *dev_name, uint8_t chan_id)
 {
     if (!dev_name)
         return NULL;
 
     dma_device_t *dev;
+
     list_for_each_entry(dev, &_dev_list, list)
     {
         if (strcmp(dev->name, dev_name) != 0)
             continue;
+
         if (chan_id >= dev->nr_channels)
             return NULL;
 
         dma_chan_t *ch = &dev->channels[chan_id];
+
         if (ch->state == DMA_CHAN_IDLE)
         {
             ch->state = DMA_CHAN_ALLOCATED;
             return ch;
         }
     }
+
     return NULL;
 }
 
-/* ── dma_release_chan ────────────────────────────────────────────────────── */
-
+/**
+ * @brief Release DMA channel
+ */
+__SECTION_OS __USED
 void dma_release_chan(dma_chan_t *chan)
 {
     if (!chan)
         return;
+
     dmaengine_terminate_all(chan);
     chan->state = DMA_CHAN_IDLE;
 }
 
-/* ── dmaengine_slave_config ──────────────────────────────────────────────── */
-
-int32_t dmaengine_slave_config(dma_chan_t *chan, const dma_slave_config_t *cfg)
+__SECTION_OS __USED
+void dmaengine_terminate_all(dma_chan_t *chan)
 {
-    if (!chan || !cfg || chan->state == DMA_CHAN_IDLE)
-        return OS_ERR_OP;
-
-    chan->slave_cfg = *cfg;
-
-    if (chan->device->ops->slave_config)
-        return chan->device->ops->slave_config(chan, cfg);
-
-    return OS_ERR_NONE;
+    if (!chan || !chan->device || !chan->device->ops->terminate_all)
+        return;
+    chan->device->ops->terminate_all(chan);
+    chan->active_desc = NULL;
 }
 
-/* ── Descriptor preparation ──────────────────────────────────────────────── */
-
-dma_async_tx_descriptor_t *dmaengine_prep_slave_single(
-    dma_chan_t *chan, uint32_t buf, uint32_t len,
-    dma_transfer_direction_t dir)
-{
-    if (!chan || chan->state == DMA_CHAN_IDLE || len == 0)
-        return NULL;
-
-    dma_async_tx_descriptor_t *desc = _desc_alloc(chan);
-    if (!desc)
-        return NULL;
-
-    desc->direction = dir;
-    desc->mode      = DMA_XFER_NORMAL;
-    desc->len       = len;
-
-    if (dir == DMA_MEM_TO_DEV)
-    {
-        desc->src = buf;
-        desc->dst = chan->slave_cfg.dst_addr;
-    }
-    else /* DEV_TO_MEM */
-    {
-        desc->src = chan->slave_cfg.src_addr;
-        desc->dst = buf;
-    }
-    return desc;
-}
-
-dma_async_tx_descriptor_t *dmaengine_prep_dma_memcpy(
-    dma_chan_t *chan, uint32_t dst, uint32_t src, uint32_t len)
-{
-    if (!chan || chan->state == DMA_CHAN_IDLE || len == 0)
-        return NULL;
-
-    dma_async_tx_descriptor_t *desc = _desc_alloc(chan);
-    if (!desc)
-        return NULL;
-
-    desc->direction = DMA_MEM_TO_MEM;
-    desc->mode      = DMA_XFER_NORMAL;
-    desc->src       = src;
-    desc->dst       = dst;
-    desc->len       = len;
-    return desc;
-}
-
-dma_async_tx_descriptor_t *dmaengine_prep_dma_cyclic(
-    dma_chan_t *chan, uint32_t buf_addr, uint32_t buf_len,
-    uint32_t period_len, dma_transfer_direction_t dir)
-{
-    if (!chan || chan->state == DMA_CHAN_IDLE || buf_len == 0 || period_len == 0)
-        return NULL;
-
-    dma_async_tx_descriptor_t *desc = _desc_alloc(chan);
-    if (!desc)
-        return NULL;
-
-    desc->direction  = dir;
-    desc->mode       = DMA_XFER_CYCLIC;
-    desc->len        = buf_len;
-    desc->period_len = period_len;
-    desc->src = (dir == DMA_DEV_TO_MEM) ? chan->slave_cfg.src_addr : buf_addr;
-    desc->dst = (dir == DMA_MEM_TO_DEV) ? chan->slave_cfg.dst_addr : buf_addr;
-    return desc;
-}
-
-/* ── dmaengine_submit ────────────────────────────────────────────────────── */
-
-dma_cookie_t dmaengine_submit(dma_async_tx_descriptor_t *desc)
-{
-    if (!desc || !desc->chan)
-        return (dma_cookie_t)(-OS_ERR_OP);
-
-    desc->cookie = _cookie_alloc();
-    desc->state  = DMA_DESC_SUBMITTED;
-    list_add_tail(&desc->node, &desc->chan->pending);
-    desc->chan->cookie = desc->cookie;
-    return desc->cookie;
-}
-
-/* ── dma_async_issue_pending ─────────────────────────────────────────────── */
-
+__SECTION_OS __USED
 void dma_async_issue_pending(dma_chan_t *chan)
 {
-    if (!chan || chan->state == DMA_CHAN_IDLE)
+    if (!chan || !chan->device || !chan->device->ops->start)
         return;
-    if (chan->active_desc)
-        return; /* already running — will auto-chain on complete */
 
     if (list_empty(&chan->pending))
         return;
 
-    dma_async_tx_descriptor_t *desc = list_first_entry(
-        &chan->pending, dma_async_tx_descriptor_t, node);
+    dma_async_tx_descriptor_t *desc =
+        list_first_entry(&chan->pending, dma_async_tx_descriptor_t, node);
 
     list_delete(&desc->node);
-    desc->state      = DMA_DESC_IN_PROGRESS;
     chan->active_desc = desc;
+    desc->state       = DMA_DESC_IN_PROGRESS;
     chan->state       = DMA_CHAN_BUSY;
-
-    if (chan->device->ops->start)
-        chan->device->ops->start(chan, desc);
+    chan->device->ops->start(chan, desc);
 }
 
-/* ── Control ops ─────────────────────────────────────────────────────────── */
+/* ── ISR callbacks ─────────────────────────────────────────────────────── */
 
-int32_t dmaengine_terminate_all(dma_chan_t *chan)
-{
-    if (!chan)
-        return OS_ERR_OP;
-
-    int32_t ret = OS_ERR_NONE;
-    if (chan->device->ops->terminate_all)
-        ret = chan->device->ops->terminate_all(chan);
-
-    while (!list_empty(&chan->pending))
-    {
-        dma_async_tx_descriptor_t *desc = list_first_entry(
-            &chan->pending, dma_async_tx_descriptor_t, node);
-        list_delete(&desc->node);
-        _desc_free(desc);
-    }
-
-    if (chan->active_desc)
-    {
-        _desc_free(chan->active_desc);
-        chan->active_desc = NULL;
-    }
-
-    if (chan->state == DMA_CHAN_BUSY)
-        chan->state = DMA_CHAN_ALLOCATED;
-
-    return ret;
-}
-
-int32_t dmaengine_pause(dma_chan_t *chan)
-{
-    if (!chan || !chan->device->ops->pause)
-        return OS_ERR_OP;
-    return chan->device->ops->pause(chan);
-}
-
-int32_t dmaengine_resume(dma_chan_t *chan)
-{
-    if (!chan || !chan->device->ops->resume)
-        return OS_ERR_OP;
-    return chan->device->ops->resume(chan);
-}
-
-uint32_t dmaengine_get_residue(dma_chan_t *chan)
-{
-    if (!chan || !chan->device->ops->get_residue)
-        return 0;
-    return chan->device->ops->get_residue(chan);
-}
-
-/* ── ISR dispatch — called by HAL backend from interrupt context ─────────── */
-
+/**
+ * @brief DMA transfer complete callback (called from ISR)
+ */
+__SECTION_OS __USED
 void dma_complete_callback(dma_chan_t *chan)
 {
     if (!chan)
@@ -311,22 +239,25 @@ void dma_complete_callback(dma_chan_t *chan)
     if (desc->callback)
         desc->callback(desc->callback_param);
 
-    /* Cyclic: keep descriptor active; HAL re-arms automatically */
     if (desc->mode == DMA_XFER_CYCLIC)
     {
         desc->state = DMA_DESC_IN_PROGRESS;
         return;
     }
 
-    desc->state      = DMA_DESC_COMPLETE;
+    desc->state = DMA_DESC_COMPLETE;
     _desc_free(desc);
-    chan->active_desc = NULL;
-    chan->state       = DMA_CHAN_ALLOCATED;
 
-    /* Auto-start next queued descriptor */
+    chan->active_desc = NULL;
+    chan->state = DMA_CHAN_ALLOCATED;
+
     dma_async_issue_pending(chan);
 }
 
+/**
+ * @brief DMA error callback (called from ISR)
+ */
+__SECTION_OS __USED
 void dma_error_callback(dma_chan_t *chan)
 {
     if (!chan)
@@ -339,8 +270,9 @@ void dma_error_callback(dma_chan_t *chan)
     if (desc->error_callback)
         desc->error_callback(desc->callback_param);
 
-    desc->state      = DMA_DESC_ERROR;
+    desc->state = DMA_DESC_ERROR;
     _desc_free(desc);
+
     chan->active_desc = NULL;
-    chan->state       = DMA_CHAN_ALLOCATED;
+    chan->state = DMA_CHAN_ALLOCATED;
 }

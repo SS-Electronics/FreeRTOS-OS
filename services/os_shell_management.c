@@ -41,8 +41,8 @@
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
 #include <ipc/mqueue.h>
-#include <drivers/timer/drv_time.h>
-#include <drivers/com/drv_uart.h>
+#include <drivers/drv_time.h>
+#include <drivers/drv_uart.h>
 
 #include <task.h>
 #include <FreeRTOS_CLI.h>

@@ -15,8 +15,8 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
 
-#include <drivers/com/drv_uart.h>
-#include <drivers/com/hal/infineon/hal_uart_infineon.h>
+#include <drivers/drv_uart.h>
+#include <drivers/hal/stm32/hal_uart_infineon.h>
 
 /* ── Stub helpers ─────────────────────────────────────────────────────── */
 

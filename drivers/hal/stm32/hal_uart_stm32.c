@@ -1,40 +1,113 @@
-/*
- * hal_uart_stm32.c — STM32 HAL UART ops implementation
+/**
+ * @file    hal_uart_stm32.c
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
  *
+ * @module  drivers
+ * @brief   STM32 HAL-based UART backend with direct register IRQ handling
+ *
+ * @details
+ * This module implements the drv_uart_hal_ops_t interface for STM32 devices,
+ * providing a hardware abstraction layer between the generic UART driver
+ * (drv_uart) and STM32 peripherals.
+ *
+ * The implementation uses STM32 HAL for initialization and blocking APIs,
+ * while bypassing HAL interrupt handling in favor of direct register-level
+ * ISR logic for improved determinism and control.
+ *
+ * Features:
+ * - UART hardware initialization via board descriptor
+ * - Blocking transmit and receive (HAL-based)
+ * - Interrupt-driven TX using ring buffer
+ * - Direct IRQ handling without HAL callback chain
+ *
+ * IRQ Design:
+ * - Reads USART SR/CR1/CR3 registers directly
+ * - Dispatches events through drv_irq subsystem
+ * - Avoids HAL_UART_IRQHandler overhead
+ *
+ * IRQ Flow:
+ * @code
+ * USART IRQ →
+ *   hal_uart_stm32_irq_handler()
+ *     → RX   → drv_irq_dispatch_from_isr(UART_RX)
+ *     → TX   → drv_irq_dispatch_from_isr(UART_TX_DONE)
+ *     → ERR  → drv_irq_dispatch_from_isr(UART_ERROR)
+ * @endcode
+ *
+ * @dependencies
+ * board/mcu_config.h,
+ * drivers/com/drv_uart.h,
+ * drivers/com/hal/stm32/hal_uart_stm32.h,
+ * drivers/drv_irq.h,
+ * board/board_config.h
+ *
+ * @note
  * This file is part of FreeRTOS-OS Project.
  *
- * Implements the drv_uart_hal_ops_t vtable for the STM32 HAL backend.
- * Compiled only when CONFIG_DEVICE_VARIANT is MCU_VAR_STM.
+ * @license
+ * FreeRTOS-OS is free software: you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation, either version 
+ * 3 of the License, or (at your option) any later version.
  *
- * IRQ handling — hal_uart_stm32_irq_handler():
- *   Reads USART SR/CR1/CR3 registers directly and dispatches events without
- *   going through the STM32 HAL callback chain.  On each RXNE interrupt the
- *   received byte is read from DR and forwarded via drv_irq_dispatch_from_isr
- *   (IRQ_ID_UART_RX(n)) — subscribers (e.g. uart_mgmt._uart_rx_cb) write the
- *   byte into the IPC ring buffer.
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
-#include <drivers/com/drv_uart.h>
-#include <drivers/com/hal/stm32/hal_uart_stm32.h>
+#include <drivers/drv_uart.h>
+#include <drivers/hal/stm32/hal_uart_stm32.h>
 #include <drivers/drv_irq.h>
 #include <board/board_config.h>
 
-/* Forward declaration — defined in drv_uart.c */
+/**
+ * @brief Retrieve next byte from TX ring buffer.
+ *
+ * @param dev_id UART device ID
+ * @param byte   Output byte
+ * @return OS_ERR_NONE if byte available, otherwise error
+ */
 extern int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte);
 
-/* ── Internal helpers ─────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Internal Helpers                                                          */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Convert HAL status to OS error code.
+ *
+ * @param s HAL status
+ * @return OS_ERR_NONE on success, OS_ERR_OP otherwise
+ */
+__SECTION_OS __USED
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
     return (s == HAL_OK) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-/* ── HAL ops implementations ──────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* HAL Operations                                                            */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Initialize UART hardware.
+ *
+ * @param h UART handle
+ * @return OS error code
+ *
+ * @details
+ * Configures GPIO, NVIC, and initializes UART via HAL.
+ * Enables RXNE interrupt directly at register level.
+ */
+__SECTION_OS __USED
 static int32_t stm32_uart_hw_init(drv_uart_handle_t *h)
 {
     if (h == NULL || h->ops == NULL)
@@ -45,8 +118,6 @@ static int32_t stm32_uart_hw_init(drv_uart_handle_t *h)
     if (d == NULL)
         return OS_ERR_OP;
 
-    /* GPIO and NVIC setup — owned here so HAL_UART_MspInit (called internally
-     * by HAL_UART_Init below) is a no-op and init ownership stays in this fn. */
     GPIO_InitTypeDef gpio = {
         .Mode      = d->tx_pin.mode,
         .Pull      = d->tx_pin.pull,
@@ -69,7 +140,6 @@ static int32_t stm32_uart_hw_init(drv_uart_handle_t *h)
     if (ret == HAL_OK)
     {
         h->initialized = 1;
-        /* Enable RXNE interrupt directly — no HAL state machine involved */
         SET_BIT(huart->Instance->CR1, USART_CR1_RXNEIE);
     }
 
@@ -77,6 +147,13 @@ static int32_t stm32_uart_hw_init(drv_uart_handle_t *h)
     return h->last_err;
 }
 
+/**
+ * @brief Deinitialize UART hardware.
+ *
+ * @param h UART handle
+ * @return OS error code
+ */
+__SECTION_OS __USED
 static int32_t stm32_uart_hw_deinit(drv_uart_handle_t *h)
 {
     if (h == NULL)
@@ -86,6 +163,7 @@ static int32_t stm32_uart_hw_deinit(drv_uart_handle_t *h)
 
     CLEAR_BIT(h->hw.huart.Instance->CR1, USART_CR1_RXNEIE);
     HAL_StatusTypeDef ret = HAL_UART_DeInit(&h->hw.huart);
+
     h->initialized = 0;
     h->last_err    = _hal_to_os_err(ret);
 
@@ -99,10 +177,14 @@ static int32_t stm32_uart_hw_deinit(drv_uart_handle_t *h)
     return h->last_err;
 }
 
+/**
+ * @brief Transmit data (blocking).
+ */
+__SECTION_OS __USED
 static int32_t stm32_uart_transmit(drv_uart_handle_t *h,
-                                   const uint8_t     *data,
-                                   uint16_t           len,
-                                   uint32_t           timeout_ms)
+                                   const uint8_t *data,
+                                   uint16_t len,
+                                   uint32_t timeout_ms)
 {
     if (h == NULL || !h->initialized || data == NULL)
         return OS_ERR_OP;
@@ -115,10 +197,14 @@ static int32_t stm32_uart_transmit(drv_uart_handle_t *h,
     return h->last_err;
 }
 
+/**
+ * @brief Receive data (blocking).
+ */
+__SECTION_OS __USED
 static int32_t stm32_uart_receive(drv_uart_handle_t *h,
-                                  uint8_t           *data,
-                                  uint16_t           len,
-                                  uint32_t           timeout_ms)
+                                  uint8_t *data,
+                                  uint16_t len,
+                                  uint32_t timeout_ms)
 {
     if (h == NULL || !h->initialized || data == NULL)
         return OS_ERR_OP;
@@ -128,16 +214,21 @@ static int32_t stm32_uart_receive(drv_uart_handle_t *h,
     return h->last_err;
 }
 
+/**
+ * @brief Start TX interrupt-driven transmission.
+ */
+__SECTION_OS __USED
 static void stm32_uart_tx_start(drv_uart_handle_t *h)
 {
     if (h == NULL || !h->initialized)
         return;
-    /* Enable TXE interrupt — ISR will drain the TX ring buffer byte by byte */
+
     SET_BIT(h->hw.huart.Instance->CR1, USART_CR1_TXEIE);
 }
 
-/* ── Static ops table ─────────────────────────────────────────────────────── */
-
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Ops Table                                                                 */
+/* ────────────────────────────────────────────────────────────────────────── */
 static const drv_uart_hal_ops_t _stm32_uart_ops = {
     .hw_init   = stm32_uart_hw_init,
     .hw_deinit = stm32_uart_hw_deinit,
@@ -146,19 +237,29 @@ static const drv_uart_hal_ops_t _stm32_uart_ops = {
     .tx_start  = stm32_uart_tx_start,
 };
 
-/* ── Public API ───────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Public API                                                                */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Get STM32 UART HAL operations.
+ */
+__SECTION_OS __USED
 const drv_uart_hal_ops_t *hal_uart_stm32_get_ops(void)
 {
     return &_stm32_uart_ops;
 }
 
+/**
+ * @brief Configure UART parameters.
+ */
+__SECTION_OS __USED
 void hal_uart_stm32_set_config(drv_uart_handle_t *h,
-                               USART_TypeDef     *instance,
-                               uint32_t           word_len,
-                               uint32_t           stop_bits,
-                               uint32_t           parity,
-                               uint32_t           mode)
+                               USART_TypeDef *instance,
+                               uint32_t word_len,
+                               uint32_t stop_bits,
+                               uint32_t parity,
+                               uint32_t mode)
 {
     if (h == NULL || instance == NULL)
         return;
@@ -170,27 +271,24 @@ void hal_uart_stm32_set_config(drv_uart_handle_t *h,
     huart->Init.StopBits     = stop_bits;
     huart->Init.Parity       = parity;
     huart->Init.Mode         = mode;
-    huart->Init.HwFlowCtl   = UART_HWCONTROL_NONE;
+    huart->Init.HwFlowCtl    = UART_HWCONTROL_NONE;
     huart->Init.OverSampling = UART_OVERSAMPLING_16;
 }
 
-/* ── IRQ dispatch ─────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* IRQ Handler                                                               */
+/* ────────────────────────────────────────────────────────────────────────── */
 
-/*
- * hal_uart_stm32_irq_handler — direct USART register-level IRQ handler.
+/**
+ * @brief USART IRQ handler (direct register-level implementation).
  *
- * Reads SR, CR1, CR3 and dispatches events to the drv_irq framework without
- * going through the STM32 HAL callback chain (no HAL_UART_IRQHandler call).
+ * @param instance USART peripheral instance
  *
- * RX path:
- *   RXNE set → read DR (clears RXNE) → drv_irq_dispatch_from_isr(RX)
- *              subscriber (_uart_rx_cb) writes byte into IPC ring buffer
- * Error path:
- *   Read DR to clear SR error flags, dispatch RX byte if RXNE was also set,
- *   then dispatch ERROR event.
- * TX path:
- *   TXE/TC → clear interrupt enable bit → dispatch TX_DONE event.
+ * @details
+ * Handles RX, TX, and error interrupts without using HAL IRQ handlers.
+ * Dispatches events through drv_irq subsystem.
  */
+__SECTION_OS __USED
 void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
 {
     for (uint8_t id = 0; id < NO_OF_UART; id++)
@@ -199,14 +297,14 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
         if (h == NULL || !h->initialized || h->hw.huart.Instance != instance)
             continue;
 
-        uint32_t sr         = READ_REG(instance->SR);
-        uint32_t cr1        = READ_REG(instance->CR1);
-        uint32_t cr3        = READ_REG(instance->CR3);
+        uint32_t sr = READ_REG(instance->SR);
+        uint32_t cr1 = READ_REG(instance->CR1);
+        uint32_t cr3 = READ_REG(instance->CR3);
         uint32_t errorflags = sr & (USART_SR_PE | USART_SR_FE |
-                                    USART_SR_ORE | USART_SR_NE);
+                                   USART_SR_ORE | USART_SR_NE);
+
         BaseType_t hpt = pdFALSE;
 
-        /* ── No errors: handle RX ─────────────────────────────────────────── */
         if (errorflags == 0U)
         {
             if ((sr & USART_SR_RXNE) && (cr1 & USART_CR1_RXNEIE))
@@ -218,11 +316,9 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
             }
         }
 
-        /* ── Error path ───────────────────────────────────────────────────── */
         if (errorflags && ((cr3 & USART_CR3_EIE) ||
                            (cr1 & (USART_CR1_RXNEIE | USART_CR1_PEIE))))
         {
-            /* SR read above + DR read clears error flags on STM32F4 */
             uint8_t byte = (uint8_t)(READ_REG(instance->DR) & 0xFFU);
 
             if (sr & USART_SR_RXNE)
@@ -233,7 +329,6 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
             return;
         }
 
-        /* ── TX empty ─────────────────────────────────────────────────────── */
         if ((sr & USART_SR_TXE) && (cr1 & USART_CR1_TXEIE))
         {
             uint8_t byte;
@@ -250,7 +345,6 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
             return;
         }
 
-        /* ── Transmit complete ────────────────────────────────────────────── */
         if ((sr & USART_SR_TC) && (cr1 & USART_CR1_TCIE))
         {
             CLEAR_BIT(instance->CR1, USART_CR1_TCIE);

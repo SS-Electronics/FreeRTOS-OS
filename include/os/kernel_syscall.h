@@ -29,7 +29,7 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include <def_std.h>
 #include <conf_os.h>
 #include <ipc/ringbuffer.h>
-#include <drivers/timer/drv_time.h>
+#include <drivers/drv_time.h>
 #include <ipc/global_var.h>
 #include <FreeRTOS.h>
 #include <atomic.h>

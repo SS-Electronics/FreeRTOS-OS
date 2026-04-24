@@ -8,8 +8,8 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
 
-#include <drivers/com/drv_iic.h>
-#include <drivers/com/hal/infineon/hal_iic_infineon.h>
+#include <drivers/drv_iic.h>
+#include <drivers/hal/stm32/hal_iic_infineon.h>
 
 static int32_t infineon_iic_hw_init(drv_iic_handle_t *h)
 {

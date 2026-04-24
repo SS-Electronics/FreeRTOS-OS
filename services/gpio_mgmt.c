@@ -11,7 +11,7 @@
 #include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
-#  include <drivers/cpu/hal/stm32/hal_gpio_stm32.h>
+#  include <drivers/hal/stm32/hal_gpio_stm32.h>
 #endif
 
 static QueueHandle_t _mgmt_queue = NULL;

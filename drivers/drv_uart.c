@@ -43,22 +43,25 @@
  */
 
 #include <def_attributes.h>
+#include <def_compiler.h>
 #include <def_std.h>
-#include <conf_os.h>
 #include <def_err.h>
+#include <conf_os.h>
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
+#include <ipc/mqueue.h>
 
-#include <drivers/com/drv_uart.h>
+#include <drivers/drv_uart.h>
 #include <board/mcu_config.h>
 
 #if (BOARD_UART_COUNT > 0)
 
 /* ── Handle storage (owned by this module) ────────────────────────────── */
-
+__SECTION_OS_DATA __USED
 static drv_uart_handle_t _uart_handles[BOARD_UART_COUNT];
 
 /* Ring-buffer pointer for interrupt-driven TX per UART */
+__SECTION_OS_DATA __USED
 static struct ringbuffer *_tx_rb[BOARD_UART_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
@@ -78,6 +81,7 @@ static struct ringbuffer *_tx_rb[BOARD_UART_COUNT];
  *
  * @return OS_ERR_NONE on success, OS_ERR_OP or HAL error on failure
  */
+__SECTION_OS __USED
 int32_t drv_uart_register(uint8_t dev_id,
                           const drv_uart_hal_ops_t *ops,
                           uint32_t baudrate,
@@ -118,6 +122,7 @@ int32_t drv_uart_register(uint8_t dev_id,
  * @param  dev_id  UART device index
  * @return Pointer to UART handle or NULL if invalid
  */
+__SECTION_OS __USED
 drv_uart_handle_t *drv_uart_get_handle(uint8_t dev_id)
 {
     if (dev_id >= BOARD_UART_COUNT)
@@ -136,6 +141,7 @@ drv_uart_handle_t *drv_uart_get_handle(uint8_t dev_id)
  *
  * @return OS_ERR_NONE on success, OS_ERR_OP on failure
  */
+__SECTION_OS __USED
 int32_t drv_serial_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
 {
     if (dev_id >= BOARD_UART_COUNT || data == NULL || len == 0)
@@ -158,6 +164,7 @@ int32_t drv_serial_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
  *
  * @return OS_ERR_NONE on success, OS_ERR_OP on failure
  */
+__SECTION_OS __USED
 int32_t drv_serial_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
 {
     if (dev_id >= BOARD_UART_COUNT || data == NULL || len == 0)
@@ -181,6 +188,7 @@ int32_t drv_serial_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
  *
  * @return OS_ERR_NONE if byte available, OS_ERR_OP if empty/error
  */
+__SECTION_OS __USED
 int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte)
 {
     if (dev_id >= BOARD_UART_COUNT || byte == NULL || _tx_rb[dev_id] == NULL)
@@ -201,6 +209,7 @@ int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte)
  *
  * @return OS_ERR_NONE on success, OS_ERR_OP on failure
  */
+__SECTION_OS __USED
 int32_t drv_uart_tx_kick(uint8_t dev_id)
 {
     drv_uart_handle_t *h = drv_uart_get_handle(dev_id);

@@ -32,7 +32,7 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include <time.h>
 #include <stdint.h>
 #include <inttypes.h>
-
+#include <string.h>
 
 
 

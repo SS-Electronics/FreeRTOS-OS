@@ -1,3 +1,55 @@
+/**
+ * @file    hal_rcc_stm32.h
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ *
+ * @module  drivers
+ * @brief   STM32 RCC + CMSIS system declarations and abstraction layer
+ *
+ * @details
+ * This header provides the STM32-specific Reset and Clock Control (RCC)
+ * interface along with CMSIS system-level declarations required during
+ * system startup and runtime.
+ *
+ * It replaces the default system_stm32f4xx.h and is included by multiple
+ * layers of the system including startup code, device abstraction, HAL,
+ * and the portable RCC driver.
+ *
+ * Key responsibilities:
+ * - System initialization via SystemInit()
+ * - Runtime clock updates via SystemCoreClockUpdate()
+ * - Integration with the generic drv_rcc layer via ops registration
+ * - Encapsulation of all peripheral clock enable operations
+ *
+ * Clock configuration parameters and CMSIS variables are defined in:
+ * - app/board/board_config.h (BOARD_RCC_* macros)
+ * - board_config.c (SystemCoreClock and prescaler tables)
+ *
+ * All direct HAL RCC macro usage (__HAL_RCC_*) is confined to the
+ * hal_rcc_stm32.c implementation to maintain portability.
+ *
+ * @dependencies
+ * stdint.h,
+ * board/board_config.h,
+ * drivers/drv_rcc.h
+ *
+ * @note
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * @license
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 /*
  * hal_rcc_stm32.h — STM32 RCC + CMSIS system declarations
  *

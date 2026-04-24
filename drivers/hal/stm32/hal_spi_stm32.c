@@ -1,12 +1,64 @@
-/*
- * hal_spi_stm32.c — STM32 HAL SPI ops implementation
+/**
+ * @file    hal_spi_stm32.c
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ *
+ * @module  drivers
+ * @brief   STM32 HAL SPI backend implementation with blocking and interrupt-driven support
+ *
+ * @details
+ * This module implements the SPI HAL abstraction layer for STM32 platforms.
+ * It provides both blocking and interrupt-driven SPI operations through the
+ * drv_spi_hal_ops_t interface.
+ *
+ * Features:
+ * - Blocking APIs: transmit, receive, full-duplex transfer
+ * - Interrupt-driven APIs: transmit_it, receive_it, transfer_it
+ * - Direct IRQ-driven completion handling (no HAL weak callbacks)
+ * - Board-level GPIO and NVIC ownership (no MSP dependency)
+ *
+ * -----------------------------------------------------------------------------
+ * @section spi_flow SPI Execution Flow
+ *
+ * Blocking mode:
+ * @code
+ * App → drv_spi_* → HAL_SPI_* → Peripheral
+ * @endcode
+ *
+ * Interrupt mode:
+ * @code
+ * App → drv_spi_*_it → HAL_SPI_*_IT
+ *     → SPI IRQ
+ *         → hal_spi_stm32_irq_handler()
+ *             → HAL_SPI_IRQHandler()
+ *             → State comparison (before/after)
+ *             → drv_irq_dispatch_from_isr()
+ * @endcode
+ *
+ * -----------------------------------------------------------------------------
+ * @section irq_design IRQ Design
+ *
+ * - No HAL weak callbacks are used
+ * - Completion inferred via HAL state machine:
+ *     BUSY_TX    → TX_DONE
+ *     BUSY_RX    → RX_DONE
+ *     BUSY_TX_RX → TXRX_DONE
+ * - Errors take precedence over completion events
+ *
+ * -----------------------------------------------------------------------------
+ * @dependencies
+ * board/mcu_config.h, board/board_config.h,
+ * drivers/com/drv_spi.h,
+ * drivers/com/hal/stm32/hal_spi_stm32.h,
+ * drivers/drv_irq.h
+ *
+ * @note
+ * Compiled only when CONFIG_DEVICE_VARIANT == MCU_VAR_STM
+ * and HAL_SPI_MODULE_ENABLED is defined.
  *
  * This file is part of FreeRTOS-OS Project.
  *
- * Provides both blocking ops (transmit/receive/transfer) and interrupt-driven
- * ops (transmit_it/receive_it/transfer_it).  Completion events are dispatched
- * directly from hal_spi_stm32_irq_handler() by inspecting HAL_SPI_GetState()
- * before and after calling the HAL handler — no HAL weak callbacks are used.
+ * @license
+ * GNU General Public License v3 or later.
  */
 
 #include <board/mcu_config.h>
@@ -14,17 +66,41 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
 
-#include <drivers/com/drv_spi.h>
-#include <drivers/com/hal/stm32/hal_spi_stm32.h>
+#include <drivers/drv_spi.h>
+#include <drivers/hal/stm32/hal_spi_stm32.h>
 #include <drivers/drv_irq.h>
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Internal Helpers                                                          */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * @brief Convert HAL status to OS error code
+ */
+__SECTION_OS __USED
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
     return (s == HAL_OK) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-/* ── HAL ops implementations ──────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* HAL Operations: Initialization                                            */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Initialize SPI hardware
+ *
+ * @param h SPI handle
+ * @return OS_ERR_NONE on success, OS_ERR_OP on failure
+ *
+ * @details
+ * - Configures GPIO pins (SCK, MISO, MOSI, optional NSS)
+ * - Enables IRQ in NVIC
+ * - Calls HAL_SPI_Init()
+ *
+ * GPIO/NVIC ownership is handled here (not MSP).
+ */
+__SECTION_OS __USED
 static int32_t stm32_spi_hw_init(drv_spi_handle_t *h)
 {
     if (h == NULL)
@@ -35,8 +111,6 @@ static int32_t stm32_spi_hw_init(drv_spi_handle_t *h)
     if (d == NULL)
         return OS_ERR_OP;
 
-    /* GPIO and NVIC setup — owned here so HAL_SPI_MspInit (called internally
-     * by HAL_SPI_Init below) is a no-op and init ownership stays in this fn. */
     GPIO_InitTypeDef gpio = {
         .Mode      = d->sck_pin.mode,
         .Pull      = d->sck_pin.pull,
@@ -72,6 +146,10 @@ static int32_t stm32_spi_hw_init(drv_spi_handle_t *h)
     return h->last_err;
 }
 
+/**
+ * @brief Deinitialize SPI hardware
+ */
+__SECTION_OS __USED
 static int32_t stm32_spi_hw_deinit(drv_spi_handle_t *h)
 {
     if (h == NULL)
@@ -96,91 +174,114 @@ static int32_t stm32_spi_hw_deinit(drv_spi_handle_t *h)
     return h->last_err;
 }
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Blocking Operations                                                      */
+/* ────────────────────────────────────────────────────────────────────────── */
+__SECTION_OS __USED
 static int32_t stm32_spi_transmit(drv_spi_handle_t *h,
-                                   const uint8_t    *data,
-                                   uint16_t          len,
-                                   uint32_t          timeout_ms)
-{
-    if (h == NULL || !h->initialized || data == NULL)
-        return OS_ERR_OP;
-
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit(&h->hw.hspi,
-                                              (uint8_t *)data, len, timeout_ms);
-    h->last_err = _hal_to_os_err(ret);
-    return h->last_err;
-}
-
-static int32_t stm32_spi_receive(drv_spi_handle_t *h,
-                                  uint8_t          *data,
+                                  const uint8_t    *data,
                                   uint16_t          len,
                                   uint32_t          timeout_ms)
 {
     if (h == NULL || !h->initialized || data == NULL)
         return OS_ERR_OP;
 
-    HAL_StatusTypeDef ret = HAL_SPI_Receive(&h->hw.hspi, data, len, timeout_ms);
+    HAL_StatusTypeDef ret =
+        HAL_SPI_Transmit(&h->hw.hspi, (uint8_t *)data, len, timeout_ms);
+
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
-static int32_t stm32_spi_transfer(drv_spi_handle_t *h,
-                                   const uint8_t    *tx,
-                                   uint8_t          *rx,
-                                   uint16_t          len,
-                                   uint32_t          timeout_ms)
-{
-    if (h == NULL || !h->initialized || tx == NULL || rx == NULL)
-        return OS_ERR_OP;
-
-    HAL_StatusTypeDef ret = HAL_SPI_TransmitReceive(&h->hw.hspi,
-                                                     (uint8_t *)tx, rx, len,
-                                                     timeout_ms);
-    h->last_err = _hal_to_os_err(ret);
-    return h->last_err;
-}
-
-/* ── IT ops ───────────────────────────────────────────────────────────────── */
-
-static int32_t stm32_spi_transmit_it(drv_spi_handle_t *h,
-                                      const uint8_t    *data,
-                                      uint16_t          len)
+__SECTION_OS __USED
+static int32_t stm32_spi_receive(drv_spi_handle_t *h,
+                                 uint8_t          *data,
+                                 uint16_t          len,
+                                 uint32_t          timeout_ms)
 {
     if (h == NULL || !h->initialized || data == NULL)
         return OS_ERR_OP;
 
-    HAL_StatusTypeDef ret = HAL_SPI_Transmit_IT(&h->hw.hspi, (uint8_t *)data, len);
+    HAL_StatusTypeDef ret =
+        HAL_SPI_Receive(&h->hw.hspi, data, len, timeout_ms);
+
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
-static int32_t stm32_spi_receive_it(drv_spi_handle_t *h,
-                                     uint8_t          *data,
+__SECTION_OS __USED
+static int32_t stm32_spi_transfer(drv_spi_handle_t *h,
+                                  const uint8_t    *tx,
+                                  uint8_t          *rx,
+                                  uint16_t          len,
+                                  uint32_t          timeout_ms)
+{
+    if (h == NULL || !h->initialized || tx == NULL || rx == NULL)
+        return OS_ERR_OP;
+
+    HAL_StatusTypeDef ret =
+        HAL_SPI_TransmitReceive(&h->hw.hspi, (uint8_t *)tx, rx, len, timeout_ms);
+
+    h->last_err = _hal_to_os_err(ret);
+    return h->last_err;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Interrupt-based Operations                                               */
+/* ────────────────────────────────────────────────────────────────────────── */
+__SECTION_OS __USED
+static int32_t stm32_spi_transmit_it(drv_spi_handle_t *h,
+                                     const uint8_t    *data,
                                      uint16_t          len)
 {
     if (h == NULL || !h->initialized || data == NULL)
         return OS_ERR_OP;
 
-    HAL_StatusTypeDef ret = HAL_SPI_Receive_IT(&h->hw.hspi, data, len);
+    HAL_StatusTypeDef ret =
+        HAL_SPI_Transmit_IT(&h->hw.hspi, (uint8_t *)data, len);
+
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
+__SECTION_OS __USED
+static int32_t stm32_spi_receive_it(drv_spi_handle_t *h,
+                                    uint8_t          *data,
+                                    uint16_t          len)
+{
+    if (h == NULL || !h->initialized || data == NULL)
+        return OS_ERR_OP;
+
+    HAL_StatusTypeDef ret =
+        HAL_SPI_Receive_IT(&h->hw.hspi, data, len);
+
+    h->last_err = _hal_to_os_err(ret);
+    return h->last_err;
+}
+
+__SECTION_OS __USED
 static int32_t stm32_spi_transfer_it(drv_spi_handle_t *h,
-                                      const uint8_t    *tx,
-                                      uint8_t          *rx,
-                                      uint16_t          len)
+                                     const uint8_t    *tx,
+                                     uint8_t          *rx,
+                                     uint16_t          len)
 {
     if (h == NULL || !h->initialized || tx == NULL || rx == NULL)
         return OS_ERR_OP;
 
-    HAL_StatusTypeDef ret = HAL_SPI_TransmitReceive_IT(&h->hw.hspi,
-                                                        (uint8_t *)tx, rx, len);
+    HAL_StatusTypeDef ret =
+        HAL_SPI_TransmitReceive_IT(&h->hw.hspi, (uint8_t *)tx, rx, len);
+
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
-/* ── Static ops table ─────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Ops Table                                                                */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief STM32 SPI HAL operations table
+ */
 static const drv_spi_hal_ops_t _stm32_spi_ops = {
     .hw_init     = stm32_spi_hw_init,
     .hw_deinit   = stm32_spi_hw_deinit,
@@ -192,23 +293,33 @@ static const drv_spi_hal_ops_t _stm32_spi_ops = {
     .transfer_it = stm32_spi_transfer_it,
 };
 
-/* ── Public API ───────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Public API                                                               */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Get STM32 SPI HAL operations
+ */
+__SECTION_OS __USED
 const drv_spi_hal_ops_t *hal_spi_stm32_get_ops(void)
 {
     return &_stm32_spi_ops;
 }
 
+/**
+ * @brief Configure SPI peripheral parameters
+ */
+__SECTION_OS __USED
 void hal_spi_stm32_set_config(drv_spi_handle_t *h,
-                               SPI_TypeDef      *instance,
-                               uint32_t          mode,
-                               uint32_t          direction,
-                               uint32_t          data_size,
-                               uint32_t          clk_polarity,
-                               uint32_t          clk_phase,
-                               uint32_t          nss,
-                               uint32_t          baud_prescaler,
-                               uint32_t          bit_order)
+                              SPI_TypeDef      *instance,
+                              uint32_t          mode,
+                              uint32_t          direction,
+                              uint32_t          data_size,
+                              uint32_t          clk_polarity,
+                              uint32_t          clk_phase,
+                              uint32_t          nss,
+                              uint32_t          baud_prescaler,
+                              uint32_t          bit_order)
 {
     if (h == NULL || instance == NULL)
         return;
@@ -229,19 +340,18 @@ void hal_spi_stm32_set_config(drv_spi_handle_t *h,
     hspi->Init.CRCPolynomial     = 10;
 }
 
-/* ── IRQ dispatch ─────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* IRQ Handler                                                              */
+/* ────────────────────────────────────────────────────────────────────────── */
 
-/*
- * hal_spi_stm32_irq_handler — SPI IRQ, dispatches completion/error events.
+/**
+ * @brief SPI IRQ handler with completion detection
  *
- * Captures HAL state before and after calling HAL_SPI_IRQHandler.  When the
- * state returns to READY the transfer is done; if an error was recorded the
- * error path takes priority, otherwise the previous state selects the IRQ ID:
- *   BUSY_TX    → IRQ_ID_SPI_TX_DONE
- *   BUSY_RX    → IRQ_ID_SPI_RX_DONE
- *   BUSY_TX_RX → IRQ_ID_SPI_TXRX_DONE
- * No HAL weak callbacks (TxCplt / RxCplt / TxRxCplt / ErrorCallback) needed.
+ * @details
+ * Uses HAL state comparison before/after IRQ handling to determine
+ * transfer completion and dispatch appropriate events.
  */
+__SECTION_OS __USED
 void hal_spi_stm32_irq_handler(SPI_TypeDef *instance)
 {
     for (uint8_t id = 0; id < NO_OF_SPI; id++)
@@ -254,7 +364,7 @@ void hal_spi_stm32_irq_handler(SPI_TypeDef *instance)
         HAL_SPI_IRQHandler(&h->hw.hspi);
 
         if (HAL_SPI_GetState(&h->hw.hspi) != HAL_SPI_STATE_READY)
-            return; /* transfer still in progress — multi-interrupt op */
+            return;
 
         BaseType_t hpt  = pdFALSE;
         uint32_t   err  = HAL_SPI_GetError(&h->hw.hspi);
@@ -267,6 +377,7 @@ void hal_spi_stm32_irq_handler(SPI_TypeDef *instance)
         else
         {
             h->last_err = OS_ERR_NONE;
+
             if (prev == HAL_SPI_STATE_BUSY_TX)
                 drv_irq_dispatch_from_isr(IRQ_ID_SPI_TX_DONE(id), NULL, &hpt);
             else if (prev == HAL_SPI_STATE_BUSY_RX)
@@ -274,22 +385,10 @@ void hal_spi_stm32_irq_handler(SPI_TypeDef *instance)
             else if (prev == HAL_SPI_STATE_BUSY_TX_RX)
                 drv_irq_dispatch_from_isr(IRQ_ID_SPI_TXRX_DONE(id), NULL, &hpt);
         }
+
         portYIELD_FROM_ISR(hpt);
         return;
     }
 }
-
-/* ── SPI MSP / completion stubs ──────────────────────────────────────────── */
-
-/* GPIO and NVIC are owned by stm32_spi_hw_init/deinit; MspInit/DeInit are
- * no-ops so HAL_SPI_Init/DeInit do not double-execute setup.
- * Completion and error callbacks are handled in the IRQ handler above;
- * these stubs silence the HAL weak-symbol override. */
-void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)          { (void)hspi; }
-void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)        { (void)hspi; }
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)   { (void)hspi; }
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)   { (void)hspi; }
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) { (void)hspi; }
-void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)    { (void)hspi; }
 
 #endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM && HAL_SPI_MODULE_ENABLED */

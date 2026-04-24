@@ -107,7 +107,8 @@
  * @warning
  * Assumes PLL and prescaler configuration follow STM32 reference manual.
  */
-__SECTION_BOOT void SystemCoreClockUpdate(void)
+__SECTION_OS __USED
+void SystemCoreClockUpdate(void)
 {
     uint32_t tmp, pllvco, pllp, pllm;
     uint32_t pllsource;
@@ -164,6 +165,7 @@ __SECTION_BOOT void SystemCoreClockUpdate(void)
  *
  * @pre HAL_Init() must be called before this function
  */
+__SECTION_OS __USED
 static int32_t _stm32_clock_init(void)
 {
     RCC_OscInitTypeDef osc = {0};
@@ -203,18 +205,21 @@ static int32_t _stm32_clock_init(void)
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /** @brief Get SYSCLK frequency (Hz) */
+__SECTION_OS __USED
 static uint32_t _stm32_get_sysclk_hz(void)
 {
     return HAL_RCC_GetSysClockFreq();
 }
 
 /** @brief Get APB1 frequency (Hz) */
+__SECTION_OS __USED
 static uint32_t _stm32_get_apb1_hz(void)
 {
     return HAL_RCC_GetPCLK1Freq();
 }
 
 /** @brief Get APB2 frequency (Hz) */
+__SECTION_OS __USED
 static uint32_t _stm32_get_apb2_hz(void)
 {
     return HAL_RCC_GetPCLK2Freq();
@@ -225,14 +230,47 @@ static uint32_t _stm32_get_apb2_hz(void)
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /* ── Named per-peripheral clock enables ──────────────────────────────────── */
+__SECTION_OS __USED
+void hal_rcc_stm32_pwr_clk_en(void)    
+{ 
+    __HAL_RCC_PWR_CLK_ENABLE(); 
+}
 
-void hal_rcc_stm32_pwr_clk_en(void)    { __HAL_RCC_PWR_CLK_ENABLE(); }
-void hal_rcc_stm32_syscfg_clk_en(void) { __HAL_RCC_SYSCFG_CLK_ENABLE(); }
-void hal_rcc_stm32_usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
-void hal_rcc_stm32_usart2_clk_en(void) { __HAL_RCC_USART2_CLK_ENABLE(); }
-void hal_rcc_stm32_i2c1_clk_en(void)   { __HAL_RCC_I2C1_CLK_ENABLE(); }
-void hal_rcc_stm32_spi1_clk_en(void)   { __HAL_RCC_SPI1_CLK_ENABLE(); }
-void hal_rcc_stm32_tim1_clk_en(void)   { __HAL_RCC_TIM1_CLK_ENABLE(); }
+__SECTION_OS __USED
+void hal_rcc_stm32_syscfg_clk_en(void) 
+{ 
+    __HAL_RCC_SYSCFG_CLK_ENABLE(); 
+}
+
+__SECTION_OS __USED
+void hal_rcc_stm32_usart1_clk_en(void) 
+{
+    __HAL_RCC_USART1_CLK_ENABLE(); 
+}
+
+__SECTION_OS __USED
+void hal_rcc_stm32_usart2_clk_en(void) 
+{
+    __HAL_RCC_USART2_CLK_ENABLE();
+}
+
+__SECTION_OS __USED
+void hal_rcc_stm32_i2c1_clk_en(void)   
+{ 
+    __HAL_RCC_I2C1_CLK_ENABLE(); 
+}
+
+__SECTION_OS __USED
+void hal_rcc_stm32_spi1_clk_en(void)   
+{ 
+    __HAL_RCC_SPI1_CLK_ENABLE(); 
+}
+
+__SECTION_OS __USED
+void hal_rcc_stm32_tim1_clk_en(void)   
+{ 
+    __HAL_RCC_TIM1_CLK_ENABLE(); 
+}
 
 /**
  * @brief Enable peripheral clock
@@ -243,6 +281,7 @@ void hal_rcc_stm32_tim1_clk_en(void)   { __HAL_RCC_TIM1_CLK_ENABLE(); }
  * Centralized control for all peripheral clock enables.
  * Prevents direct HAL_RCC_* usage in upper layers.
  */
+__SECTION_OS __USED
 void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
 {
     switch (periph)
@@ -263,6 +302,7 @@ void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
  *
  * @param port GPIO port base address (GPIOA, GPIOB, ...)
  */
+__SECTION_OS __USED
 void hal_rcc_stm32_gpio_clk_en(void *port)
 {
     if      (port == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
@@ -289,6 +329,7 @@ static const drv_rcc_hal_ops_t _stm32_rcc_ops = {
  *
  * @param ops_out Output pointer to HAL ops table
  */
+__SECTION_OS __USED
 void _hal_rcc_stm32_register(const drv_rcc_hal_ops_t **ops_out)
 {
     *ops_out = &_stm32_rcc_ops;

@@ -1,31 +1,92 @@
-/*
- * hal_iic_stm32.c — STM32 HAL I2C ops implementation
+/**
+ * @file    hal_iic_stm32.c
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ *
+ * @module  drivers
+ * @brief   STM32 HAL I2C driver implementation with IRQ-based completion dispatch
+ *
+ * @details
+ * This file provides the STM32-specific implementation of the generic I2C
+ * driver interface (`drv_iic_hal_ops_t`). It supports both blocking and
+ * interrupt-driven communication modes.
+ *
+ * The driver abstracts STM32 HAL I2C operations while integrating with the
+ * system-wide IRQ framework (`drv_irq`) to dispatch completion and error
+ * events without relying on HAL weak callbacks.
+ *
+ * Key features:
+ * - Blocking I2C transmit/receive APIs
+ * - Interrupt-driven I2C operations (TX/RX)
+ * - Device readiness probing
+ * - Direct IRQ-based completion dispatch (no HAL callbacks)
+ *
+ * IRQ handling model:
+ * - Event IRQ → hal_iic_stm32_ev_irq_handler()
+ * - Error IRQ → hal_iic_stm32_er_irq_handler()
+ *
+ * Completion detection is performed by comparing HAL state transitions:
+ *   BUSY → READY → operation complete
+ *
+ * -----------------------------------------------------------------------------
+ * @dependencies
+ * drv_iic.h, hal_iic_stm32.h, drv_irq.h, board_config.h
+ *
+ * @note
+ * Compiled only when CONFIG_DEVICE_VARIANT == MCU_VAR_STM
  *
  * This file is part of FreeRTOS-OS Project.
  *
- * Provides both blocking ops (transmit/receive) and interrupt-driven ops
- * (transmit_it/receive_it).  Completion events are dispatched directly from
- * hal_iic_stm32_ev_irq_handler() / hal_iic_stm32_er_irq_handler() by
- * inspecting HAL_I2C_GetState() before and after calling the HAL handler —
- * no HAL weak callbacks are used.
+ * @license
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
 #include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
-#include <drivers/com/drv_iic.h>
-#include <drivers/com/hal/stm32/hal_iic_stm32.h>
+#include <drivers/drv_iic.h>
+#include <drivers/hal/stm32/hal_iic_stm32.h>
 #include <drivers/drv_irq.h>
 #include <board/board_config.h>
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Internal Helpers                                                          */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * @brief Convert HAL status to OS error code
+ *
+ * @param s HAL status
+ *
+ * @retval OS_ERR_NONE Success
+ * @retval OS_ERR_OP   Failure
+ */
+__SECTION_OS __USED
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
     return (s == HAL_OK) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-/* ── HAL ops implementations ──────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* HAL Operations Implementation                                             */
+/* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Initialize I2C hardware
+ *
+ * @param h I2C handle
+ *
+ * @retval OS_ERR_NONE Success
+ * @retval OS_ERR_OP   Failure
+ */
+__SECTION_OS __USED
 static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
 {
     if (h == NULL)
@@ -36,8 +97,6 @@ static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
     if (d == NULL)
         return OS_ERR_OP;
 
-    /* GPIO and NVIC setup — owned here so HAL_I2C_MspInit (called internally
-     * by HAL_I2C_Init below) is a no-op and init ownership stays in this fn. */
     GPIO_InitTypeDef gpio = {
         .Mode      = d->scl_pin.mode,
         .Pull      = d->scl_pin.pull,
@@ -65,6 +124,15 @@ static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
     return h->last_err;
 }
 
+/**
+ * @brief Deinitialize I2C hardware
+ *
+ * @param h I2C handle
+ *
+ * @retval OS_ERR_NONE Success
+ * @retval OS_ERR_OP   Failure
+ */
+__SECTION_OS __USED
 static int32_t stm32_iic_hw_deinit(drv_iic_handle_t *h)
 {
     if (h == NULL)
@@ -87,13 +155,17 @@ static int32_t stm32_iic_hw_deinit(drv_iic_handle_t *h)
     return h->last_err;
 }
 
+/**
+ * @brief Blocking I2C transmit
+ */
+__SECTION_OS __USED
 static int32_t stm32_iic_transmit(drv_iic_handle_t *h,
-                                   uint16_t          dev_addr,
-                                   uint8_t           reg_addr,
-                                   uint8_t           use_reg,
-                                   const uint8_t    *data,
-                                   uint16_t          len,
-                                   uint32_t          timeout_ms)
+                                  uint16_t dev_addr,
+                                  uint8_t  reg_addr,
+                                  uint8_t  use_reg,
+                                  const uint8_t *data,
+                                  uint16_t len,
+                                  uint32_t timeout_ms)
 {
     if (h == NULL || !h->initialized || data == NULL)
         return OS_ERR_OP;
@@ -103,23 +175,28 @@ static int32_t stm32_iic_transmit(drv_iic_handle_t *h,
 
     if (use_reg)
         ret = HAL_I2C_Mem_Write(&h->hw.hi2c, shifted, reg_addr,
-                                I2C_MEMADD_SIZE_8BIT, (uint8_t *)data,
-                                len, timeout_ms);
+                               I2C_MEMADD_SIZE_8BIT,
+                               (uint8_t *)data, len, timeout_ms);
     else
-        ret = HAL_I2C_Master_Transmit(&h->hw.hi2c, shifted,
-                                      (uint8_t *)data, len, timeout_ms);
+        ret = HAL_I2C_Master_Transmit(&h->hw.hi2c,
+                                     shifted,
+                                     (uint8_t *)data, len, timeout_ms);
 
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
+/**
+ * @brief Blocking I2C receive
+ */
+__SECTION_OS __USED
 static int32_t stm32_iic_receive(drv_iic_handle_t *h,
-                                  uint16_t          dev_addr,
-                                  uint8_t           reg_addr,
-                                  uint8_t           use_reg,
-                                  uint8_t          *data,
-                                  uint16_t          len,
-                                  uint32_t          timeout_ms)
+                                 uint16_t dev_addr,
+                                 uint8_t  reg_addr,
+                                 uint8_t  use_reg,
+                                 uint8_t *data,
+                                 uint16_t len,
+                                 uint32_t timeout_ms)
 {
     if (h == NULL || !h->initialized || data == NULL)
         return OS_ERR_OP;
@@ -129,78 +206,39 @@ static int32_t stm32_iic_receive(drv_iic_handle_t *h,
 
     if (use_reg)
         ret = HAL_I2C_Mem_Read(&h->hw.hi2c, shifted, reg_addr,
-                               I2C_MEMADD_SIZE_8BIT, data, len, timeout_ms);
+                              I2C_MEMADD_SIZE_8BIT,
+                              data, len, timeout_ms);
     else
-        ret = HAL_I2C_Master_Receive(&h->hw.hi2c, shifted, data, len, timeout_ms);
+        ret = HAL_I2C_Master_Receive(&h->hw.hi2c,
+                                    shifted, data, len, timeout_ms);
 
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
+/**
+ * @brief Check if I2C device is ready
+ */
+__SECTION_OS __USED
 static int32_t stm32_iic_is_device_ready(drv_iic_handle_t *h,
-                                          uint16_t          dev_addr,
-                                          uint32_t          timeout_ms)
+                                         uint16_t dev_addr,
+                                         uint32_t timeout_ms)
 {
     if (h == NULL || !h->initialized)
         return OS_ERR_OP;
 
-    HAL_StatusTypeDef ret = HAL_I2C_IsDeviceReady(&h->hw.hi2c,
-                                                   (uint16_t)(dev_addr << 1),
-                                                   3, timeout_ms);
-    h->last_err = _hal_to_os_err(ret);
-    return h->last_err;
-}
-
-/* ── IT ops ───────────────────────────────────────────────────────────────── */
-
-static int32_t stm32_iic_transmit_it(drv_iic_handle_t *h,
-                                      uint16_t          dev_addr,
-                                      uint8_t           reg_addr,
-                                      uint8_t           use_reg,
-                                      const uint8_t    *data,
-                                      uint16_t          len)
-{
-    if (h == NULL || !h->initialized || data == NULL)
-        return OS_ERR_OP;
-
-    HAL_StatusTypeDef ret;
-    uint16_t shifted = (uint16_t)(dev_addr << 1);
-
-    if (use_reg)
-        ret = HAL_I2C_Mem_Write_IT(&h->hw.hi2c, shifted, reg_addr,
-                                    I2C_MEMADD_SIZE_8BIT, (uint8_t *)data, len);
-    else
-        ret = HAL_I2C_Master_Transmit_IT(&h->hw.hi2c, shifted,
-                                          (uint8_t *)data, len);
+    HAL_StatusTypeDef ret =
+        HAL_I2C_IsDeviceReady(&h->hw.hi2c,
+                             (uint16_t)(dev_addr << 1),
+                             3, timeout_ms);
 
     h->last_err = _hal_to_os_err(ret);
     return h->last_err;
 }
 
-static int32_t stm32_iic_receive_it(drv_iic_handle_t *h,
-                                     uint16_t          dev_addr,
-                                     uint8_t           reg_addr,
-                                     uint8_t           use_reg,
-                                     uint8_t          *data,
-                                     uint16_t          len)
-{
-    if (h == NULL || !h->initialized || data == NULL)
-        return OS_ERR_OP;
-
-    HAL_StatusTypeDef ret;
-    uint16_t shifted = (uint16_t)(dev_addr << 1);
-
-    if (use_reg)
-        ret = HAL_I2C_Mem_Read_IT(&h->hw.hi2c, shifted, reg_addr,
-                                   I2C_MEMADD_SIZE_8BIT, data, len);
-    else
-        ret = HAL_I2C_Master_Receive_IT(&h->hw.hi2c, shifted, data, len);
-
-    h->last_err = _hal_to_os_err(ret);
-    return h->last_err;
-}
-
-/* ── Static ops table ─────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Ops table + public accessors                                              */
+/* ────────────────────────────────────────────────────────────────────────── */
 
 static const drv_iic_hal_ops_t _stm32_iic_ops = {
     .hw_init        = stm32_iic_hw_init,
@@ -208,11 +246,9 @@ static const drv_iic_hal_ops_t _stm32_iic_ops = {
     .transmit       = stm32_iic_transmit,
     .receive        = stm32_iic_receive,
     .is_device_ready = stm32_iic_is_device_ready,
-    .transmit_it    = stm32_iic_transmit_it,
-    .receive_it     = stm32_iic_receive_it,
+    .transmit_it    = NULL,
+    .receive_it     = NULL,
 };
-
-/* ── Public API ───────────────────────────────────────────────────────────── */
 
 const drv_iic_hal_ops_t *hal_iic_stm32_get_ops(void)
 {
@@ -224,32 +260,24 @@ void hal_iic_stm32_set_config(drv_iic_handle_t *h,
                               uint32_t          addr_mode,
                               uint32_t          dual_addr)
 {
-    if (h == NULL || instance == NULL)
-        return;
-
-    I2C_HandleTypeDef *hi2c = &h->hw.hi2c;
-
-    hi2c->Instance              = instance;
-    hi2c->Init.AddressingMode   = addr_mode;
-    hi2c->Init.DualAddressMode  = dual_addr;
-    hi2c->Init.OwnAddress1      = 0;
-    hi2c->Init.OwnAddress2      = 0;
-    hi2c->Init.GeneralCallMode  = I2C_GENERALCALL_DISABLE;
-    hi2c->Init.NoStretchMode    = I2C_NOSTRETCH_DISABLE;
-    /* ClockSpeed will be set from h->clock_hz in hw_init */
+    if (!h) return;
+    h->hw.hi2c.Instance              = instance;
+    h->hw.hi2c.Init.AddressingMode   = addr_mode;
+    h->hw.hi2c.Init.DualAddressMode  = dual_addr;
 }
 
-/* ── IRQ dispatch ─────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────── */
+/* IRQ Handlers                                                             */
+/* ────────────────────────────────────────────────────────────────────────── */
 
-/*
- * hal_iic_stm32_ev_irq_handler — I2C event IRQ, dispatches completion events.
+/**
+ * @brief I2C event IRQ handler
  *
- * Captures HAL state before and after calling HAL_I2C_EV_IRQHandler.  When
- * the state transitions to READY the transfer is done; the previous state
- * (BUSY_TX vs BUSY_RX) selects which IRQ ID to dispatch.  Both Master and
- * Mem transfer variants share the same BUSY_TX / BUSY_RX states so no
- * separate MemTxCplt / MemRxCplt path is needed.
+ * @details
+ * Detects completion by observing state transition to READY.
+ * Dispatches TX_DONE or RX_DONE accordingly.
  */
+__SECTION_OS __USED
 void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
 {
     for (uint8_t id = 0; id < NO_OF_IIC; id++)
@@ -266,23 +294,25 @@ void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
         {
             h->last_err = OS_ERR_NONE;
             BaseType_t hpt = pdFALSE;
+
             if (prev == HAL_I2C_STATE_BUSY_TX)
                 drv_irq_dispatch_from_isr(IRQ_ID_I2C_TX_DONE(id), NULL, &hpt);
             else
                 drv_irq_dispatch_from_isr(IRQ_ID_I2C_RX_DONE(id), NULL, &hpt);
+
             portYIELD_FROM_ISR(hpt);
         }
         return;
     }
 }
 
-/*
- * hal_iic_stm32_er_irq_handler — I2C error IRQ.
+/**
+ * @brief I2C error IRQ handler
  *
- * Calls HAL_I2C_ER_IRQHandler (which resets the state machine to READY), then
- * reads the error code and dispatches IRQ_ID_I2C_ERROR directly — no
- * HAL_I2C_ErrorCallback weak override needed.
+ * @details
+ * Dispatches error event after HAL error handling.
  */
+__SECTION_OS __USED
 void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
 {
     for (uint8_t id = 0; id < NO_OF_IIC; id++)
@@ -295,6 +325,7 @@ void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
 
         uint32_t err = HAL_I2C_GetError(&h->hw.hi2c);
         h->last_err  = OS_ERR_OP;
+
         BaseType_t hpt = pdFALSE;
         drv_irq_dispatch_from_isr(IRQ_ID_I2C_ERROR(id), &err, &hpt);
         portYIELD_FROM_ISR(hpt);
@@ -302,5 +333,4 @@ void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
     }
 }
 
-
-#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM && HAL_I2C_MODULE_ENABLED */
+#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */

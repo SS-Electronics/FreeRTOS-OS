@@ -19,14 +19,14 @@
 #include <services/iic_mgmt.h>
 
 #include <os/kernel.h>
-#include <drivers/com/drv_iic.h>
+#include <drivers/drv_iic.h>
 #include <board/board_config.h>
 #include <irq/irq_notify.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
-#  include <drivers/com/hal/stm32/hal_iic_stm32.h>
+#  include <drivers/hal/stm32/hal_iic_stm32.h>
 #elif (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
-#  include <drivers/com/hal/infineon/hal_iic_infineon.h>
+#  include <drivers/hal/stm32/hal_iic_infineon.h>
 #endif
 
 #if (BOARD_IIC_COUNT > 0)

@@ -38,7 +38,7 @@
 #include <services/uart_mgmt.h>
 
 #include <os/kernel.h>
-#include <drivers/com/drv_uart.h>
+#include <drivers/drv_uart.h>
 #include <board/board_config.h>
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
@@ -47,9 +47,9 @@
 
 /* Vendor HAL selection */
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
-#  include <drivers/com/hal/stm32/hal_uart_stm32.h>
+#  include <drivers/hal/stm32/hal_uart_stm32.h>
 #elif (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
-#  include <drivers/com/hal/infineon/hal_uart_infineon.h>
+#  include <drivers/hal/stm32/hal_uart_infineon.h>
 #endif
 
 #if (BOARD_UART_COUNT > 0)

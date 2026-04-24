@@ -1,9 +1,9 @@
 /**
  * @file    irq_chip_nvic.c
  * @author  Subhajit Roy (subhajitroy005@gmail.com)
- * @brief   NVIC-backed irq_chip implementation for ARM Cortex-M (STM32)
  *
- * @ingroup irq_chip
+ * @module  irq_chip
+ * @brief   NVIC-backed IRQ controller implementation for Cortex-M (STM32)
  *
  * @details
  * This module implements the generic IRQ controller abstraction
@@ -13,40 +13,42 @@
  * - Generic IRQ subsystem (irq_desc / irq_data)
  * - STM32 HAL NVIC APIs
  *
- * This allows upper layers to remain platform-independent while
- * delegating interrupt control to the NVIC.
+ * The implementation enables platform-independent interrupt handling
+ * while delegating hardware-specific operations to the NVIC.
  *
- * -----------------------------------------------------------------------------
- * @section irq_flow IRQ Execution Flow
+ * Features:
+ * - IRQ enable/disable via NVIC
+ * - Mask/unmask abstraction
+ * - Priority configuration
+ * - Logical IRQ to hardware IRQ binding
  *
- * Typical interrupt handling path:
+ * Limitations:
+ * - No explicit ACK or EOI required (handled by hardware)
+ * - Trigger type cannot be configured (peripheral-defined)
  *
- * @code
- * Vector Table → ISR (startup.s)
- *     → HAL IRQ Handler
- *         → Generic IRQ Dispatcher
- *             → irq_chip callbacks (this file)
- * @endcode
+ * @dependencies
+ * board/mcu_config.h, device.h,
+ * drivers/hal/stm32/irq_chip_nvic.h
  *
- * -----------------------------------------------------------------------------
- * @section nvic_constraints NVIC Hardware Constraints
- *
- * - No explicit ACK mechanism
- * - No End-Of-Interrupt (EOI) signaling required
- * - Interrupt trigger type is fixed (peripheral-defined)
- * - Masking == disabling at NVIC level
- * - Priority-based preemption supported
- *
- * -----------------------------------------------------------------------------
  * @note
- * Compiled only when CONFIG_DEVICE_VARIANT == MCU_VAR_STM
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * @license
+ * FreeRTOS-OS is free software: you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation, either version 
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* ────────────────────────────────────────────────────────────────────────── */
-
 #include <board/mcu_config.h>
-
-
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
@@ -58,13 +60,18 @@
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * @brief Enable IRQ line
+ * @brief Enable an IRQ line in NVIC.
  *
- * @param data IRQ descriptor data (must be valid)
+ * @param data Pointer to IRQ descriptor data.
+ *
+ * @details
+ * Enables interrupt delivery for the given hardware IRQ line.
  *
  * @note
- * No effect if @p data is NULL or hwirq is invalid.
+ * - No effect if @p data is NULL
+ * - No effect if @p hwirq is invalid (< 0)
  */
+__SECTION_OS __USED
 static void nvic_irq_enable(struct irq_data *data)
 {
     if (data == NULL || data->hwirq < 0)
@@ -74,10 +81,14 @@ static void nvic_irq_enable(struct irq_data *data)
 }
 
 /**
- * @brief Disable IRQ line
+ * @brief Disable an IRQ line in NVIC.
  *
- * @param data IRQ descriptor data
+ * @param data Pointer to IRQ descriptor data.
+ *
+ * @details
+ * Prevents interrupt delivery from the specified hardware IRQ.
  */
+__SECTION_OS __USED
 static void nvic_irq_disable(struct irq_data *data)
 {
     if (data == NULL || data->hwirq < 0)
@@ -87,64 +98,76 @@ static void nvic_irq_disable(struct irq_data *data)
 }
 
 /**
- * @brief Mask IRQ (disable delivery)
+ * @brief Mask an IRQ line.
+ *
+ * @param data Pointer to IRQ descriptor data.
  *
  * @details
- * On Cortex-M, masking is implemented by disabling the NVIC line.
- *
- * @param data IRQ descriptor data
+ * On Cortex-M, masking is equivalent to disabling the IRQ in NVIC.
  */
+__SECTION_OS __USED
 static void nvic_irq_mask(struct irq_data *data)
 {
     nvic_irq_disable(data);
 }
 
 /**
- * @brief Unmask IRQ (enable delivery)
+ * @brief Unmask an IRQ line.
  *
- * @param data IRQ descriptor data
+ * @param data Pointer to IRQ descriptor data.
+ *
+ * @details
+ * On Cortex-M, unmasking is equivalent to enabling the IRQ in NVIC.
  */
+__SECTION_OS __USED
 static void nvic_irq_unmask(struct irq_data *data)
 {
     nvic_irq_enable(data);
 }
 
 /**
- * @brief Acknowledge IRQ
+ * @brief Acknowledge an IRQ.
+ *
+ * @param data Pointer to IRQ descriptor data.
  *
  * @details
- * NVIC does not require explicit acknowledgment. Interrupt flags
- * must be cleared at the peripheral level before returning from ISR.
- *
- * @param data IRQ descriptor data
+ * NVIC does not require explicit acknowledgment.
+ * Interrupt sources must be cleared at the peripheral level.
  */
+__SECTION_OS __USED
 static void nvic_irq_ack(struct irq_data *data)
 {
     (void)data;
 }
 
 /**
- * @brief End Of Interrupt (EOI)
+ * @brief End-of-interrupt handler.
+ *
+ * @param data Pointer to IRQ descriptor data.
  *
  * @details
- * Cortex-M automatically completes interrupt handling on ISR exit.
- *
- * @param data IRQ descriptor data
+ * Cortex-M automatically handles interrupt completion on ISR exit.
+ * No explicit EOI operation is required.
  */
+__SECTION_OS __USED
 static void nvic_irq_eoi(struct irq_data *data)
 {
     (void)data;
 }
 
 /**
- * @brief Set IRQ priority
+ * @brief Set IRQ priority.
  *
- * @param data     IRQ descriptor data
- * @param priority Preemption priority (implementation-defined range)
+ * @param data     Pointer to IRQ descriptor data.
+ * @param priority Preemption priority value.
+ *
+ * @details
+ * Configures the NVIC priority for the given IRQ.
  *
  * @warning
- * Priority encoding depends on NVIC configuration (PRIGROUP).
+ * Priority encoding depends on NVIC PRIGROUP configuration.
  */
+__SECTION_OS __USED
 static void nvic_irq_set_affinity(struct irq_data *data, uint32_t priority)
 {
     if (data == NULL || data->hwirq < 0)
@@ -154,16 +177,18 @@ static void nvic_irq_set_affinity(struct irq_data *data, uint32_t priority)
 }
 
 /**
- * @brief Configure IRQ trigger type
+ * @brief Configure IRQ trigger type.
+ *
+ * @param data      Pointer to IRQ descriptor data.
+ * @param flow_type Requested trigger type.
+ *
+ * @retval 0 Always returns success.
  *
  * @details
- * Not supported on NVIC. Trigger behavior is fixed by hardware.
- *
- * @param data      IRQ descriptor data
- * @param flow_type Requested trigger type (ignored)
- *
- * @retval 0 Always succeeds
+ * NVIC does not support runtime trigger configuration.
+ * Trigger type is fixed by peripheral hardware design.
  */
+__SECTION_OS __USED
 static int nvic_irq_set_type(struct irq_data *data, unsigned int flow_type)
 {
     (void)data;
@@ -176,9 +201,11 @@ static int nvic_irq_set_type(struct irq_data *data, unsigned int flow_type)
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * @brief NVIC irq_chip singleton
+ * @brief Static NVIC irq_chip instance.
  *
- * Provides the concrete implementation of the generic irq_chip interface.
+ * @details
+ * Provides concrete implementation of generic irq_chip interface
+ * using Cortex-M NVIC backend.
  */
 static struct irq_chip _nvic_chip = {
     .name             = "NVIC",
@@ -186,7 +213,7 @@ static struct irq_chip _nvic_chip = {
     .irq_disable      = nvic_irq_disable,
     .irq_ack          = nvic_irq_ack,
     .irq_mask         = nvic_irq_mask,
-    .irq_mask_ack     = NULL,   /**< Separate mask + ack */
+    .irq_mask_ack     = NULL,   /**< Combined mask+ack not required */
     .irq_unmask       = nvic_irq_unmask,
     .irq_eoi          = nvic_irq_eoi,
     .irq_retrigger    = NULL,
@@ -196,10 +223,14 @@ static struct irq_chip _nvic_chip = {
 };
 
 /**
- * @brief Retrieve NVIC irq_chip instance
+ * @brief Get NVIC irq_chip instance.
  *
- * @return Pointer to static irq_chip instance
+ * @return Pointer to static NVIC irq_chip object.
+ *
+ * @details
+ * Used by IRQ subsystem to attach NVIC controller implementation.
  */
+__SECTION_OS __USED
 struct irq_chip *irq_chip_nvic_get(void)
 {
     return &_nvic_chip;
@@ -210,18 +241,27 @@ struct irq_chip *irq_chip_nvic_get(void)
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * @brief Bind logical IRQ to NVIC hardware interrupt
+ * @brief Bind logical IRQ to NVIC hardware interrupt.
  *
- * @param irq      Logical IRQ ID
- * @param irqn     NVIC IRQ number
- * @param priority Interrupt priority
+ * @param irq      Logical IRQ identifier.
+ * @param irqn     Hardware NVIC IRQ number.
+ * @param priority Interrupt priority.
  *
  * @details
- * Associates a generic IRQ descriptor with a physical NVIC line and
- * initializes its priority.
+ * Associates a logical IRQ (software-managed) with a physical NVIC
+ * interrupt line and configures its priority.
  *
- * @pre irq must map to a valid irq_desc
+ * This function updates:
+ *   - irq_desc → irq_data.hwirq
+ *   - NVIC priority configuration
+ *
+ * @pre
+ * - @p irq must correspond to a valid irq_desc
+ *
+ * @note
+ * Does not enable the IRQ; only binds and configures it.
  */
+__SECTION_OS __USED
 void irq_chip_nvic_bind_hwirq(irq_id_t irq, int32_t irqn, uint32_t priority)
 {
     struct irq_desc *desc = irq_to_desc(irq);

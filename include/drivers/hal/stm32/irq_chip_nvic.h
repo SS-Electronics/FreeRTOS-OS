@@ -1,24 +1,58 @@
-/*
- * irq_chip_nvic.h — ARM Cortex-M NVIC irq_chip implementation
+/**
+ * @file    irq_chip_nvic.h
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
  *
+ * @module  drivers
+ * @brief   ARM Cortex-M NVIC-backed irq_chip implementation
+ *
+ * @details
+ * This module provides an implementation of the generic irq_chip interface
+ * using the ARM Cortex-M NVIC (Nested Vectored Interrupt Controller).
+ *
+ * It enables the IRQ subsystem to map software-defined IRQ IDs to actual
+ * hardware interrupt lines and control them through a uniform abstraction.
+ *
+ * The driver supports:
+ * - Binding software IRQ IDs to NVIC IRQn lines
+ * - Configuring interrupt priority
+ * - Providing a shared irq_chip instance for all NVIC-backed interrupts
+ *
+ * Software-only IRQs (i.e., those not mapped to hardware lines) must use
+ * a NULL irq_chip and typically rely on handle_simple_irq().
+ *
+ * Typical usage:
+ * @code
+ * irq_set_chip_and_handler(IRQ_ID_UART_RX(0),
+ *                          irq_chip_nvic_get(),
+ *                          handle_simple_irq);
+ *
+ * irq_chip_nvic_bind_hwirq(IRQ_ID_UART_RX(0), USART1_IRQn, 5);
+ * @endcode
+ *
+ * @dependencies
+ * irq/irq_desc.h
+ *
+ * @note
  * This file is part of FreeRTOS-OS Project.
  *
- * Provides an irq_chip backed by the ARM NVIC (Nested Vectored Interrupt
- * Controller).  Used as the chip for any software IRQ ID that maps 1:1 to
- * a hardware NVIC line (e.g. USART1, SPI1, I2C1_EV).
+ * @license
+ * FreeRTOS-OS is free software: you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation, either version 
+ * 3 of the License, or (at your option) any later version.
  *
- * Software-only IRQ IDs (no hardware line) use handle_simple_irq with a NULL
- * chip instead.
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+ * GNU General Public License for more details.
  *
- * Usage:
- *   irq_set_chip_and_handler(IRQ_ID_UART_RX(0),
- *                             irq_chip_nvic_get(),
- *                             handle_simple_irq);
- *   irq_chip_nvic_bind_hwirq(IRQ_ID_UART_RX(0), USART1_IRQn, 5);
+ * You should have received a copy of the GNU General Public License 
+ * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #ifndef INCLUDE_DRIVERS_HAL_STM32_IRQ_CHIP_NVIC_H_
 #define INCLUDE_DRIVERS_HAL_STM32_IRQ_CHIP_NVIC_H_
+
 
 #include <irq/irq_desc.h>
 
@@ -27,22 +61,35 @@ extern "C" {
 #endif
 
 /**
- * irq_chip_nvic_get — return the singleton NVIC irq_chip.
+ * @brief Get the singleton NVIC irq_chip instance.
  *
- * The same chip object is shared by all IRQ descriptors — it is stateless
- * (all state lives in irq_data.hwirq / chip_data).
+ * Returns a pointer to the NVIC-backed irq_chip structure. This instance
+ * is shared across all IRQ descriptors and does not store per-interrupt state.
+ *
+ * All hardware-specific information such as IRQ number and priority is stored
+ * in the corresponding irq_data structure.
+ *
+ * @return Pointer to the global NVIC irq_chip instance.
  */
 struct irq_chip *irq_chip_nvic_get(void);
 
 /**
- * irq_chip_nvic_bind_hwirq — associate a software IRQ ID with an NVIC line.
+ * @brief Bind a software IRQ ID to a hardware NVIC interrupt line.
  *
- * Sets irq_data.hwirq to @p irqn and configures priority.  Must be called
- * before irq_enable() so the chip ops have a valid hwirq to act on.
+ * Associates a logical IRQ identifier with a physical NVIC interrupt number
+ * and configures its priority.
  *
- * @param irq      Software IRQ ID.
- * @param irqn     Hardware NVIC IRQn number (e.g. USART1_IRQn).
- * @param priority NVIC preempt priority.
+ * This function must be called before enabling the interrupt via irq_enable(),
+ * otherwise the irq_chip will not have a valid hardware IRQ number to operate on.
+ *
+ * @param[in] irq
+ *     Software IRQ identifier used by the IRQ subsystem.
+ *
+ * @param[in] irqn
+ *     Hardware NVIC interrupt number (IRQn_Type cast to int32_t).
+ *
+ * @param[in] priority
+ *     NVIC preemption priority (0 = highest priority).
  */
 void irq_chip_nvic_bind_hwirq(irq_id_t irq, int32_t irqn, uint32_t priority);
 

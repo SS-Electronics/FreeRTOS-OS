@@ -25,7 +25,7 @@
 
 #include <os/kernel_syscall.h>
 #include <ipc/mqueue.h>
-#include <drivers/com/drv_uart.h>
+#include <drivers/drv_uart.h>
 #include <stdarg.h>
 
 /* ── printk state ─────────────────────────────────────────────────────────── */

@@ -1,3 +1,57 @@
+/**
+ * @file    hal_dma_stm32.h
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ *
+ * @module  drivers
+ * @brief   STM32F4 DMA HAL backend for generic DMA engine
+ *
+ * @details
+ * This header provides the STM32-specific DMA backend implementation
+ * that integrates with the generic Linux-style DMA engine (drv_dma).
+ *
+ * It exposes pre-configured DMA controller instances and initialization
+ * routines that bind STM32 HAL DMA streams to the portable DMA engine.
+ *
+ * Key responsibilities:
+ * - Provide DMA1 and DMA2 controller instances
+ * - Initialize DMA hardware and register devices with the engine
+ * - Handle IRQ dispatch from NVIC to the DMA engine
+ * - Define per-channel hardware context for STM32 DMA streams
+ *
+ * The STM32 HAL layer is fully encapsulated here, ensuring that upper
+ * layers interact only with the abstract DMA engine API.
+ *
+ * STM32F411 stream-to-peripheral mapping (DMA channel mux):
+ * - DMA1 Stream 5, Channel 4 → USART2_RX
+ * - DMA1 Stream 6, Channel 4 → USART2_TX
+ * - DMA1 Stream 0, Channel 1 → I2C1_RX
+ * - DMA1 Stream 6, Channel 1 → I2C1_TX
+ * - DMA2 Stream 3, Channel 3 → SPI1_RX
+ * - DMA2 Stream 3, Channel 3 → SPI1_TX
+ *
+ * @dependencies
+ * drivers/dma/drv_dma.h,
+ * board/mcu_config.h,
+ * device.h (STM32 HAL)
+ *
+ * @note
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * @license
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 /*
  * hal_dma_stm32.h — STM32F4 DMA HAL backend for the DMA engine
  *
@@ -24,7 +78,7 @@
 #ifndef INCLUDE_DRIVERS_DMA_HAL_STM32_HAL_DMA_STM32_H_
 #define INCLUDE_DRIVERS_DMA_HAL_STM32_HAL_DMA_STM32_H_
 
-#include <drivers/dma/drv_dma.h>
+#include <drivers/drv_dma.h>
 #include <board/mcu_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)

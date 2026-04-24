@@ -16,7 +16,7 @@
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
 
-#include <drivers/com/drv_uart.h>
+#include <drivers/drv_uart.h>
 
 #ifdef __cplusplus
 extern "C" {
