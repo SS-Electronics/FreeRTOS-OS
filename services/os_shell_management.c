@@ -33,6 +33,7 @@
 #include <stdio.h>
 
 #include <os/kernel.h>
+#include <os/kernel_syscall.h>
 #include <board/mcu_config.h>
 #include <config/conf_os.h>
 #include <def_err.h>
@@ -43,8 +44,10 @@
 #include <drivers/drv_handle.h>
 #include <drivers/timer/drv_time.h>
 
+#include <task.h>
 #include <FreeRTOS_CLI.h>
 #include <shell/shell_task_mgmt.h>
+#include <board/board_config.h>
 
 #if (INC_SERVICE_OS_SHELL_MGMT == 1)
 
@@ -79,9 +82,6 @@ static const CLI_Command_Definition_t _cmd_reboot = {
 /* ── Shell state ──────────────────────────────────────────────────────────── */
 
 #define SHELL_PROMPT        "\r\n> "
-#define SHELL_BANNER        "\r\n\r\n=== FreeRTOS-OS Shell ===\r\n"   \
-                            "Type 'help' for available commands.\r\n"  \
-                            SHELL_PROMPT
 
 static char     _line_buf[SHELL_LINE_BUF_LEN];
 static uint16_t _line_pos;
@@ -108,6 +108,47 @@ static void _shell_write(const char *str, uint16_t len)
         ringbuffer_putchar(rb, (uint8_t)str[i]);
 
     drv_uart_tx_kick(UART_SHELL_HW_ID);
+}
+
+/* ── Boot banner ──────────────────────────────────────────────────────────── */
+
+static void _print_banner(void)
+{
+    extern uint32_t SystemCoreClock;
+    const board_config_t *brd = board_get_config();
+    uint32_t mhz = SystemCoreClock / 1000000UL;
+    uint16_t n;
+
+/* Static art — written as a string literal, never touches _out_buf */
+#define _W(s) _shell_write((s), (uint16_t)(sizeof(s) - 1))
+    _W("\r\n");
+    _W(" +-----------------------------------------+\r\n");
+    _W(" |                                         |\r\n");
+    _W(" |   ____              ___ _____ ___  ____  |\r\n");
+    _W(" |  |  __| ___ ___ ___|  _|_   _/   \\/ ___| |\r\n");
+    _W(" |  | |_  |  _| -_| -_|_  | | || o  \\___  | |\r\n");
+    _W(" |  |____||_| |___|___|___| |_| \\___/|____/ |\r\n");
+    _W(" |              O S   v 1 . 0               |\r\n");
+    _W(" |                                         |\r\n");
+    _W(" +-----------------------------------------+\r\n");
+#undef _W
+
+    /* Dynamic info lines — one snprintf per line, each ~46 B < SHELL_OUT_BUF_LEN */
+#define _L(fmt, ...) \
+    do { n = (uint16_t)snprintf(_out_buf, sizeof(_out_buf), fmt, ##__VA_ARGS__); \
+         _shell_write(_out_buf, n); } while (0)
+
+    _L(" |  Board    : %-28s|\r\n", brd ? brd->board_name : "unknown");
+    _L(" |  MCU      : %-28s|\r\n", CONFIG_TARGET_MCU);
+    _L(" |  CPU Clock: %-3lu MHz                      |\r\n", (unsigned long)mhz);
+    _L(" |  Kernel   : FreeRTOS %-20s|\r\n", tskKERNEL_VERSION_NUMBER);
+    _L(" |  Build    : %-28s|\r\n", __DATE__ " " __TIME__);
+#undef _L
+
+#define _W(s) _shell_write((s), (uint16_t)(sizeof(s) - 1))
+    _W(" +-----------------------------------------+\r\n");
+    _W("   Type 'help' for available commands.\r\n");
+#undef _W
 }
 
 /* ── Line processor ───────────────────────────────────────────────────────── */
@@ -157,7 +198,8 @@ static void _os_shell_task(void *arg)
     shell_task_mgmt_register_cmds();
 
     /* Print welcome banner */
-    _shell_write(SHELL_BANNER, (uint16_t)(sizeof(SHELL_BANNER) - 1));
+    _print_banner();
+    _shell_write(SHELL_PROMPT, (uint16_t)(sizeof(SHELL_PROMPT) - 1));
 
     memset(_line_buf, 0, sizeof(_line_buf));
     _line_pos = 0;
@@ -192,6 +234,12 @@ static void _os_shell_task(void *arg)
                     _line_buf[_line_pos] = '\0';
                     _shell_write("\b \b", 3);
                 }
+                break;
+
+            case 0x1BU:  /* ESC — disable printk debug output */
+                printk_disable();
+                _shell_write("\r\n[debug off]\r\n", 15);
+                _shell_write(SHELL_PROMPT, (uint16_t)(sizeof(SHELL_PROMPT) - 1));
                 break;
 
             case 0x03U:  /* Ctrl-C — discard current line */

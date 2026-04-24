@@ -13,5 +13,4 @@ include autoconf.mk
 # ── IRQ notification framework ────────────────────────────────────────────
 obj-y += irq/irq_desc.o
 obj-y += irq/irq_notify.o
-obj-y += irq/irq_table.o
 

@@ -42,6 +42,9 @@ extern "C" {
 void    printk_init(void);
 int32_t printk(const char *fmt, ...);
 
+void    printk_enable(void);
+void    printk_disable(void);
+
 
 #ifdef __cplusplus
 }

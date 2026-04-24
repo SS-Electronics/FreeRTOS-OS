@@ -34,6 +34,7 @@
 
 #include <shell/shell_task_mgmt.h>
 #include <os/kernel_task_mgr.h>
+#include <os/kernel_syscall.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -46,6 +47,7 @@
 
 static BaseType_t _cmd_heap_fn (char *out, size_t len, const char *in);
 static BaseType_t _cmd_tasks_fn(char *out, size_t len, const char *in);
+static BaseType_t _cmd_debug_fn(char *out, size_t len, const char *in);
 
 /* ── CLI command descriptors ──────────────────────────────────────────────── */
 
@@ -61,6 +63,13 @@ static const CLI_Command_Definition_t _cmd_tasks = {
     "tasks\r\n"
     "  List all OS tasks with state and stack high-watermark (5 s snapshot).\r\n",
     _cmd_tasks_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_debug = {
+    "debug",
+    "debug <en|dis>\r\n"
+    "  Enable or disable printk debug output.\r\n",
+    _cmd_debug_fn, 1
 };
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -176,10 +185,43 @@ static BaseType_t _cmd_tasks_fn(char *out, size_t len, const char *in)
     return pdFALSE;
 }
 
+/* ── debug command ────────────────────────────────────────────────────────── */
+
+static BaseType_t _cmd_debug_fn(char *out, size_t len, const char *in)
+{
+    BaseType_t plen;
+    const char *param = FreeRTOS_CLIGetParameter(in, 1, &plen);
+
+    if (param == NULL)
+    {
+        snprintf(out, len, "Usage: debug <en|dis>\r\n");
+        return pdFALSE;
+    }
+
+    if (plen == 2 && strncmp(param, "en", 2) == 0)
+    {
+        printk_enable();
+        snprintf(out, len, "Debug output enabled.\r\n");
+    }
+    else if (plen == 3 && strncmp(param, "dis", 3) == 0)
+    {
+        printk_disable();
+        snprintf(out, len, "Debug output disabled.\r\n");
+    }
+    else
+    {
+        snprintf(out, len, "Unknown option '%.*s'. Usage: debug <en|dis>\r\n",
+                 (int)plen, param);
+    }
+
+    return pdFALSE;
+}
+
 /* ── Registration ─────────────────────────────────────────────────────────── */
 
 void shell_task_mgmt_register_cmds(void)
 {
     FreeRTOS_CLIRegisterCommand(&_cmd_heap);
     FreeRTOS_CLIRegisterCommand(&_cmd_tasks);
+    FreeRTOS_CLIRegisterCommand(&_cmd_debug);
 }

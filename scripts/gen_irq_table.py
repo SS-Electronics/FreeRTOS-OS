@@ -9,7 +9,7 @@ Reads app/board/irq_table.xml and generates:
       Included by irq_notify.h (and everything that uses IRQ IDs).
       Replaces the hand-written section that lived in irq_notify.h.
 
-  FreeRTOS-OS/irq/irq_table.c
+  app/board/irq_table_generated.c
       Static IRQ name table indexed by software irq_id_t.
 
   app/board/irq_hw_init_generated.c  +  irq_hw_init_generated.h
@@ -850,7 +850,7 @@ def main():
     project_root = os.path.dirname(os.path.dirname(script_dir))
 
     out_irq_hw_conf_h         = os.path.join(project_root, "app", "board", "irq_hw_conf.h")
-    out_irq_table_c           = os.path.join(project_root, "FreeRTOS-OS", "irq", "irq_table.c")
+    out_irq_table_c           = os.path.join(project_root, "app", "board", "irq_table_generated.c")
     out_hw_init_c             = os.path.join(project_root, "app", "board", "irq_hw_init_generated.c")
     out_hw_init_h             = os.path.join(project_root, "app", "board", "irq_hw_init_generated.h")
     out_periph_handlers_h     = os.path.join(project_root, "app", "board", "irq_periph_handlers_generated.h")

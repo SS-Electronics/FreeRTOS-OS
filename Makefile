@@ -327,6 +327,11 @@ $(BUILD)/$(TARGET_NAME).elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo 'Generating Assembly'
 	@arm-none-eabi-objdump -D $@ > $@.asm
 	@echo '##############################################'
+	@echo ' '
+	@echo 'Generating Symbol Map'
+	@arm-none-eabi-nm --numeric-sort --print-size $@ > $@.sym
+	@echo ' Symbol map: $@.sym'
+	@echo '##############################################'
 
 # Rule for compiling OS sources into build dir
 $(BUILD)/%.o: %.c | $(BUILD) $(AUTOCONF)

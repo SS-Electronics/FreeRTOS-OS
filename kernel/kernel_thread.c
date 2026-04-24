@@ -37,15 +37,13 @@
   *        pointer bookkeeping is needed.  An empty list has
   *        thread_list.next == thread_list.prev == &thread_list.
   */
-__SECTION_OS_DATA	__KEEP
-	LIST_NODE_HEAD(thread_list);
+LIST_NODE_HEAD(thread_list);
 
  /**
   * @brief Monotonically increasing counter used as thread IDs.
   * @note  Starts at 0; first created thread receives ID 1.
   */
-__SECTION_OS_DATA __KEEP
-	static int32_t	thread_counter = 0;
+static int32_t	thread_counter = 0;
 
 
 /**
@@ -204,4 +202,26 @@ void __SECTION_OS os_resume_thread(uint32_t thread_id)
 			return;
 		}
 	}
+}
+
+
+/* ── Thread diagnostic accessors ─────────────────────────────────────────── */
+
+/**
+ * @brief  Return the head sentinel of the intrusive thread list.
+ * @note   Read-only — callers must not add or remove nodes.
+ *         Intended for kernel_service_task_manager to walk the list.
+ */
+struct list_node *os_thread_list_get(void)
+{
+	return &thread_list;
+}
+
+/**
+ * @brief  Return the number of threads created since boot (monotonic counter).
+ * @note   Does not decrease when threads are deleted.
+ */
+int32_t os_thread_count_get(void)
+{
+	return thread_counter;
 }

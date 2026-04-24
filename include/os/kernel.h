@@ -124,7 +124,20 @@ void		 os_suspend_thread(uint32_t thread_id);
 /** Resume a previously suspended thread by its ID. */
 void		 os_resume_thread(uint32_t thread_id);
 
+/**
+ * @defgroup Thread diagnostic accessors
+ * @brief Read-only access to the kernel thread list — for use by
+ *        kernel_service_task_manager only.  Do not modify the list.
+ * @{
+ */
 
+/** Return the head sentinel of the intrusive thread list. */
+struct list_node *os_thread_list_get(void);
+
+/** Return the number of threads ever created (monotonic). */
+int32_t           os_thread_count_get(void);
+
+/** @} */
 
 #ifdef __cplusplus
 }

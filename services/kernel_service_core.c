@@ -63,5 +63,10 @@ status_t os_kernel_thread_register(void)
         status |= OS_ERR_OP;
 #endif
 
+    /* Start interactive shell on UART_APP (USART2, PA2/PA3, /dev/ttyUSB0).
+     * The shell task delays TIME_OFFSET_OS_SHELL_MGMT ms internally so it
+     * waits for uart_mgmt to complete UART initialisation first. */
+    os_shell_mgmt_start();
+
     return status;
 }

@@ -58,12 +58,10 @@ static void _collect_task(task_health_t *out, TaskHandle_t h, uint32_t tid)
 
 static void _scan_tasks(void)
 {
-    extern struct list_node thread_list;
-
     _health.task_count = 0;
 
     thread_handle_t *pos;
-    list_for_each_entry(pos, &thread_list, list)
+    list_for_each_entry(pos, os_thread_list_get(), list)
     {
         if (_health.task_count >= TASK_MGR_MAX_TASKS)
             break;

@@ -33,6 +33,10 @@
 static char              _time_buf[10];
 static char              _msg_buf[CONF_MAX_CHAR_IN_PRINTK];
 static struct ringbuffer *_printk_rb;
+static volatile uint8_t  _printk_enabled = 0;
+
+void printk_enable(void)  { _printk_enabled = 1; }
+void printk_disable(void) { _printk_enabled = 0; }
 
 /* ── Newlib byte-level I/O hooks ──────────────────────────────────────────── */
 
@@ -145,6 +149,9 @@ void printk_init(void)
 int32_t printk(const char *fmt, ...)
 {
 #if (NO_OF_UART > 0)
+    if (!_printk_enabled)
+        return 0;
+
     va_list args;
     int     ts_len, msg_len, i;
 

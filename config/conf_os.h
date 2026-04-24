@@ -60,16 +60,16 @@
 #define ITM_PRINT_BUFF_LENGTH           CONFIG_ITM_PRINT_BUFF_LENGTH
 #define CONF_MAX_CHAR_IN_PRINTK         ITM_PRINT_BUFF_LENGTH
 
-/* UART hardware index used by printk() — must be < NO_OF_UART */
-#define COMM_PRINTK_HW_ID               (0)   /* UART_DEBUG (USART1 — PA9 TX / PA10 RX) */
-
 /* UART hardware index used by the OS shell CLI — must be < NO_OF_UART.
  * Matches UART_APP (dev_id=1) from board_device_ids.h. */
 #define UART_SHELL_HW_ID                (1)   /* UART_APP  (USART2) */
 
+/* printk() shares the shell UART so debug output appears inline in the shell */
+#define COMM_PRINTK_HW_ID               UART_SHELL_HW_ID
+
 /* Shell line-editing and output buffer sizes */
 #define SHELL_LINE_BUF_LEN              (128)
-#define SHELL_OUT_BUF_LEN               (512)
+#define SHELL_OUT_BUF_LEN               (128)
 
 /* ── Debug activation — driven by Kconfig ───────────────────────────── */
 #define DRV_DEBUG_EN                    CONFIG_DRV_DEBUG_EN
@@ -99,9 +99,9 @@
 #define TEST_SUITE_PRIORITY                     (1)
 
 /* ── Startup timing offsets (ms) ────────────────────────────────────── */
-#define TIME_OFFSET_GPIO_MANAGEMENT     (3000)
-#define TIME_OFFSET_SERIAL_MANAGEMENT   (4000)
-#define TIME_OFFSET_OS_SHELL_MGMT       (5000)
+#define TIME_OFFSET_GPIO_MANAGEMENT     (10)
+#define TIME_OFFSET_SERIAL_MANAGEMENT   (20)
+#define TIME_OFFSET_OS_SHELL_MGMT       (1000)
 #define TIME_OFFSET_SPI_MANAGEMENT      (5500)
 #define TIME_OFFSET_IIC_MANAGEMENT      (6500)
 #define TIME_OFFSET_ETH_MANAGEMENT      (7000)
