@@ -18,7 +18,7 @@
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
 
-#if (NO_OF_UART > 0)
+#if (BOARD_UART_COUNT > 0)
 
 /* ── Handle storage (owned by this module) ────────────────────────────── */
 

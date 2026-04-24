@@ -17,6 +17,7 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
 | [docs/DEV_MGMT.md](docs/DEV_MGMT.md) | UART / I2C / SPI / GPIO management service threads |
 | [docs/SHELL_CLI.md](docs/SHELL_CLI.md) | Interactive shell over UART, PuTTY setup, registering commands |
 | [docs/IRQ.md](docs/IRQ.md) | Linux-style IRQ dispatch, irq_desc chain, request_irq, irq_register |
+| [docs/DMA.md](docs/DMA.md) | Linux-style DMA engine, STM32F4 HAL backend, slave/memcpy/cyclic transfers |
 | [docs/DEBUG.md](docs/DEBUG.md) | VSCode debug setup, OpenOCD, GDB, ITM/SWO |
 | [docs/OS_INSIDE.md](docs/OS_INSIDE.md) | Internals deep-dive: ISR priority rules, post-mortems, debug recipes |
 
