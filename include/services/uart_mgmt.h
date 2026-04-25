@@ -1,111 +1,155 @@
-/*
- * uart_mgmt.h — UART management service thread
+/**
+ * @file    uart_mgmt.h
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @brief   UART management service thread interface
  *
- * This file is part of FreeRTOS-OS Project.
+ * @details
+ * This module defines the UART management service layer for FreeRTOS-OS.
+ * The UART management thread owns and serialises access to all UART
+ * peripherals in the system through a single message queue.
  *
- * The UART management thread owns all drv_uart_handle_t instances for the
- * system.  It:
- *   • Registers and initialises each enabled UART peripheral at startup.
- *   • Accepts asynchronous transmit requests via a FreeRTOS queue.
- *   • Monitors the last_err field and attempts peripheral recovery on error.
+ * Responsibilities:
+ *   - Peripheral registration and hardware initialisation at startup.
+ *   - Asynchronous UART transmission requests via queue-based messaging.
+ *   - UART recovery handling through reinitialisation on error detection.
+ *   - RX byte retrieval through per-device ring buffers.
  *
- * Usage
- * ─────
- *   Include this header and call uart_mgmt_start() from the OS init sequence.
- *   Upper layers post uart_mgmt_msg_t messages to the management queue
- *   (uart_mgmt_get_queue()) to request transmissions without blocking the
- *   calling thread on the UART bus.
+ * Execution model:
+ *   - Upper layers never access drv_uart directly for TX.
+ *   - All UART operations are routed via uart_mgmt_msg_t queue messages.
+ *   - RX data is pushed via ISR into ringbuffers and consumed non-blocking.
+ *
+ * Typical usage:
+ *   - Call uart_mgmt_start() during system initialisation.
+ *   - Use uart_mgmt_get_queue() to submit UART requests.
  */
 
 #ifndef DRIVERS_MGMT_UART_MGMT_H_
 #define DRIVERS_MGMT_UART_MGMT_H_
 
+#include <def_attributes.h>
+#include <def_compiler.h>
 #include <def_std.h>
 #include <def_err.h>
-#include <board/mcu_config.h>
-#include <config/conf_os.h>
+#include <conf_os.h>
+#include <services/uart_mgmt.h>
+#include <os/kernel.h>
 #include <drivers/drv_uart.h>
+#include <board/board_config.h>
+#include <ipc/ringbuffer.h>
+#include <ipc/global_var.h>
+#include <ipc/mqueue.h>
+#include <irq/irq_notify.h>
 
-/* FreeRTOS */
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "task.h"
+/* ────────────────────────────────────────────────────────────────────────────
+ * Message types
+ * ────────────────────────────────────────────────────────────────────────── */
 
-/* ── Message types ────────────────────────────────────────────────────── */
-
+/**
+ * @enum uart_mgmt_cmd_t
+ * @brief UART management command types processed by the service thread.
+ */
 typedef enum {
-    UART_MGMT_CMD_TRANSMIT = 0,  /**< Async transmit request               */
-    UART_MGMT_CMD_REINIT,        /**< Re-initialise peripheral after error  */
-    UART_MGMT_CMD_DEINIT,        /**< Graceful shutdown of a UART device    */
+    UART_MGMT_CMD_TRANSMIT = 0,  /**< Transmit data asynchronously */
+    UART_MGMT_CMD_REINIT,        /**< Reinitialize UART peripheral  */
+    UART_MGMT_CMD_DEINIT,        /**< Deinitialize UART peripheral  */
 } uart_mgmt_cmd_t;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Message structure
+ * ────────────────────────────────────────────────────────────────────────── */
 
 /**
  * @struct uart_mgmt_msg_t
- * @brief  Message posted to the management thread queue.
+ * @brief Message structure posted to the UART management queue.
  *
- * For UART_MGMT_CMD_TRANSMIT: fill dev_id, data pointer, and len.
- * The data buffer must remain valid until the management thread drains the
- * message (use a static buffer or a heap allocation the caller frees later).
+ * @details
+ * This structure represents a request sent to the UART management thread.
+ *
+ * For UART_MGMT_CMD_TRANSMIT:
+ *   - dev_id must specify the UART instance.
+ *   - data points to a valid buffer that must remain valid until transmission.
+ *   - len defines the number of bytes to transmit.
+ *
+ * Optional synchronous support:
+ *   - result_notify: task to notify upon completion.
+ *   - result_code: pointer where the return status is stored.
  */
 typedef struct {
-    uart_mgmt_cmd_t  cmd;
-    uint8_t          dev_id;
-    const uint8_t   *data;
-    uint16_t         len;
-    TaskHandle_t     result_notify; /**< Task to notify on completion (NULL = async) */
-    int32_t         *result_code;   /**< Where to store the return code (NULL = ignore) */
+    uart_mgmt_cmd_t  cmd;            /**< Command type */
+    uint8_t          dev_id;         /**< UART device index */
+    const uint8_t   *data;           /**< TX buffer pointer */
+    uint16_t         len;            /**< TX length in bytes */
+    TaskHandle_t     result_notify;   /**< Task to notify (NULL = async) */
+    int32_t         *result_code;     /**< Pointer to return status */
 } uart_mgmt_msg_t;
 
-/* ── Management queue depth ───────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────────
+ * Configuration
+ * ────────────────────────────────────────────────────────────────────────── */
 
 #ifndef UART_MGMT_QUEUE_DEPTH
-#define UART_MGMT_QUEUE_DEPTH   16
+#define UART_MGMT_QUEUE_DEPTH   16   /**< Depth of UART management queue */
 #endif
 
-/* ── Public API ───────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────────
+ * Public API
+ * ────────────────────────────────────────────────────────────────────────── */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief  Create and start the UART management thread.
+ * @brief Create and start the UART management service thread.
  *
- * Call this once from the OS init sequence, before the FreeRTOS scheduler
- * starts.  The thread will perform hardware initialisation after the
- * scheduler starts (after the startup delay defined in os_config.h).
+ * @details
+ * This function creates the UART management thread and its queue.
+ * Hardware initialization is performed after the scheduler starts,
+ * following the configured startup delay.
  *
- * @return OS_ERR_NONE on success, negative OS_ERR_* on failure.
+ * @return OS_ERR_NONE on success, or OS_ERR_* on failure.
  */
 int32_t uart_mgmt_start(void);
 
 /**
- * @brief  Return the management queue handle.
+ * @brief Get UART management queue handle.
  *
- * Upper layers post uart_mgmt_msg_t items to this queue to request
- * asynchronous UART operations.
+ * @details
+ * Used by upper layers to submit uart_mgmt_msg_t requests to the
+ * UART management thread.
+ *
+ * @return FreeRTOS queue handle.
  */
 QueueHandle_t uart_mgmt_get_queue(void);
 
 /**
- * @brief  Post an async transmit request to the management queue.
+ * @brief Submit an asynchronous UART transmit request.
  *
- * Non-blocking.  Returns OS_ERR_OP if the queue is full.
+ * @details
+ * Non-blocking API. The message is queued and processed later by the
+ * UART management thread.
  *
- * @param  dev_id  UART device index.
- * @param  data    Pointer to the data buffer (must remain valid until sent).
- * @param  len     Number of bytes.
+ * @param dev_id UART device index.
+ * @param data   Pointer to transmit buffer (must remain valid until sent).
+ * @param len    Number of bytes to transmit.
+ *
+ * @return OS_ERR_NONE if queued successfully, OS_ERR_OP otherwise.
  */
-int32_t uart_mgmt_async_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len);
+int32_t uart_mgmt_async_transmit(uint8_t dev_id,
+                                 const uint8_t *data,
+                                 uint16_t len);
 
 /**
- * @brief  Read one byte from the UART RX ring buffer.
+ * @brief Read one byte from UART RX ring buffer.
  *
- * Non-blocking.  Returns OS_ERR_NONE and stores the byte at *byte when one
- * is available, or OS_ERR_OP when the buffer is empty.
+ * @details
+ * Non-blocking access to the per-UART RX buffer filled by ISR callbacks.
  *
- * @param  dev_id  UART device index.
- * @param  byte    Output pointer for the received byte.
+ * @param dev_id UART device index.
+ * @param byte   Output pointer to store received byte.
+ *
+ * @return OS_ERR_NONE if a byte is available, OS_ERR_OP otherwise.
  */
 int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte);
 

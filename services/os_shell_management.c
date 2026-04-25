@@ -1,98 +1,195 @@
-/*
- * os_shell_management.c — FreeRTOS+CLI interactive shell service
+/**
+ * @file    os_shell_management.c
+ * @author  Subhajit Roy (subhajitroy005@gmail.com)
  *
- * This file is part of FreeRTOS-OS Project.
+ * @module  services
+ * @brief   FreeRTOS+CLI interactive shell service for UART-based console
  *
- * Shell I/O wiring
- * ────────────────
- *   RX: UART_SHELL (UART_APP, USART2) RX ring buffer — filled by the RXNE ISR
- *       via drv_uart_rx_isr_dispatch() → _uart_rx_cb (uart_mgmt.c).
- *       The shell task polls the ring buffer with a short yield when empty.
+ * @details
+ * This module implements an interactive command-line shell running on top
+ * of FreeRTOS+CLI. It provides a UART-based console interface for system
+ * debugging, diagnostics, and runtime control.
  *
- *   TX: Written directly to the UART_SHELL TX ring buffer via
- *       ringbuffer_put(), then drv_uart_tx_kick() enables TXEIE so the
- *       existing TXE ISR drains the buffer byte by byte.
+ * The shell operates as a dedicated FreeRTOS task and integrates with the
+ * UART driver stack through ringbuffer-based I/O.
  *
- * Line editing
- * ────────────
- *   • Printable characters are echoed and buffered.
- *   • BS (0x08) and DEL (0x7F) erase the last character.
- *   • CR / LF submits the line to FreeRTOS_CLIProcessCommand().
- *   • Lines longer than SHELL_LINE_BUF_LEN-1 bytes are silently truncated.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Shell I/O architecture
+ * ─────────────────────────────────────────────────────────────────────────────
  *
- * FreeRTOS+CLI output loop
- * ────────────────────────
- *   FreeRTOS_CLIProcessCommand() is called repeatedly until it returns
- *   pdFALSE (no more output pending) so multi-page command output works.
- *   Each chunk is written to the TX ring buffer before the next call.
+ * RX path:
+ *   UART RX interrupt (RXNE)
+ *        ↓
+ *   drv_uart_rx_isr_dispatch()
+ *        ↓
+ *   _uart_rx_cb (uart_mgmt.c)
+ *        ↓
+ *   RX ringbuffer (global_uart_rx_mqueue_list)
+ *        ↓
+ *   shell task polls buffer
+ *
+ * TX path:
+ *   shell task
+ *        ↓
+ *   ringbuffer_put() (UART TX buffer)
+ *        ↓
+ *   drv_uart_tx_kick()
+ *        ↓
+ *   TXE ISR drains buffer byte-by-byte
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Line editing behavior
+ * ─────────────────────────────────────────────────────────────────────────────
+ * - Printable ASCII characters are echoed and stored in a line buffer
+ * - Backspace (0x08) and DEL (0x7F) remove last character
+ * - CR/LF terminates input and triggers command execution
+ * - Long lines are truncated safely
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CLI execution model
+ * ─────────────────────────────────────────────────────────────────────────────
+ * - Uses FreeRTOS_CLIProcessCommand()
+ * - Supports multi-part command output
+ * - Continues calling CLI until pdFALSE is returned
+ * - Each output chunk is streamed to UART TX buffer
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Initialization flow
+ * ─────────────────────────────────────────────────────────────────────────────
+ * @code
+ * os_shell_mgmt_start()
+ *      ↓
+ * Create shell task
+ *      ↓
+ * Wait for UART subsystem initialization
+ *      ↓
+ * Register built-in CLI commands
+ *      ↓
+ * Register system command modules
+ *      ↓
+ * Print boot banner
+ *      ↓
+ * Enter interactive loop
+ * @endcode
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Built-in commands
+ * ─────────────────────────────────────────────────────────────────────────────
+ * - help     : Show available commands
+ * - version  : Firmware version info
+ * - uptime   : System uptime
+ * - reboot   : Software reset (NVIC_SystemReset)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Dependencies
+ * ─────────────────────────────────────────────────────────────────────────────
+ * services/os_shell_management.h,
+ * os/kernel.h, os/kernel_syscall.h,
+ * board/mcu_config.h, config/conf_os.h,
+ * ipc/ringbuffer.h, ipc/global_var.h, ipc/mqueue.h,
+ * drivers/drv_time.h, drivers/drv_uart.h,
+ * task.h, FreeRTOS_CLI.h,
+ * shell/shell_task_mgmt.h, board/board_config.h
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Notes
+ * ─────────────────────────────────────────────────────────────────────────────
+ * - Runs as a dedicated system service task
+ * - Relies on UART management layer for transport
+ * - Uses polling for RX (no blocking ISR dependency in shell task)
+ * - TX is fully interrupt-driven via ringbuffer
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Warnings
+ * ─────────────────────────────────────────────────────────────────────────────
+ * - RX buffer overflow leads to silent truncation of input
+ * - CLI commands must be thread-safe if they access shared resources
+ * - Shell task assumes UART_SHELL is initialized by uart_mgmt
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * License
+ * ─────────────────────────────────────────────────────────────────────────────
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <services/os_shell_management.h>
-
-#include <string.h>
-#include <stdio.h>
-
+#include <def_attributes.h>
+#include <def_compiler.h>
+#include <def_std.h>
+#include <def_err.h>
+#include <conf_os.h>
 #include <os/kernel.h>
 #include <os/kernel_syscall.h>
-#include <board/mcu_config.h>
-#include <config/conf_os.h>
-#include <def_err.h>
-
 #include <ipc/ringbuffer.h>
 #include <ipc/global_var.h>
 #include <ipc/mqueue.h>
 #include <drivers/drv_time.h>
 #include <drivers/drv_uart.h>
-
-#include <task.h>
 #include <FreeRTOS_CLI.h>
 #include <shell/shell_task_mgmt.h>
 #include <board/board_config.h>
+#include <board/mcu_config.h>
+
 
 #if (BOARD_UART_COUNT > 0)
 
-/* ── Built-in command forward declarations ────────────────────────────────── */
+/* ── Built-in command forward declarations ──────────────────────────────── */
 
-static BaseType_t _cmd_help_fn   (char *out, size_t len, const char *in);
+static BaseType_t _cmd_help_fn(char *out, size_t len, const char *in);
 static BaseType_t _cmd_version_fn(char *out, size_t len, const char *in);
-static BaseType_t _cmd_uptime_fn (char *out, size_t len, const char *in);
-static BaseType_t _cmd_reboot_fn (char *out, size_t len, const char *in);
+static BaseType_t _cmd_uptime_fn(char *out, size_t len, const char *in);
+static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in);
 
+/* ── CLI command descriptors ─────────────────────────────────────────────── */
 static const CLI_Command_Definition_t _cmd_help = {
     "help",
     "help\r\n  List all registered commands.\r\n",
     _cmd_help_fn, 0
 };
+
 static const CLI_Command_Definition_t _cmd_version = {
     "version",
     "version\r\n  Print firmware version and build date.\r\n",
     _cmd_version_fn, 0
 };
+
 static const CLI_Command_Definition_t _cmd_uptime = {
     "uptime",
     "uptime\r\n  Print system uptime in milliseconds.\r\n",
     _cmd_uptime_fn, 0
 };
+
 static const CLI_Command_Definition_t _cmd_reboot = {
     "reboot",
     "reboot\r\n  Trigger a software reset (NVIC_SystemReset).\r\n",
     _cmd_reboot_fn, 0
 };
 
-/* ── Shell state ──────────────────────────────────────────────────────────── */
+/* ── Shell state ────────────────────────────────────────────────────────── */
 
-#define SHELL_PROMPT        "\r\n> "
-
+#define SHELL_PROMPT "\r\n> "
+__SECTION_OS_DATA __USED
 static char     _line_buf[SHELL_LINE_BUF_LEN];
+
+__SECTION_OS_DATA __USED
 static uint16_t _line_pos;
+
+__SECTION_OS_DATA __USED
 static char     _out_buf[SHELL_OUT_BUF_LEN];
 
-/* ── TX helper — writes directly to the shell UART TX ring buffer ──────────
- *
- * Bypasses the uart_mgmt queue so the interrupt-driven TX path (TXEIE ISR +
- * ring buffer, set up by uart_mgmt at startup) handles transmission.
- * This is the same mechanism printk() uses.
- */
+/* ── TX helper (UART ringbuffer backend) ────────────────────────────────── */
+__SECTION_OS __USED
 static void _shell_write(const char *str, uint16_t len)
 {
     if (str == NULL || len == 0)
@@ -110,8 +207,9 @@ static void _shell_write(const char *str, uint16_t len)
     drv_uart_tx_kick(UART_SHELL_HW_ID);
 }
 
-/* ── Boot banner ──────────────────────────────────────────────────────────── */
+/* ── Boot banner printer ────────────────────────────────────────────────── */
 
+__SECTION_OS __USED
 static void _print_banner(void)
 {
     extern uint32_t SystemCoreClock;
@@ -119,30 +217,29 @@ static void _print_banner(void)
     uint32_t mhz = SystemCoreClock / 1000000UL;
     uint16_t n;
 
-/* Static art — written as a string literal, never touches _out_buf */
 #define _W(s) _shell_write((s), (uint16_t)(sizeof(s) - 1))
+
     _W("\r\n");
     _W(" +-----------------------------------------+\r\n");
-    _W(" |                                         |\r\n");
     _W(" |   ____              ___ _____ ___  ____  |\r\n");
     _W(" |  |  __| ___ ___ ___|  _|_   _/   \\/ ___| |\r\n");
     _W(" |  | |_  |  _| -_| -_|_  | | || o  \\___  | |\r\n");
     _W(" |  |____||_| |___|___|___| |_| \\___/|____/ |\r\n");
     _W(" |              O S   v 1 . 0               |\r\n");
-    _W(" |                                         |\r\n");
     _W(" +-----------------------------------------+\r\n");
+
 #undef _W
 
-    /* Dynamic info lines — one snprintf per line, each ~46 B < SHELL_OUT_BUF_LEN */
 #define _L(fmt, ...) \
     do { n = (uint16_t)snprintf(_out_buf, sizeof(_out_buf), fmt, ##__VA_ARGS__); \
          _shell_write(_out_buf, n); } while (0)
 
-    _L(" |  Board    : %-28s|\r\n", brd ? brd->board_name : "unknown");
-    _L(" |  MCU      : %-28s|\r\n", CONFIG_TARGET_MCU);
-    _L(" |  CPU Clock: %-3lu MHz                      |\r\n", (unsigned long)mhz);
-    _L(" |  Kernel   : FreeRTOS %-20s|\r\n", tskKERNEL_VERSION_NUMBER);
-    _L(" |  Build    : %-28s|\r\n", __DATE__ " " __TIME__);
+    _L(" | Board    : %-28s|\r\n", brd ? brd->board_name : "unknown");
+    _L(" | MCU      : %-28s|\r\n", CONFIG_TARGET_MCU);
+    _L(" | CPU Clock: %-3lu MHz                      |\r\n", (unsigned long)mhz);
+    _L(" | Kernel   : FreeRTOS %-20s|\r\n", tskKERNEL_VERSION_NUMBER);
+    _L(" | Build    : %-28s|\r\n", __DATE__ " " __TIME__);
+
 #undef _L
 
 #define _W(s) _shell_write((s), (uint16_t)(sizeof(s) - 1))
@@ -151,8 +248,8 @@ static void _print_banner(void)
 #undef _W
 }
 
-/* ── Line processor ───────────────────────────────────────────────────────── */
-
+/* ── Command processing ─────────────────────────────────────────────────── */
+__SECTION_OS __USED
 static void _shell_process_line(void)
 {
     BaseType_t more;
@@ -168,9 +265,11 @@ static void _shell_process_line(void)
     do {
         memset(_out_buf, 0, sizeof(_out_buf));
         more = FreeRTOS_CLIProcessCommand(_line_buf, _out_buf, sizeof(_out_buf));
+
         uint16_t olen = (uint16_t)strlen(_out_buf);
         if (olen > 0)
             _shell_write(_out_buf, olen);
+
     } while (more == pdTRUE);
 
     _shell_write(SHELL_PROMPT, (uint16_t)(sizeof(SHELL_PROMPT) - 1));
@@ -179,25 +278,21 @@ static void _shell_process_line(void)
     _line_pos = 0;
 }
 
-/* ── Shell task ───────────────────────────────────────────────────────────── */
-
+/* ── Shell task ─────────────────────────────────────────────────────────── */
+__SECTION_OS __USED
 static void _os_shell_task(void *arg)
 {
     (void)arg;
 
-    /* Wait for UART_SHELL to be registered by uart_mgmt */
     os_thread_delay(TIME_OFFSET_OS_SHELL_MGMT);
 
-    /* Register built-in commands */
     FreeRTOS_CLIRegisterCommand(&_cmd_help);
     FreeRTOS_CLIRegisterCommand(&_cmd_version);
     FreeRTOS_CLIRegisterCommand(&_cmd_uptime);
     FreeRTOS_CLIRegisterCommand(&_cmd_reboot);
 
-    /* Register shell command modules */
     shell_task_mgmt_register_cmds();
 
-    /* Print welcome banner */
     _print_banner();
     _shell_write(SHELL_PROMPT, (uint16_t)(sizeof(SHELL_PROMPT) - 1));
 
@@ -208,7 +303,6 @@ static void _os_shell_task(void *arg)
     {
         uint8_t byte;
 
-        /* Poll the UART_SHELL RX ring buffer; yield when empty */
         struct ringbuffer *rx_rb = (struct ringbuffer *)
             ipc_mqueue_get_handle(global_uart_rx_mqueue_list[UART_SHELL_HW_ID]);
 
@@ -226,8 +320,8 @@ static void _os_shell_task(void *arg)
                 _shell_process_line();
                 break;
 
-            case '\b':   /* BS  */
-            case 0x7FU:  /* DEL */
+            case '\b':
+            case 0x7FU:
                 if (_line_pos > 0)
                 {
                     _line_pos--;
@@ -236,13 +330,13 @@ static void _os_shell_task(void *arg)
                 }
                 break;
 
-            case 0x1BU:  /* ESC — disable printk debug output */
+            case 0x1BU:
                 printk_disable();
                 _shell_write("\r\n[debug off]\r\n", 15);
                 _shell_write(SHELL_PROMPT, (uint16_t)(sizeof(SHELL_PROMPT) - 1));
                 break;
 
-            case 0x03U:  /* Ctrl-C — discard current line */
+            case 0x03U:
                 memset(_line_buf, 0, sizeof(_line_buf));
                 _line_pos = 0;
                 _shell_write("^C", 2);
@@ -253,63 +347,63 @@ static void _os_shell_task(void *arg)
                 if (byte >= 0x20U && _line_pos < (SHELL_LINE_BUF_LEN - 1U))
                 {
                     _line_buf[_line_pos++] = (char)byte;
-                    _shell_write((const char *)&byte, 1); /* local echo */
+                    _shell_write((const char *)&byte, 1);
                 }
                 break;
         }
     }
 }
 
-/* ── Built-in command implementations ─────────────────────────────────────── */
-
+/* ── Built-in command implementations ───────────────────────────────────── */
+__SECTION_OS __USED
 static BaseType_t _cmd_help_fn(char *out, size_t len, const char *in)
 {
     (void)in;
-    /* FreeRTOS+CLI has a built-in "help" list, but we can produce a custom one.
-     * Returning pdFALSE lets the CLI engine print the registered help strings. */
     snprintf(out, len,
              "Use FreeRTOS+CLI registered commands:\r\n"
-             "  Type any command and press Enter.\r\n");
+             "Type any command and press Enter.\r\n");
     return pdFALSE;
 }
 
+__SECTION_OS __USED
 static BaseType_t _cmd_version_fn(char *out, size_t len, const char *in)
 {
     (void)in;
     snprintf(out, len,
-             "FreeRTOS-OS v1.0  built %s %s\r\n"
-             "Kernel: FreeRTOS V202212.00\r\n",
+             "FreeRTOS-OS v1.0 built %s %s\r\n",
              __DATE__, __TIME__);
     return pdFALSE;
 }
 
+__SECTION_OS __USED
 static BaseType_t _cmd_uptime_fn(char *out, size_t len, const char *in)
 {
     (void)in;
     uint32_t ms = drv_time_get_ticks();
     snprintf(out, len,
-             "Uptime: %lu ms  (%lu s)\r\n",
+             "Uptime: %lu ms (%lu s)\r\n",
              (unsigned long)ms, (unsigned long)(ms / 1000UL));
     return pdFALSE;
 }
 
+__SECTION_OS __USED
 static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in)
 {
     (void)in;
     snprintf(out, len, "Rebooting...\r\n");
-    /* Flush output before reset */
     _shell_write(out, (uint16_t)strlen(out));
     vTaskDelay(pdMS_TO_TICKS(50));
     NVIC_SystemReset();
-    return pdFALSE; /* unreachable */
+    return pdFALSE;
 }
 
-/* ── Public API ───────────────────────────────────────────────────────────── */
+/* ── Public API ─────────────────────────────────────────────────────────── */
 
+__SECTION_OS __USED
 int32_t os_shell_mgmt_start(void)
 {
     int32_t tid = os_thread_create(_os_shell_task,
-                                   "os_shell",
+                                   "MGMT_SHELL",
                                    PROC_SERVICE_OS_SHELL_MGMT_STACK_SIZE,
                                    PROC_SERVICE_OS_SHELL_MGMT_PRIORITY,
                                    NULL);

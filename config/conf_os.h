@@ -34,6 +34,14 @@
 #define INC_DRIVER_MCP45HVX1            (0)
 
 /* ── IPC / pipe sizes — driven by Kconfig where available ───────────── */
+/* ── Management queue depths ────────────────────────────────────────── */
+#define UART_MGMT_QUEUE_DEPTH           (16)
+#define SPI_MGMT_QUEUE_DEPTH            (8)
+#define IIC_MGMT_QUEUE_DEPTH            (8)
+#define GPIO_MGMT_QUEUE_DEPTH           (16)
+
+
+
 #define PIPE_USB_1_DRV_RX_SIZE          (4096)
 #define PIPE_UART_1_DRV_RX_SIZE         CONFIG_PIPE_UART_1_DRV_RX_SIZE
 #define PIPE_UART_1_DRV_TX_SIZE         CONFIG_PIPE_UART_1_DRV_TX_SIZE
@@ -71,6 +79,9 @@
 #define ITM_DEBUG_EN                    (0)
 
 /* ── Service thread properties ──────────────────────────────────────── */
+#define PROC_SERVICE_GPIO_MGMT_STACK_SIZE       (256)
+#define PROC_SERVICE_GPIO_MGMT_PRIORITY         (1)
+
 #define PROC_SERVICE_SERIAL_MGMT_STACK_SIZE     (512)
 #define PROC_SERVICE_SERIAL_MGMT_PRIORITY       (1)
 
@@ -79,6 +90,9 @@
 
 #define PROC_SERVICE_IIC_MGMT_STACK_SIZE        (1024)
 #define PROC_SERVICE_IIC_MGMT_PRIORITY          (1)
+
+#define PROC_SERVICE_SPI_MGMT_STACK_SIZE        (512)
+#define PROC_SERVICE_SPI_MGMT_PRIORITY          (1)
 
 #define PROC_SERVICE_OS_SHELL_MGMT_STACK_SIZE   (1024)
 #define PROC_SERVICE_OS_SHELL_MGMT_PRIORITY     (1)
@@ -100,13 +114,10 @@
 #define TIME_OFFSET_TEST_SUITE          (11000)
 
 /* ── Timeout constants ──────────────────────────────────────────────── */
+#define TASK_MGR_SCAN_PERIOD_MS         (1000)
 #define TIMEOUT_IIC_PIPE_OP             (2)
 #define IIC_ACK_TIMEOUT_MS              (100)
 
-/* ── Management queue depths ────────────────────────────────────────── */
-#define UART_MGMT_QUEUE_DEPTH           (16)
-#define SPI_MGMT_QUEUE_DEPTH            (8)
-#define IIC_MGMT_QUEUE_DEPTH            (8)
-#define GPIO_MGMT_QUEUE_DEPTH           (16)
+
 
 #endif /* OS_CONFIG_OS_CONF_OS_CONFIG_H_ */
