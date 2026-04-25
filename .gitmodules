@@ -7,3 +7,6 @@
 [submodule "arch/devices/STM/stm32f4xx-hal-driver"]
 	path = arch/devices/STM/stm32f4xx-hal-driver
 	url = https://github.com/STMicroelectronics/stm32f4xx-hal-driver.git
+[submodule "lib/lib-fsm"]
+	path = lib/lib-fsm
+	url = https://github.com/SS-Electronics/lib-fsm.git
