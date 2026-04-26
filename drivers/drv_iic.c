@@ -47,7 +47,7 @@ along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
 #include <def_std.h>
 #include <def_err.h>
 #include <drivers/drv_iic.h>
-#include <board/mcu_config.h>   /* pulls board_device_ids.h → BOARD_IIC_COUNT */
+#include <board/board_config.h>   /* pulls board_device_ids.h → BOARD_IIC_COUNT */
 #include <board/board_handles.h>
 
 #if (BOARD_IIC_COUNT > 0)

@@ -139,7 +139,7 @@
 #include <FreeRTOS_CLI.h>
 #include <shell/shell_task_mgmt.h>
 #include <board/board_config.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 
 #if (BOARD_UART_COUNT > 0)

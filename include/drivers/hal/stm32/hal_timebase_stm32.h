@@ -59,7 +59,7 @@
 #include <def_compiler.h>
 #include <def_std.h>
 #include <def_err.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <board/board_config.h>
 #include <board/board_handles.h>
 #include <drivers/drv_time.h>

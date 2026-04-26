@@ -90,7 +90,7 @@ int32_t ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id,
 				break;
 			}
 
-			case IPC_MQUEUE_TYPE_UART_HW:
+			case IPC_MQUEUE_RING_BUFFER:
 			{
 				struct ringbuffer *temp_buffer_handle =
 					ringbuffer_create((uint16_t)queue_size);
@@ -99,7 +99,7 @@ int32_t ipc_mqueue_register(type_mqueue queue_type, int32_t hardware_id,
 				{
 					new_node->mqueue.queue_id                   = mqueue_id_counter++;
 					mqueue_id                                   = new_node->mqueue.queue_id;
-					new_node->mqueue.queue_type                 = IPC_MQUEUE_TYPE_UART_HW;
+					new_node->mqueue.queue_type                 = IPC_MQUEUE_RING_BUFFER;
 					new_node->mqueue.linked_hw_peripheral_id    = hardware_id;
 					new_node->mqueue.handle                     = (void *)temp_buffer_handle;
 					new_node->mqueue.free_rtos_queue_handle     = NULL;
@@ -155,7 +155,7 @@ status_type ipc_mqueue_unregister(int32_t mqueue_id)
 					vQueueDelete(pos->mqueue.free_rtos_queue_handle);
 					break;
 
-				case IPC_MQUEUE_TYPE_UART_HW:
+				case IPC_MQUEUE_RING_BUFFER:
 					ringbuffer_destroy((struct ringbuffer *)pos->mqueue.handle);
 					break;
 

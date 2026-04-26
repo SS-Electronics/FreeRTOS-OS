@@ -49,7 +49,7 @@
 #include <def_std.h> 
 #include <def_err.h>
 #include <board/board_handles.h>
-#include <board/mcu_config.h>   /* pulls board_device_ids.h → BOARD_SPI_COUNT */
+#include <board/board_config.h>   /* pulls board_device_ids.h → BOARD_SPI_COUNT */
 #include <drivers/drv_spi.h>
 
 #if (BOARD_SPI_COUNT > 0)

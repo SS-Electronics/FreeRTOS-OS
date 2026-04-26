@@ -15,10 +15,10 @@
  *    drv_rcc_clock_init()       — PLL: HSI 16 MHz → 100 MHz SYSCLK
  *    drv_cpu_interrupt_prio_set()  — NVIC group bits before any IRQ enabled
  *    irq_hw_init_all()          — irq_desc table + irq_chip bindings for all HW IRQs
- *    ipc_queues_init()          — ring-buffer queues for UART RX/TX channels
+ *    ipc_mqueue_init()          — reset IPC list sentinel (services register their own queues)
  *    os_kernel_thread_register() — all OS service tasks (see kernel_service_core.c)
- *    printk_init()              — binds printk to UART TX ring buffer
  *    app_main()                 — creates application tasks (may subscribe IRQs)
+ *    [uart_mgmt_thread]         — registers UART ring-buffer queues, calls printk_init()
  *    vTaskStartScheduler()      — interrupts enabled inside vPortSVCHandler
  *
  *  Generic IRQ chain (after scheduler starts)
@@ -42,11 +42,9 @@
  */
 
 #include <device.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <ipc/mqueue.h>
-#include <ipc/global_var.h>
 #include <os/kernel.h>
-#include <os/kernel_syscall.h>
 #include <os/kernel_services.h>
 #include <drivers/drv_cpu.h>
 #include <drivers/drv_irq.h>
@@ -58,33 +56,6 @@
 /* ── Weak application entry point ─────────────────────────────────────────── */
 
 __attribute__((weak)) int app_main(void) { return 0; }
-
-
-/* ── IPC message-queue registration for all enabled peripherals ───────────── */
-
-static void ipc_queues_init(void)
-{
-    ipc_mqueue_init();
-
-    for (uint8_t i = 0; i < NO_OF_UART; i++)
-    {
-        global_uart_tx_mqueue_list[i] = ipc_mqueue_register(
-            IPC_MQUEUE_TYPE_UART_HW, (int32_t)i,
-            (int32_t)sizeof(uint8_t), PIPE_UART_1_DRV_TX_SIZE);
-
-        global_uart_rx_mqueue_list[i] = ipc_mqueue_register(
-            IPC_MQUEUE_TYPE_UART_HW, (int32_t)i,
-            (int32_t)sizeof(uint8_t), PIPE_UART_1_DRV_RX_SIZE);
-    }
-
-#if (NO_OF_IIC > 0)
-    for (uint8_t i = 0; i < NO_OF_IIC; i++)
-    {
-        global_iic_tx_mqueue_list[i] = 0;
-        global_iic_rx_mqueue_list[i] = 0;
-    }
-#endif
-}
 
 
 /* ── OS entry point ───────────────────────────────────────────────────────── */
@@ -112,24 +83,20 @@ __SECTION_BOOT __USED void main(void)
      *     uses an early-boot fallback until handle_irq is populated here. */
     irq_hw_init_all();
 
-    /* 3. IPC ring-buffer queues — UART mgmt reads ring-buffer handles after
-     *    its startup delay, so these must be allocated first. */
-    ipc_queues_init();
+    /* 3. Reset IPC queue list sentinel — each service registers its own
+     *    ring-buffer queues during thread startup. */
+    ipc_mqueue_init();
 
     /* 4. Register all OS service tasks in one call.
      *    See services/kernel_service_core.c for the full registration table. */
     os_kernel_thread_register();
 
-    /* 5. Bind printk() to the TX ring-buffer of COMM_PRINTK_HW_ID.
-     *    Must be called after ipc_queues_init() registers the queue. */
-    printk_init();
-
-    /* 6. Application layer.  app_main() creates tasks, optionally registers
+    /* 5. Application layer.  app_main() creates tasks, optionally registers
      *    additional IRQ subscribers via irq_register(), then returns.
      *    Tasks are driven by the scheduler; app_main must not block. */
     app_main();
 
-    /* 7. Hand over to FreeRTOS.  Interrupts are enabled for the first time
+    /* 6. Hand over to FreeRTOS.  Interrupts are enabled for the first time
      *    inside vPortSVCHandler when the first task context loads. */
     vTaskStartScheduler();
 

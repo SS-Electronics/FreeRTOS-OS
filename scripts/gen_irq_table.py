@@ -559,7 +559,7 @@ def gen_periph_dispatch_c(handler_map, extra_includes, vec_entries, out_path):
     )
 
     lines = [_BANNER.format(ts=_ts())]
-    lines.append('#include <board/mcu_config.h>\n\n')
+    lines.append('#include <board/board_config.h>\n\n')
     lines.append('#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)\n\n')
     lines.append('#include <device.h>\n')
     if has_exti_direct:
@@ -740,7 +740,7 @@ def gen_irq_hw_init_c(hw_irqs, sys_irqs, sys_irq_ids, clk_info, out_path):
       3. irq_chip_nvic binding + NVIC priority setup
     """
     lines = [_BANNER.format(ts=_ts())]
-    lines.append('#include <board/mcu_config.h>\n\n')
+    lines.append('#include <board/board_config.h>\n\n')
     lines.append('#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)\n\n')
     lines.append('#include <device.h>\n')
     lines.append('#include <irq/irq_desc.h>\n')

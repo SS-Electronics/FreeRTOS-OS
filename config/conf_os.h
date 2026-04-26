@@ -59,13 +59,6 @@
 #define ITM_PRINT_BUFF_LENGTH           CONFIG_ITM_PRINT_BUFF_LENGTH
 #define CONF_MAX_CHAR_IN_PRINTK         ITM_PRINT_BUFF_LENGTH
 
-/* UART hardware index used by the OS shell CLI — must be < NO_OF_UART.
- * Matches UART_APP (dev_id=1) from board_device_ids.h. */
-#define UART_SHELL_HW_ID                (1)   /* UART_APP  (USART2) */
-
-/* printk() shares the shell UART so debug output appears inline in the shell */
-#define COMM_PRINTK_HW_ID               UART_SHELL_HW_ID
-
 /* Shell line-editing and output buffer sizes */
 #define SHELL_LINE_BUF_LEN              (128)
 #define SHELL_OUT_BUF_LEN               (128)

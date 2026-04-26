@@ -52,7 +52,7 @@
 #include <ipc/mqueue.h>
 
 #include <drivers/drv_uart.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 #if (BOARD_UART_COUNT > 0)
 

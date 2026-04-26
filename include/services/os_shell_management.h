@@ -105,7 +105,7 @@
 #include <FreeRTOS_CLI.h>
 #include <shell/shell_task_mgmt.h>
 #include <board/board_config.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 #ifdef __cplusplus
 extern "C" {

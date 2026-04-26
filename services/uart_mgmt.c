@@ -44,9 +44,12 @@
  *  1. uart_mgmt_start()
  *       → creates queue + FreeRTOS thread
  *
- *  2. After TIME_OFFSET_SERIAL_MANAGEMENT delay:
- *       → registers all UARTs from board config
- *       → initializes HAL + driver layer
+ *  2. On thread entry (immediately, before delay):
+ *       → registers UART TX/RX IPC ring-buffer queues
+ *       → calls printk_init() / printk_enable()
+ *
+ *  3. After TIME_OFFSET_SERIAL_MANAGEMENT delay:
+ *       → initializes HAL + driver layer for each UART
  *       → subscribes to IRQ notification framework
  *
  *  3. Main loop:
@@ -79,6 +82,7 @@
 #include <ipc/mqueue.h>
 
 #include <irq/irq_notify.h>
+#include <os/kernel_syscall.h>
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /*                          Vendor HAL Selection                              */
@@ -165,6 +169,28 @@ static void uart_mgmt_thread(void *arg)
 {
     (void)arg;
 
+    /* ── IPC ring-buffer queue registration ── */
+    {
+        const board_config_t *bc = board_get_config();
+
+        for (uint8_t i = 0; i < bc->uart_count; i++)
+        {
+            const board_uart_desc_t *d = &bc->uart_table[i];
+
+            global_uart_tx_mqueue_list[d->dev_id] = ipc_mqueue_register(
+                IPC_MQUEUE_RING_BUFFER, (int32_t)d->dev_id,
+                (int32_t)sizeof(uint8_t), PIPE_UART_1_DRV_TX_SIZE);
+
+            global_uart_rx_mqueue_list[d->dev_id] = ipc_mqueue_register(
+                IPC_MQUEUE_RING_BUFFER, (int32_t)d->dev_id,
+                (int32_t)sizeof(uint8_t), PIPE_UART_1_DRV_RX_SIZE);
+        }
+    }
+
+    /* ── Bind printk to the shell UART TX ring buffer ── */
+    printk_init();
+    printk_enable();
+
     os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT);
 
     /* ── UART initialization from board configuration ── */
@@ -185,6 +211,7 @@ static void uart_mgmt_thread(void *arg)
             for (uint8_t i = 0; i < bc->uart_count; i++)
             {
                 const board_uart_desc_t *d = &bc->uart_table[i];
+                
                 drv_uart_handle_t *h = drv_uart_get_handle(d->dev_id);
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
@@ -196,13 +223,16 @@ static void uart_mgmt_thread(void *arg)
                 (void)drv_uart_register(d->dev_id, ops,
                                         d->baudrate, 10);
 
-                /* ── IRQ subscription setup ── */
-                struct ringbuffer *rb =
-                    (struct ringbuffer *)ipc_mqueue_get_handle(
-                        global_uart_rx_mqueue_list[d->dev_id]);
+                /* ── IRQ subscription — shell UART only ── */
+                if (d->dev_id == UART_SHELL_HW_ID)
+                {
+                    struct ringbuffer *rb =
+                        (struct ringbuffer *)ipc_mqueue_get_handle(
+                            global_uart_rx_mqueue_list[d->dev_id]);
 
-                irq_register(IRQ_ID_UART_RX(d->dev_id),    _uart_rx_cb,  rb);
-                irq_register(IRQ_ID_UART_ERROR(d->dev_id), _uart_err_cb, h);
+                    irq_register(IRQ_ID_UART_RX(d->dev_id),    _uart_rx_cb,  rb);
+                    irq_register(IRQ_ID_UART_ERROR(d->dev_id), _uart_err_cb, h);
+                }
             }
         }
     }
@@ -323,7 +353,7 @@ int32_t uart_mgmt_async_transmit(uint8_t dev_id,
 __SECTION_OS __USED
 int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte)
 {
-    if (dev_id >= NO_OF_UART || byte == NULL)
+    if (dev_id >= BOARD_UART_COUNT || byte == NULL)
         return OS_ERR_OP;
 
     struct ringbuffer *rb =

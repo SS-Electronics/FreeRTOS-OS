@@ -60,7 +60,7 @@
 #ifndef DRIVERS_HAL_STM32_HAL_SPI_STM32_H_
 #define DRIVERS_HAL_STM32_HAL_SPI_STM32_H_
 
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
 

@@ -65,68 +65,6 @@
             "forcedInclude": [
                 "${workspaceFolder}/config/autoconf.h"
             ]
-        },
-        {
-            "name": "STM32F401xE",
-            "includePath": [
-                    "${workspaceFolder}",
-                    "${workspaceFolder}/include",
-                    "${workspaceFolder}/include/drivers",
-                    "${workspaceFolder}/include/drivers/hal/stm32",
-                    "${workspaceFolder}/include/drv_app",
-                    "${workspaceFolder}/include/drv_ext_chips",
-                    "${workspaceFolder}/include/init",
-                    "${workspaceFolder}/include/ipc",
-                    "${workspaceFolder}/include/irq",
-                    "${workspaceFolder}/include/lib",
-                    "${workspaceFolder}/include/mm",
-                    "${workspaceFolder}/include/os",
-                    "${workspaceFolder}/include/services",
-                    "${workspaceFolder}/include/shell",
-                    "${workspaceFolder}/config",
-                    "${workspaceFolder}/lib",
-                    "${workspaceFolder}/arch/arm/CMSIS_6",
-                    "${workspaceFolder}/arch/devices",
-                    "${workspaceFolder}/arch/devices/device_conf",
-                    "${workspaceFolder}/arch/devices/STM/stm32f4xx-hal-driver/Inc",
-                    "${workspaceFolder}/kernel",
-                    "${workspaceFolder}/kernel/FreeRTOS-Kernel/include",
-                    "${workspaceFolder}/kernel/FreeRTOS-Plus-CLI",
-                    "${workspaceFolder}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F",
-                    "${workspaceFolder}/arch/devices/STM/STM32F4xx",
-                    "${workspaceFolder}/arch/devices/STM/STM32F4xx/STM32F401",
-                    "${workspaceFolder}/../app",
-                    "${workspaceFolder}/../app/board"
-                ],
-            "defines": [
-                    "STM32F401xE",
-                    "USE_HAL_DRIVER",
-                    "__ARM_ARCH_7EM__",
-                    "__FPU_PRESENT=1",
-                    "ARM_MATH_CM4",
-                    "CONFIG_DEVICE_VARIANT=2",
-                    "MCU_VAR_STM=2",
-                    "HAL_MODULE_ENABLED",
-                    "HAL_CORTEX_MODULE_ENABLED",
-                    "HAL_GPIO_MODULE_ENABLED",
-                    "HAL_EXTI_MODULE_ENABLED",
-                    "HAL_UART_MODULE_ENABLED",
-                    "HAL_I2C_MODULE_ENABLED",
-                    "HAL_SPI_MODULE_ENABLED",
-                    "HAL_TIM_MODULE_ENABLED",
-                    "HAL_RCC_MODULE_ENABLED",
-                    "HAL_DMA_MODULE_ENABLED",
-                    "HAL_FLASH_MODULE_ENABLED",
-                    "HAL_PWR_MODULE_ENABLED"
-                ],
-            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
-            "compilerArgs": ["-mcpu=cortex-m4", "-mfpu=fpv4-sp-d16", "-mfloat-abi=hard", "-mthumb"],
-            "cStandard": "gnu99",
-            "cppStandard": "gnu++14",
-            "intelliSenseMode": "gcc-arm",
-            "forcedInclude": [
-                "${workspaceFolder}/config/autoconf.h"
-            ]
         }
     ],
     "version": 4

@@ -51,7 +51,7 @@ along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
 #include <def_compiler.h>
 #include <def_std.h>
 #include <def_err.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <board/board_handles.h>
 #include <os/kernel.h>
 
@@ -87,7 +87,7 @@ typedef struct {
 } drv_hw_iic_ctx_t;
 
 #else
-#error "CONFIG_DEVICE_VARIANT not set or unsupported. Check mcu_config.h."
+#error "CONFIG_DEVICE_VARIANT not set or unsupported. Check board_config.h."
 #endif
 
 /* ── HAL ops table ─────────────────────────────────────────────────────── */

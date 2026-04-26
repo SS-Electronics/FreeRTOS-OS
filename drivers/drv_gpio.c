@@ -46,7 +46,7 @@ along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
 #include <def_std.h>
 #include <def_err.h>
 #include <drivers/drv_gpio.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <board/board_handles.h>
 
 /* Maximum logical GPIO lines managed by this driver */

@@ -17,9 +17,9 @@
 
 /* driver status variables */
 
-int32_t global_uart_tx_mqueue_list[NO_OF_UART];
-int32_t global_uart_rx_mqueue_list[NO_OF_UART];
-int32_t global_iic_tx_mqueue_list[NO_OF_IIC];
-int32_t global_iic_rx_mqueue_list[NO_OF_IIC];
+int32_t global_uart_tx_mqueue_list[BOARD_UART_COUNT];
+int32_t global_uart_rx_mqueue_list[BOARD_UART_COUNT];
+int32_t global_iic_tx_mqueue_list[BOARD_IIC_COUNT];
+int32_t global_iic_rx_mqueue_list[BOARD_IIC_COUNT];
 
 

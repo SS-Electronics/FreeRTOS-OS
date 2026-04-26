@@ -55,7 +55,7 @@
 
 #include <drivers/drv_iic.h>
 #include <board/board_config.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <irq/irq_notify.h>
 
 /* ────────────────────────────────────────────────────────────────────────── */

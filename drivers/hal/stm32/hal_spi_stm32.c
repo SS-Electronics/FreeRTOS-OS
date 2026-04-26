@@ -61,7 +61,7 @@
  * GNU General Public License v3 or later.
  */
 
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_SPI_MODULE_ENABLED)
@@ -354,7 +354,7 @@ void hal_spi_stm32_set_config(drv_spi_handle_t *h,
 __SECTION_OS __USED
 void hal_spi_stm32_irq_handler(SPI_TypeDef *instance)
 {
-    for (uint8_t id = 0; id < NO_OF_SPI; id++)
+    for (uint8_t id = 0; id < BOARD_SPI_COUNT; id++)
     {
         drv_spi_handle_t *h = drv_spi_get_handle(id);
         if (h == NULL || !h->initialized || h->hw.hspi.Instance != instance)

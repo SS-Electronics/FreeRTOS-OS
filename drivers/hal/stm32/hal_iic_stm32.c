@@ -47,7 +47,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 
@@ -280,7 +280,7 @@ void hal_iic_stm32_set_config(drv_iic_handle_t *h,
 __SECTION_OS __USED
 void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
 {
-    for (uint8_t id = 0; id < NO_OF_IIC; id++)
+    for (uint8_t id = 0; id < BOARD_IIC_COUNT; id++)
     {
         drv_iic_handle_t *h = drv_iic_get_handle(id);
         if (h == NULL || !h->initialized || h->hw.hi2c.Instance != instance)
@@ -315,7 +315,7 @@ void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
 __SECTION_OS __USED
 void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
 {
-    for (uint8_t id = 0; id < NO_OF_IIC; id++)
+    for (uint8_t id = 0; id < BOARD_IIC_COUNT; id++)
     {
         drv_iic_handle_t *h = drv_iic_get_handle(id);
         if (h == NULL || !h->initialized || h->hw.hi2c.Instance != instance)

@@ -419,6 +419,17 @@ _MCU_PERIPH_MAP = {
         'iic_ports':     [('IIC_1', ''), ('IIC_2', ''), ('IIC_3', '')],
         'tim_ports':     [('TIMER_1', ''), ('TIMER_2', ''),
                           ('TIMER_3', ''), ('TIMER_4', ''), ('INVALID_TIMER_ID', '')],
+        'clock': {
+            'note':           'STM32F411VET6 @ 100 MHz, HSI source',
+            'pllm':           '16U',
+            'plln':           '200U',
+            'pllp':           'RCC_PLLP_DIV2',
+            'pllq':           '4U',
+            'sysclk_hz':      '100000000UL',
+            'apb1_hz':         '50000000UL',
+            'apb2_hz':        '100000000UL',
+            'flash_latency':  'FLASH_LATENCY_3',
+        },
     },
     'STM32F407VGTx': {
         'vendor_var':    'MCU_VAR_STM',
@@ -435,6 +446,17 @@ _MCU_PERIPH_MAP = {
         'iic_ports':     [('IIC_1', ''), ('IIC_2', ''), ('IIC_3', '')],
         'tim_ports':     [('TIMER_1', ''), ('TIMER_2', ''),
                           ('TIMER_3', ''), ('TIMER_4', ''), ('INVALID_TIMER_ID', '')],
+        'clock': {
+            'note':           'STM32F407VGTx @ 168 MHz, HSE source (typical)',
+            'pllm':           '8U',
+            'plln':           '336U',
+            'pllp':           'RCC_PLLP_DIV2',
+            'pllq':           '7U',
+            'sysclk_hz':      '168000000UL',
+            'apb1_hz':         '42000000UL',
+            'apb2_hz':         '84000000UL',
+            'flash_latency':  'FLASH_LATENCY_5',
+        },
     },
 }
 
@@ -475,15 +497,16 @@ class BoardConfigGenerator:
         Path(c_outdir).mkdir(parents=True, exist_ok=True)
         Path(h_outdir).mkdir(parents=True, exist_ok=True)
 
-        c_path   = Path(c_outdir) / 'board_config.c'
-        h_path   = Path(h_outdir) / 'board_device_ids.h'
-        bh_path  = Path(h_outdir) / 'board_handles.h'
-        mcu_path = Path(h_outdir) / 'mcu_config.h'
+        c_path    = Path(c_outdir) / 'board_config.c'
+        h_path    = Path(h_outdir) / 'board_device_ids.h'
+        bh_path   = Path(h_outdir) / 'board_handles.h'
+        bc_h_path = Path(h_outdir) / 'board_config.h'
 
-        c_path.write_text(self._gen_board_config_c())
+        # Generate board_device_ids.h first — board_config.h includes it
         h_path.write_text(self._gen_device_ids_h())
+        bc_h_path.write_text(self._gen_board_config_h())
         bh_path.write_text(self._gen_board_handles_h())
-        mcu_path.write_text(self._gen_mcu_config_h())
+        c_path.write_text(self._gen_board_config_c())
 
         print(f'[gen_board_config] Board   : {self.board_name}')
         print(f'[gen_board_config] Vendor  : {self.vendor}  MCU: {self.mcu}')
@@ -492,7 +515,7 @@ class BoardConfigGenerator:
         print(f'[gen_board_config] -> {c_path}')
         print(f'[gen_board_config] -> {h_path}')
         print(f'[gen_board_config] -> {bh_path}')
-        print(f'[gen_board_config] -> {mcu_path}')
+        print(f'[gen_board_config] -> {bc_h_path}')
 
     # ── board_device_ids.h ────────────────────────────────────────────────────
 
@@ -525,6 +548,8 @@ class BoardConfigGenerator:
                 uid   = u.get('id', '')
                 alias = f'BOARD_UART_{role.upper()}_ID'
                 L.append(f'#define {alias:<28} {uid:<20} /* role="{role}" */')
+                if role == 'shell':
+                    L.append(f'#define {"UART_SHELL_HW_ID":<28} {alias:<20} /* printk / shell UART */')
             L.append('')
 
         L.append(_INC_GUARD_CLOSE.format(guard=guard))
@@ -564,10 +589,10 @@ class BoardConfigGenerator:
         L.append(_INC_GUARD_CLOSE.format(guard=guard))
         return '\n'.join(L)
 
-    # ── mcu_config.h ──────────────────────────────────────────────────────────
+    # ── board_config.h (MCU variant section + board types/API) ──────────────────
 
-    def _gen_mcu_config_h(self) -> str:
-        guard = 'BOARD_MCU_CONFIG_H_'
+    def _gen_board_config_h(self) -> str:
+        guard = 'INCLUDE_BOARD_BOARD_CONFIG_H_'
         info  = _MCU_PERIPH_MAP.get(self.mcu, {})
         vendor_var    = info.get('vendor_var',    'MCU_VAR_STM')
         max_uart      = info.get('max_uart',      1)
@@ -578,9 +603,9 @@ class BoardConfigGenerator:
         uart_ports    = info.get('uart_ports',    [('UART_1', '')])
         iic_ports     = info.get('iic_ports',     [('IIC_1', '')])
         tim_ports     = info.get('tim_ports',     [('TIMER_1', ''), ('INVALID_TIMER_ID', '')])
-        # Build enable map: port_name → minimum NO_OF_UART value (or None = disabled)
         _en_order     = info.get('uart_en_order', [p[0] for p in uart_ports[:max_uart]])
         uart_en_map   = {name: (i + 1) for i, name in enumerate(_en_order)}
+        clk           = info.get('clock', {})
 
         L = []
         L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
@@ -590,78 +615,36 @@ class BoardConfigGenerator:
         L.append('#include "autoconf.h"')
         L.append('')
 
+        # ── MCU Vendor / Variant Selection ──────────────────────────────────
         L.append('/* ── MCU Vendor / Variant Selection ──────────────────────────────────────── */')
         L.append('#define MCU_VAR_MICROCHIP   1')
         L.append('#define MCU_VAR_STM         2')
+        L.append('#define MCU_VAR_INFINEON    3')
         L.append('')
         L.append(f'#define CONFIG_DEVICE_VARIANT    {vendor_var}   /* {self.mcu} */')
         L.append('')
 
-        L.append('/* ── Hardware-fixed peripheral instance counts ───────────────────────────── */')
-        L.append(f'#define MCU_MAX_UART_PERIPHERAL     {max_uart}')
-        L.append(f'#define MCU_MAX_IIC_PERIPHERAL      {max_iic}')
-        L.append(f'#define MCU_MAX_SPI_PERIPHERAL      {max_spi}')
-        L.append(f'#define MCU_MAX_TIM_PERIPHERAL      {max_tim}')
-        if note:
-            L.append(f'/* {note} */')
-        L.append('')
-
+        # ── Board device IDs (board_device_ids.h must be generated first) ───
         L.append('/* ── Board device IDs — generated from XML by gen_board_config.py ─────────── */')
         L.append('/* Defines BOARD_UART_COUNT, BOARD_IIC_COUNT, BOARD_SPI_COUNT, BOARD_GPIO_COUNT */')
         L.append('#include <board/board_device_ids.h>')
         L.append('')
 
-        L.append('/* ── OS-managed peripheral counts — sourced from board config ────────────── */')
-        for macro, board_macro, fallback in [
-            ('NO_OF_UART', 'BOARD_UART_COUNT', '1'),
-            ('NO_OF_IIC',  'BOARD_IIC_COUNT',  '0'),
-            ('NO_OF_SPI',  'BOARD_SPI_COUNT',  '0'),
-            ('NO_OF_GPIO', 'BOARD_GPIO_COUNT', '0'),
-        ]:
-            L.append(f'#ifdef {board_macro}')
-            L.append(f'  #define {macro:<12}  {board_macro}')
-            L.append(f'#else')
-            L.append(f"  #define {macro:<12}  {fallback}   /* fallback — run 'make board-gen' */")
-            L.append(f'#endif')
-            L.append('')
-
-        L.append('/* ── Peripheral enable flags ─────────────────────────────────────────────── */')
-        L.append('#ifdef CONFIG_HAL_IWDG_MODULE_ENABLED')
-        L.append('  #define CONFIG_MCU_WDG_EN               (1)')
-        L.append('#else')
-        L.append('  #define CONFIG_MCU_WDG_EN               (0)')
-        L.append('#endif')
-        L.append('')
-        L.append('#define CONFIG_MCU_FLASH_DRV_EN           (1)   /* Always available */')
-        L.append('')
-        L.append('#define CONFIG_MCU_NO_OF_UART_PERIPHERAL  NO_OF_UART')
-        L.append('#define CONFIG_MCU_NO_OF_IIC_PERIPHERAL   NO_OF_IIC')
-        L.append('#define CONFIG_MCU_NO_OF_SPI_PERIPHERAL   NO_OF_SPI')
-        L.append('#define CONFIG_MCU_NO_OF_GPIO_PERIPHERAL  NO_OF_GPIO')
-        L.append('')
-        L.append('#define CONFIG_MCU_NO_OF_RS485_PERIPHERAL (0)')
-        L.append('#define CONFIG_MCU_NO_OF_CAN_PERIPHERAL   (0)')
-        L.append('#define CONFIG_MCU_NO_OF_USB_PERIPHERAL   (0)')
-        L.append('#define CONFIG_MCU_NO_OF_ETH_PERIPHERAL   (0)')
-        L.append('')
         L.append('#ifdef CONFIG_HAL_TIM_MODULE_ENABLED')
-        L.append(f'  #define CONFIG_MCU_NO_OF_TIMER_PERIPHERAL ({min(max_tim, 2)})')
+        L.append(f'  #define NO_OF_TIMER  ({min(max_tim, 2)})')
         L.append('#else')
-        L.append('  #define CONFIG_MCU_NO_OF_TIMER_PERIPHERAL (0)')
+        L.append('  #define NO_OF_TIMER  (0)')
         L.append('#endif')
         L.append('')
-        L.append('#define NO_OF_TIMER   CONFIG_MCU_NO_OF_TIMER_PERIPHERAL')
+
+        L.append('#ifdef CONFIG_HAL_IWDG_MODULE_ENABLED')
+        L.append('  #define CONFIG_MCU_WDG_EN  (1)')
+        L.append('#else')
+        L.append('  #define CONFIG_MCU_WDG_EN  (0)')
+        L.append('#endif')
         L.append('')
 
-        L.append('/* ── Individual UART instance enable — derived from board UART count ─────── */')
-        for port_name, _ in uart_ports:
-            pos = uart_en_map.get(port_name)
-            if pos is not None:
-                L.append(f'#define {port_name}_EN    (NO_OF_UART >= {pos} ? 1 : 0)')
-            else:
-                L.append(f'#define {port_name}_EN    (0)')
-        L.append('')
-
+        # ── Peripheral identifier enumerations ───────────────────────────────
         L.append('/* ── Peripheral identifier enumerations ─────────────────────────────────── */')
         L.append('typedef enum')
         L.append('{')
@@ -690,6 +673,152 @@ class BoardConfigGenerator:
         L.append('} TIMER_PORTS;')
         L.append('')
 
+        # ── Static section: includes, clock config, board types, API ─────────
+        L.append('/* ══════════════════════════════════════════════════════════════════════════')
+        L.append(' * Board peripheral configuration — types and API')
+        L.append(' * ══════════════════════════════════════════════════════════════════════════ */')
+        L.append('')
+        L.append('#include <def_std.h>')
+        L.append('#include <device.h>     /* CMSIS types: GPIO_TypeDef, USART_TypeDef, IRQn_Type … */')
+        L.append('')
+        L.append('#ifdef __cplusplus')
+        L.append('extern "C" {')
+        L.append('#endif')
+        L.append('')
+
+        # Clock tree macros (vendor-specific)
+        if self.vendor == 'STM':
+            pllm  = clk.get('pllm',          '16U')
+            plln  = clk.get('plln',          '200U')
+            pllp  = clk.get('pllp',          'RCC_PLLP_DIV2')
+            pllq  = clk.get('pllq',          '4U')
+            sysclk = clk.get('sysclk_hz',    '100000000UL')
+            apb1   = clk.get('apb1_hz',       '50000000UL')
+            apb2   = clk.get('apb2_hz',      '100000000UL')
+            flash  = clk.get('flash_latency','FLASH_LATENCY_3')
+            clk_note = clk.get('note',        f'{self.mcu} clock tree')
+            L.append(f'/* ── Clock tree  ({clk_note}) ──── */')
+            L.append(f'#define BOARD_RCC_PLLM          {pllm}')
+            L.append(f'#define BOARD_RCC_PLLN          {plln}')
+            L.append(f'#define BOARD_RCC_PLLP          {pllp}')
+            L.append(f'#define BOARD_RCC_PLLQ          {pllq}')
+            L.append('')
+            L.append(f'#define BOARD_SYSCLK_HZ         {sysclk}')
+            L.append(f'#define BOARD_APB1_HZ           {apb1}')
+            L.append(f'#define BOARD_APB2_HZ           {apb2}')
+            L.append('')
+            L.append(f'#define BOARD_FLASH_LATENCY     {flash}')
+            L.append('')
+            L.append('extern          uint32_t SystemCoreClock; /* = BOARD_SYSCLK_HZ at boot — updated by SystemCoreClockUpdate() */')
+            L.append('extern const uint8_t     AHBPrescTable[16];')
+            L.append('extern const uint8_t     APBPrescTable[8];')
+            L.append('')
+
+        # board_pin_t
+        L.append('typedef struct {')
+        L.append('    GPIO_TypeDef *port;       /**< GPIOA … GPIOE                              */')
+        L.append('    uint16_t      pin;        /**< GPIO_PIN_0 … GPIO_PIN_15                   */')
+        L.append('    uint32_t      mode;       /**< GPIO_MODE_AF_PP, GPIO_MODE_OUTPUT_PP, …    */')
+        L.append('    uint32_t      pull;       /**< GPIO_NOPULL / GPIO_PULLUP / GPIO_PULLDOWN  */')
+        L.append('    uint32_t      speed;      /**< GPIO_SPEED_FREQ_LOW / _MEDIUM / _HIGH …   */')
+        L.append('    uint32_t      alternate;  /**< GPIO_AF7_USART1, GPIO_AF4_I2C1, …         */')
+        L.append('} board_pin_t;')
+        L.append('')
+
+        # board_uart_desc_t
+        L.append('typedef struct {')
+        L.append('    uint8_t        dev_id;')
+        L.append('    USART_TypeDef *instance;')
+        L.append('    uint32_t       baudrate;')
+        L.append('    uint32_t       word_len;    /**< UART_WORDLENGTH_8B / _9B           */')
+        L.append('    uint32_t       stop_bits;   /**< UART_STOPBITS_1 / _2               */')
+        L.append('    uint32_t       parity;      /**< UART_PARITY_NONE / _EVEN / _ODD    */')
+        L.append('    uint32_t       mode;        /**< UART_MODE_TX_RX / _TX / _RX        */')
+        L.append('    board_pin_t    tx_pin;')
+        L.append('    board_pin_t    rx_pin;')
+        L.append('    IRQn_Type      irqn;')
+        L.append('    uint32_t       irq_priority;')
+        L.append('} board_uart_desc_t;')
+        L.append('')
+
+        # board_iic_desc_t
+        L.append('typedef struct {')
+        L.append('    uint8_t      dev_id;')
+        L.append('    I2C_TypeDef *instance;')
+        L.append('    uint32_t     clock_hz;     /**< 100000 (standard) or 400000 (fast) */')
+        L.append('    uint32_t     addr_mode;    /**< I2C_ADDRESSINGMODE_7BIT / _10BIT   */')
+        L.append('    uint32_t     dual_addr;    /**< I2C_DUALADDRESS_DISABLE / _ENABLE  */')
+        L.append('    board_pin_t  scl_pin;')
+        L.append('    board_pin_t  sda_pin;')
+        L.append('    IRQn_Type    ev_irqn;')
+        L.append('    IRQn_Type    er_irqn;')
+        L.append('    uint32_t     irq_priority;')
+        L.append('} board_iic_desc_t;')
+        L.append('')
+
+        # board_spi_desc_t
+        L.append('typedef struct {')
+        L.append('    uint8_t      dev_id;')
+        L.append('    SPI_TypeDef *instance;')
+        L.append('    uint32_t     mode;         /**< SPI_MODE_MASTER / _SLAVE           */')
+        L.append('    uint32_t     direction;    /**< SPI_DIRECTION_2LINES / _1LINE      */')
+        L.append('    uint32_t     data_size;    /**< SPI_DATASIZE_8BIT / _16BIT         */')
+        L.append('    uint32_t     clk_polarity; /**< SPI_POLARITY_LOW / _HIGH           */')
+        L.append('    uint32_t     clk_phase;    /**< SPI_PHASE_1EDGE / _2EDGE           */')
+        L.append('    uint32_t     nss;          /**< SPI_NSS_SOFT / _HARD_OUTPUT        */')
+        L.append('    uint32_t     baud_prescaler;')
+        L.append('    uint32_t     bit_order;    /**< SPI_FIRSTBIT_MSB / _LSB            */')
+        L.append('    board_pin_t  sck_pin;')
+        L.append('    board_pin_t  miso_pin;')
+        L.append('    board_pin_t  mosi_pin;')
+        L.append('    board_pin_t  nss_pin;      /**< Set .pin = 0 for software NSS      */')
+        L.append('    IRQn_Type    irqn;')
+        L.append('    uint32_t     irq_priority;')
+        L.append('} board_spi_desc_t;')
+        L.append('')
+
+        # board_gpio_desc_t
+        L.append('typedef struct {')
+        L.append('    uint8_t       dev_id;')
+        L.append('    const char   *label;')
+        L.append('    GPIO_TypeDef *port;')
+        L.append('    uint16_t      pin;')
+        L.append('    uint32_t      mode;')
+        L.append('    uint32_t      pull;')
+        L.append('    uint32_t      speed;')
+        L.append('    uint8_t       active_state;  /**< GPIO_PIN_SET or GPIO_PIN_RESET   */')
+        L.append('    uint8_t       initial_state; /**< 0 = inactive, 1 = active at boot */')
+        L.append('} board_gpio_desc_t;')
+        L.append('')
+
+        # board_config_t
+        L.append('typedef struct {')
+        L.append('    const char              *board_name;')
+        L.append('    const board_uart_desc_t *uart_table;')
+        L.append('    uint8_t                  uart_count;')
+        L.append('    uint8_t                  uart_shell_id;')
+        L.append('    const board_iic_desc_t  *iic_table;')
+        L.append('    uint8_t                  iic_count;')
+        L.append('    const board_spi_desc_t  *spi_table;')
+        L.append('    uint8_t                  spi_count;')
+        L.append('    const board_gpio_desc_t *gpio_table;')
+        L.append('    uint8_t                  gpio_count;')
+        L.append('} board_config_t;')
+        L.append('')
+
+        # Board API
+        L.append('const board_config_t    *board_get_config(void);')
+        L.append('const board_uart_desc_t *board_find_uart(USART_TypeDef *instance);')
+        L.append('const board_iic_desc_t  *board_find_iic(I2C_TypeDef *instance);')
+        L.append('const board_spi_desc_t  *board_find_spi(SPI_TypeDef *instance);')
+        L.append('void  board_clk_enable(void);')
+        L.append('uint8_t board_get_shell_uart_id(void);')
+        L.append('')
+        L.append('#ifdef __cplusplus')
+        L.append('}')
+        L.append('#endif')
+        L.append('')
+
         L.append(_INC_GUARD_CLOSE.format(guard=guard))
         return '\n'.join(L)
 
@@ -701,24 +830,7 @@ class BoardConfigGenerator:
 
         # ── Header
         L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
-        # mcu_config.h first — defines CONFIG_DEVICE_VARIANT and MCU_VAR_* used below
-        L.append('#include <board/mcu_config.h>')
-        L.append('')
-        L.append('/* Variant-gated device entry point.')
-        L.append(' * arch/devices/device.h selects the correct vendor HAL and device_conf:')
-        L.append(' *   MCU_VAR_STM       \u2192 device_conf/stm32f4xx_hal_conf.h + stm32f4xx_hal.h')
-        L.append(' *   MCU_VAR_INFINEON  \u2192 TODO: device_conf/xmc_conf.h')
-        L.append(' *   MCU_VAR_MICROCHIP \u2192 TODO: device_conf/asf4_conf.h */')
-        L.append('#if   (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)')
-        L.append('#  include <device.h>')
-        L.append('#elif (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)')
-        L.append('#  include <device.h>')
-        L.append('#elif (CONFIG_DEVICE_VARIANT == MCU_VAR_MICROCHIP)')
-        L.append('#  include <device.h>')
-        L.append('#else')
-        L.append('#  error "board_config.c: unknown CONFIG_DEVICE_VARIANT — update mcu_config.h"')
-        L.append('#endif')
-        L.append('')
+        # board_config.h provides: MCU_VAR_*, CONFIG_DEVICE_VARIANT, device.h, board types
         L.append('#include <board/board_config.h>')
         L.append('#include <board/board_device_ids.h>')
         L.append('')
@@ -861,9 +973,9 @@ class BoardConfigGenerator:
         L.append('')
 
         # ── API
-        uart_insts = [u.get('hal_inst','') for u in self.uarts if u.get('hal_inst','')]
-        i2c_insts  = [c.get('hal_inst','') for c in self.i2cs  if c.get('hal_inst','')]
-        spi_insts  = [s.get('hal_inst','') for s in self.spis  if s.get('hal_inst','')]
+        uart_insts = [u.get('instance','') for u in self.uarts if u.get('instance','')]
+        i2c_insts  = [c.get('instance','') for c in self.i2cs  if c.get('instance','')]
+        spi_insts  = [s.get('instance','') for s in self.spis  if s.get('instance','')]
         L.extend(self._api_impl(all_ports, uart_insts, i2c_insts, spi_insts))
         return '\n'.join(L) + '\n'
 

@@ -61,7 +61,7 @@
 #include <def_compiler.h>
 #include <def_std.h>
 #include <def_err.h> 
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <irq/irq_notify.h>   /* irq_id_t, irq_notify_cb_t, BaseType_t */
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)

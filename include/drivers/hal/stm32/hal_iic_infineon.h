@@ -7,7 +7,7 @@
 #ifndef DRIVERS_HAL_INFINEON_HAL_IIC_INFINEON_H_
 #define DRIVERS_HAL_INFINEON_HAL_IIC_INFINEON_H_
 
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_INFINEON)
 

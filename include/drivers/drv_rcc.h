@@ -57,7 +57,7 @@
 #include <def_std.h>
 #include <def_err.h>
 #include <board/board_handles.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 #ifdef __cplusplus
 extern "C" {

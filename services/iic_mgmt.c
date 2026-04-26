@@ -74,7 +74,7 @@
 #include <os/kernel_mem.h>
 #include <drivers/drv_iic.h>
 #include <board/board_config.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <irq/irq_notify.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)

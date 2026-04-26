@@ -79,7 +79,7 @@
 #define INCLUDE_DRIVERS_DMA_HAL_STM32_HAL_DMA_STM32_H_
 
 #include <drivers/drv_dma.h>
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
 #include <device.h>

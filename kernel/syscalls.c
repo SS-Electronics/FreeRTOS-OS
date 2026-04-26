@@ -10,8 +10,8 @@
  *    __io_putchar / __io_getchar are the byte-level hooks used by _write/_read.
  *
  * 2. printk — timestamped formatted string output routed through the UART TX
- *    ring buffer.  printk_init() must be called after ipc_queues_init() so the
- *    ring-buffer handle is valid.
+ *    ring buffer.  printk_init() must be called after uart_mgmt_thread registers
+ *    the UART ring-buffer queues so the handle is valid.
  */
 
 #include <sys/stat.h>
@@ -137,18 +137,18 @@ int _execve(char *name, char **argv, char **env)
 
 void printk_init(void)
 {
-#ifdef COMM_PRINTK_HW_ID
-    if (COMM_PRINTK_HW_ID < NO_OF_UART)
+#ifdef UART_SHELL_HW_ID
+    if (UART_SHELL_HW_ID < BOARD_UART_COUNT)
         _printk_rb = (struct ringbuffer *)
-                     ipc_mqueue_get_handle(global_uart_tx_mqueue_list[COMM_PRINTK_HW_ID]);
+                     ipc_mqueue_get_handle(global_uart_tx_mqueue_list[UART_SHELL_HW_ID]);
 #else
-#  error "printk: COMM_PRINTK_HW_ID not defined — set it in conf_os.h"
+#  error "printk: UART_SHELL_HW_ID not defined — run 'make board-gen' to regenerate board_device_ids.h"
 #endif
 }
 
 int32_t printk(const char *fmt, ...)
 {
-#if (NO_OF_UART > 0)
+#if (BOARD_UART_COUNT > 0)
     if (!_printk_enabled)
         return 0;
 
@@ -173,7 +173,6 @@ int32_t printk(const char *fmt, ...)
 
     va_end(args);
 
-    drv_uart_tx_kick(COMM_PRINTK_HW_ID);
     return msg_len;
 #else
     (void)fmt;

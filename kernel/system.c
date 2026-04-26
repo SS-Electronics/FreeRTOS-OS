@@ -14,7 +14,7 @@
  * hal_rcc_stm32.c because they read live RCC registers.
  */
 
-#include <board/mcu_config.h>
+#include <board/board_config.h>
 #include <def_attributes.h>
 #include <device.h>
 

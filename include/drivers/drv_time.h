@@ -53,7 +53,7 @@
 #include <def_compiler.h>
 #include <def_std.h>
 #include <def_err.h>
-#include <board/mcu_config.h>   /* CONFIG_DEVICE_VARIANT, MCU_VAR_* */
+#include <board/board_config.h>   /* CONFIG_DEVICE_VARIANT, MCU_VAR_* */
 #include <board/board_handles.h>
 
 /* ── Forward declaration ───────────────────────────────────────────────── */
@@ -100,7 +100,7 @@ typedef struct {
 } drv_hw_timer_ctx_t;
 
 #else
-#error "CONFIG_DEVICE_VARIANT not set or unsupported. Check mcu_config.h."
+#error "CONFIG_DEVICE_VARIANT not set or unsupported. Check board_config.h."
 #endif
 
 /* ── HAL ops table ─────────────────────────────────────────────────────── */
