@@ -18,7 +18,8 @@
 #include <def_attributes.h>
 #include <device.h>
 
-__SECTION_BOOT void SystemInit(void)
+__SECTION_BOOT 
+void SystemInit(void)
 {
     /* Enable FPU coprocessors CP10 and CP11 (full access) */
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)

@@ -48,6 +48,10 @@
 static BaseType_t _cmd_heap_fn (char *out, size_t len, const char *in);
 static BaseType_t _cmd_tasks_fn(char *out, size_t len, const char *in);
 static BaseType_t _cmd_debug_fn(char *out, size_t len, const char *in);
+static BaseType_t _cmd_help_fn(char *out, size_t len, const char *in);
+static BaseType_t _cmd_version_fn(char *out, size_t len, const char *in);
+static BaseType_t _cmd_uptime_fn(char *out, size_t len, const char *in);
+static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in);
 
 /* ── CLI command descriptors ──────────────────────────────────────────────── */
 
@@ -70,6 +74,30 @@ static const CLI_Command_Definition_t _cmd_debug = {
     "debug <en|dis>\r\n"
     "  Enable or disable printk debug output.\r\n",
     _cmd_debug_fn, 1
+};
+
+static const CLI_Command_Definition_t _cmd_help = {
+    "help",
+    "help\r\n  List all registered commands.\r\n",
+    _cmd_help_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_version = {
+    "version",
+    "version\r\n  Print firmware version and build date.\r\n",
+    _cmd_version_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_uptime = {
+    "uptime",
+    "uptime\r\n  Print system uptime in milliseconds.\r\n",
+    _cmd_uptime_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_reboot = {
+    "reboot",
+    "reboot\r\n  Trigger a software reset (NVIC_SystemReset).\r\n",
+    _cmd_reboot_fn, 0
 };
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -217,10 +245,59 @@ static BaseType_t _cmd_debug_fn(char *out, size_t len, const char *in)
     return pdFALSE;
 }
 
+/* ── Built-in command implementations ───────────────────────────────────── */
+__SECTION_OS __USED
+static BaseType_t _cmd_help_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+    snprintf(out, len,
+             "Use FreeRTOS+CLI registered commands:\r\n"
+             "Type any command and press Enter.\r\n");
+    return pdFALSE;
+}
+
+__SECTION_OS __USED
+static BaseType_t _cmd_version_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+    snprintf(out, len,
+             "FreeRTOS-OS v1.0 built %s %s\r\n",
+             __DATE__, __TIME__);
+    return pdFALSE;
+}
+
+__SECTION_OS __USED
+static BaseType_t _cmd_uptime_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+    uint32_t ms = drv_time_get_ticks();
+    snprintf(out, len,
+             "Uptime: %lu ms (%lu s)\r\n",
+             (unsigned long)ms, (unsigned long)(ms / 1000UL));
+    return pdFALSE;
+}
+
+__SECTION_OS __USED
+static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+    // snprintf(out, len, "Rebooting...\r\n");
+    // _shell_write(out, (uint16_t)strlen(out));
+    vTaskDelay(pdMS_TO_TICKS(50));
+    NVIC_SystemReset();
+    return pdFALSE;
+}
+
+
 /* ── Registration ─────────────────────────────────────────────────────────── */
 
 void shell_task_mgmt_register_cmds(void)
 {
+
+    FreeRTOS_CLIRegisterCommand(&_cmd_help);
+    FreeRTOS_CLIRegisterCommand(&_cmd_version);
+    FreeRTOS_CLIRegisterCommand(&_cmd_uptime);
+    FreeRTOS_CLIRegisterCommand(&_cmd_reboot);
     FreeRTOS_CLIRegisterCommand(&_cmd_heap);
     FreeRTOS_CLIRegisterCommand(&_cmd_tasks);
     FreeRTOS_CLIRegisterCommand(&_cmd_debug);

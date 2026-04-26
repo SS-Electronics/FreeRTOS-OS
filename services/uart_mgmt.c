@@ -187,10 +187,6 @@ static void uart_mgmt_thread(void *arg)
         }
     }
 
-    /* ── Bind printk to the shell UART TX ring buffer ── */
-    printk_init();
-    printk_enable();
-
     os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT);
 
     /* ── UART initialization from board configuration ── */
@@ -206,8 +202,10 @@ static void uart_mgmt_thread(void *arg)
 
         if (ops != NULL)
         {
+            /** Get the board config of device descriptors */
             const board_config_t *bc = board_get_config();
-
+            
+            /** Init all UART/USART defined */
             for (uint8_t i = 0; i < bc->uart_count; i++)
             {
                 const board_uart_desc_t *d = &bc->uart_table[i];
@@ -219,6 +217,7 @@ static void uart_mgmt_thread(void *arg)
                                           d->word_len, d->stop_bits,
                                           d->parity, d->mode);
 #endif
+
 
                 (void)drv_uart_register(d->dev_id, ops,
                                         d->baudrate, 10);
@@ -240,7 +239,7 @@ static void uart_mgmt_thread(void *arg)
     /* ── Main management loop ── */
     uart_mgmt_msg_t msg;
 
-    for (;;)
+    while(true)
     {
         if (xQueueReceive(_mgmt_queue, &msg, portMAX_DELAY) != pdTRUE)
             continue;
@@ -264,7 +263,7 @@ static void uart_mgmt_thread(void *arg)
                         h->ops->hw_init(h);
                     }
                 }
-                break;
+            break;
 
             case UART_MGMT_CMD_REINIT:
                 h->ops->hw_deinit(h);
@@ -274,10 +273,10 @@ static void uart_mgmt_thread(void *arg)
             case UART_MGMT_CMD_DEINIT:
                 h->ops->hw_deinit(h);
                 result = OS_ERR_NONE;
-                break;
+            break;
 
             default:
-                break;
+            break;
         }
 
         if (msg.result_code != NULL)

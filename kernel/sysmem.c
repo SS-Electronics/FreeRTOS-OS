@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 static uint8_t *__sbrk_heap_end = NULL;
-
+ 
 void *_sbrk(ptrdiff_t incr)
 {
     extern uint8_t  _end;

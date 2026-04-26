@@ -14,46 +14,81 @@
  *    the UART ring-buffer queues so the handle is valid.
  */
 
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <signal.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/times.h>
+#include <def_attributes.h>
+#include <def_compiler.h>
+#include <def_std.h>
+#include <def_err.h>
 
 #include <os/kernel_syscall.h>
 #include <ipc/mqueue.h>
 #include <drivers/drv_uart.h>
-#include <stdarg.h>
+
 
 /* ── printk state ─────────────────────────────────────────────────────────── */
-
+__SECTION_OS_DATA __USED
 static char              _time_buf[10];
+
+__SECTION_OS_DATA __USED
 static char              _msg_buf[CONF_MAX_CHAR_IN_PRINTK];
+
+__SECTION_OS_DATA __USED
 static struct ringbuffer *_printk_rb;
+
+__SECTION_OS_DATA __USED
 static volatile uint8_t  _printk_enabled = 0;
 
-void printk_enable(void)  { _printk_enabled = 1; }
-void printk_disable(void) { _printk_enabled = 0; }
+
+
+
+/* ── printk functions──────────────────────────────────────────────────────── */
+__SECTION_OS __USED
+void printk_enable(void)  
+{ 
+    _printk_enabled = 1; 
+}
+
+
+__SECTION_OS __USED
+void printk_disable(void) 
+{ 
+    _printk_enabled = 0; 
+}
+
 
 /* ── Newlib byte-level I/O hooks ──────────────────────────────────────────── */
+__SECTION_OS __USED
+int __io_putchar(int ch) 
+{ 
+    (void)ch; return 0; 
+}
 
-int __io_putchar(int ch) { (void)ch; return 0; }
-int __io_getchar(void)         { return 0; }
+__SECTION_OS __USED
+int __io_getchar(void)         
+{ 
+    return 0; 
+}
 
 /* ── Newlib environment ───────────────────────────────────────────────────── */
-
+__SECTION_OS_DATA __USED
 char  *__env[1] = { 0 };
+
+__SECTION_OS_DATA __USED
 char **environ  = __env;
 
-void initialise_monitor_handles(void) {}
+__SECTION_OS __USED
+void initialise_monitor_handles(void) 
+{
+
+}
 
 /* ── Newlib syscall stubs ─────────────────────────────────────────────────── */
+__SECTION_OS __USED
+int _getpid(void) 
+{ 
+    return 1; 
+}
 
-int _getpid(void) { return 1; }
-
+__SECTION_OS __USED
 int _kill(int pid, int sig)
 {
     (void)pid; (void)sig;
@@ -61,13 +96,15 @@ int _kill(int pid, int sig)
     return -1;
 }
 
+__SECTION_OS __USED
 void _exit(int status)
 {
     _kill(status, -1);
     while (1) {}
 }
 
-__attribute__((weak)) int _read(int file, char *ptr, int len)
+__SECTION_OS __WEAK
+int _read(int file, char *ptr, int len)
 {
     (void)file;
     for (int i = 0; i < len; i++)
@@ -75,7 +112,8 @@ __attribute__((weak)) int _read(int file, char *ptr, int len)
     return len;
 }
 
-__attribute__((weak)) int _write(int file, char *ptr, int len)
+__SECTION_OS __WEAK
+int _write(int file, char *ptr, int len)
 {
     (void)file;
     for (int i = 0; i < len; i++)
@@ -83,8 +121,13 @@ __attribute__((weak)) int _write(int file, char *ptr, int len)
     return len;
 }
 
-int _close(int file)  { (void)file; return -1; }
+__SECTION_OS __USED
+int _close(int file)  
+{ 
+    (void)file; return -1;
+}
 
+__SECTION_OS __USED
 int _fstat(int file, struct stat *st)
 {
     (void)file;
@@ -92,24 +135,45 @@ int _fstat(int file, struct stat *st)
     return 0;
 }
 
-int _isatty(int file) { (void)file; return 1; }
+__SECTION_OS __USED
+int _isatty(int file) 
+{ 
+    (void)file; return 1; 
+}
 
+__SECTION_OS __USED
 int _lseek(int file, int ptr, int dir)
 {
     (void)file; (void)ptr; (void)dir;
     return 0;
 }
 
+__SECTION_OS __USED
 int _open(char *path, int flags, ...)
 {
     (void)path; (void)flags;
     return -1;
 }
 
-int _wait(int *status)      { (void)status; errno = ECHILD; return -1; }
-int _unlink(char *name)     { (void)name;   errno = ENOENT; return -1; }
-int _times(struct tms *buf) { (void)buf;    return -1; }
+__SECTION_OS __USED
+int _wait(int *status)      
+{ 
+    (void)status; errno = ECHILD; return -1; 
+}
 
+__SECTION_OS __USED
+int _unlink(char *name)     
+{ 
+    (void)name;   errno = ENOENT; return -1; 
+}
+
+__SECTION_OS __USED
+int _times(struct tms *buf) 
+{ 
+    (void)buf;    return -1; 
+}
+
+__SECTION_OS __USED
 int _stat(char *file, struct stat *st)
 {
     (void)file;
@@ -117,6 +181,7 @@ int _stat(char *file, struct stat *st)
     return 0;
 }
 
+__SECTION_OS __USED
 int _link(char *old, char *new)
 {
     (void)old; (void)new;
@@ -124,8 +189,13 @@ int _link(char *old, char *new)
     return -1;
 }
 
-int _fork(void) { errno = EAGAIN; return -1; }
+__SECTION_OS __USED
+int _fork(void) 
+{ 
+    errno = EAGAIN; return -1; 
+}
 
+__SECTION_OS __USED
 int _execve(char *name, char **argv, char **env)
 {
     (void)name; (void)argv; (void)env;
@@ -134,7 +204,7 @@ int _execve(char *name, char **argv, char **env)
 }
 
 /* ── printk ───────────────────────────────────────────────────────────────── */
-
+__SECTION_OS __USED
 void printk_init(void)
 {
 #ifdef UART_SHELL_HW_ID
@@ -146,6 +216,7 @@ void printk_init(void)
 #endif
 }
 
+__SECTION_OS __USED
 int32_t printk(const char *fmt, ...)
 {
 #if (BOARD_UART_COUNT > 0)
@@ -170,6 +241,8 @@ int32_t printk(const char *fmt, ...)
             if (_printk_rb) ringbuffer_putchar(_printk_rb, (uint8_t)_msg_buf[i]);
 
     ATOMIC_EXIT_CRITICAL();
+
+     drv_uart_tx_start(UART_SHELL_HW_ID);
 
     va_end(args);
 

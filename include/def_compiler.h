@@ -14,17 +14,17 @@
 
 /* ── Inline ────────────────────────────────────────────────────────────── */
 #ifndef INLINE
-#  define INLINE            __attribute__((always_inline)) static inline
+#  define __INLINE            __attribute__((always_inline)) static inline
 #endif
 
 /* ── Packed struct ─────────────────────────────────────────────────────── */
 #ifndef PACKED
-#  define PACKED            __attribute__((packed))
+#  define __PACKED            __attribute__((packed))
 #endif
 
 /* ── Weak symbol ───────────────────────────────────────────────────────── */
 #ifndef WEAK
-#  define WEAK              __attribute__((weak))
+#  define __WEAK              __attribute__((weak))
 #endif
 
 /* ── Alignment ─────────────────────────────────────────────────────────── */

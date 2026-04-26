@@ -33,8 +33,12 @@ along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
+#include <stdbool.h>
+#include <stdarg.h>
 
-
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/times.h>
 
 typedef int32_t status_t;
 typedef status_t status_type;

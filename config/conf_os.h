@@ -61,7 +61,7 @@
 
 /* Shell line-editing and output buffer sizes */
 #define SHELL_LINE_BUF_LEN              (128)
-#define SHELL_OUT_BUF_LEN               (128)
+#define SHELL_OUT_BUF_LEN               (256)
 
 /* ── Debug activation — driven by Kconfig ───────────────────────────── */
 #define DRV_DEBUG_EN                    CONFIG_DRV_DEBUG_EN

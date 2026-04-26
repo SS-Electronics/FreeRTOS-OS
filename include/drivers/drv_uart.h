@@ -206,7 +206,7 @@ drv_uart_handle_t *drv_uart_get_handle(uint8_t dev_id);
 /**
  * @brief Start TX interrupt
  */
-int32_t drv_uart_tx_kick(uint8_t dev_id);
+int32_t drv_uart_tx_start(uint8_t dev_id);
 
 /**
  * @brief Get next TX byte (ISR context)

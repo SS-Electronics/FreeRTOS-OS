@@ -109,7 +109,7 @@ int32_t drv_uart_register(uint8_t dev_id,
         return err;
 
     /* Drain buffered TX data (e.g. printk before init) */
-    drv_uart_tx_kick(dev_id);
+    drv_uart_tx_start(dev_id);
 
     return OS_ERR_NONE;
 }
@@ -210,7 +210,7 @@ int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte)
  * @return OS_ERR_NONE on success, OS_ERR_OP on failure
  */
 __SECTION_OS __USED
-int32_t drv_uart_tx_kick(uint8_t dev_id)
+int32_t drv_uart_tx_start(uint8_t dev_id)
 {
     drv_uart_handle_t *h = drv_uart_get_handle(dev_id);
 
