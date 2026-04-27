@@ -267,8 +267,6 @@ static void _os_shell_task(void *arg)
     /* ── Bind printk to the shell UART TX ring buffer ── */
     printk_init();
 
-    printk_enable();
-
     shell_task_mgmt_register_cmds();
 
     _print_banner();

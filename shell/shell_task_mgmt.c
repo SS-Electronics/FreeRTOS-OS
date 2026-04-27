@@ -1,5 +1,5 @@
 /*
- * shell_task_mgmt.c — CLI commands: heap, tasks
+ * shell_task_mgmt.c — CLI commands: heap, tasks, iic-scan
  *
  * This file is part of FreeRTOS-OS Project.
  *
@@ -15,6 +15,17 @@
  *       Free   :  34832 B
  *       MinFree:  33104 B  (min ever free)
  *       Errors :  0 malloc failure(s)
+ *
+ * iic-scan <bus_id>
+ * ────────────────
+ *   Probes the full I2C address range (0x00–0xFF) on the given bus.
+ *   Uses iic_sync_probe() with a 10 ms per-address timeout.
+ *
+ *   Example output:
+ *     I2C bus 0 scan (0x00-0xFF):
+ *       0x19  ACK  LSM303DLHC ACC
+ *       0x1E  ACK  LSM303DLHC MAG
+ *     Found: 2 device(s) of 112 probed.
  *
  * tasks
  * ─────
@@ -35,6 +46,8 @@
 #include <shell/shell_task_mgmt.h>
 #include <os/kernel_task_mgr.h>
 #include <os/kernel_syscall.h>
+#include <drv_app/iic_app.h>
+#include <board/board_config.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -45,13 +58,14 @@
 
 /* ── Forward declarations ─────────────────────────────────────────────────── */
 
-static BaseType_t _cmd_heap_fn (char *out, size_t len, const char *in);
-static BaseType_t _cmd_tasks_fn(char *out, size_t len, const char *in);
-static BaseType_t _cmd_debug_fn(char *out, size_t len, const char *in);
-static BaseType_t _cmd_help_fn(char *out, size_t len, const char *in);
-static BaseType_t _cmd_version_fn(char *out, size_t len, const char *in);
-static BaseType_t _cmd_uptime_fn(char *out, size_t len, const char *in);
-static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in);
+static BaseType_t _cmd_heap_fn    (char *out, size_t len, const char *in);
+static BaseType_t _cmd_tasks_fn   (char *out, size_t len, const char *in);
+static BaseType_t _cmd_debug_fn   (char *out, size_t len, const char *in);
+static BaseType_t _cmd_help_fn    (char *out, size_t len, const char *in);
+static BaseType_t _cmd_version_fn (char *out, size_t len, const char *in);
+static BaseType_t _cmd_uptime_fn  (char *out, size_t len, const char *in);
+static BaseType_t _cmd_reboot_fn  (char *out, size_t len, const char *in);
+static BaseType_t _cmd_iic_scan_fn(char *out, size_t len, const char *in);
 
 /* ── CLI command descriptors ──────────────────────────────────────────────── */
 
@@ -98,6 +112,13 @@ static const CLI_Command_Definition_t _cmd_reboot = {
     "reboot",
     "reboot\r\n  Trigger a software reset (NVIC_SystemReset).\r\n",
     _cmd_reboot_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_iic_scan = {
+    "iic-scan",
+    "iic-scan <bus_id>\r\n"
+    "  Probe full I2C address range (0x00-0xFF) on the given bus.\r\n",
+    _cmd_iic_scan_fn, 1
 };
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -189,6 +210,9 @@ static BaseType_t _cmd_tasks_fn(char *out, size_t len, const char *in)
                  _state_to_str(t->state),
                  (unsigned)t->stack_hwm);
         _tasks_line++;
+
+        vTaskDelay(pdMS_TO_TICKS(10));
+
         return pdTRUE;
     }
 
@@ -289,6 +313,88 @@ static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in)
 }
 
 
+/* ── iic-scan command ─────────────────────────────────────────────────────── */
+
+/*
+ * Multi-shot state:
+ *   -1           first call — parse arg, run scan, print header
+ *   0..count-1   print one result line per shot
+ *   count        print summary line, reset to -1
+ */
+#define _IIC_SCAN_MAX  128U
+
+static int16_t _scan_state  = -1;
+static uint8_t _scan_bus_id =  0;
+static uint8_t _scan_found[_IIC_SCAN_MAX];
+static uint8_t _scan_count  =  0;
+
+static BaseType_t _cmd_iic_scan_fn(char *out, size_t len, const char *in)
+{
+    /* ── First call: parse argument, run full scan, emit header ── */
+    if (_scan_state == -1)
+    {
+        BaseType_t  plen;
+        const char *arg = FreeRTOS_CLIGetParameter(in, 1, &plen);
+
+        if (arg == NULL || plen == 0)
+        {
+            snprintf(out, len, "Usage: iic-scan <bus_id>\r\n");
+            return pdFALSE;
+        }
+
+        /* Parse single-digit bus ID */
+        uint8_t bus = (uint8_t)(arg[0] - '0');
+
+        if (arg[0] < '0' || arg[0] > '9' || bus >= BOARD_IIC_COUNT)
+        {
+            snprintf(out, len,
+                     "Error: bus %u not available (BOARD_IIC_COUNT=%u)\r\n",
+                     (unsigned)bus, (unsigned)BOARD_IIC_COUNT);
+            return pdFALSE;
+        }
+
+        _scan_bus_id = bus;
+        _scan_count  = 0;
+
+        /* Probe full byte address range — 10 ms timeout per address */
+        for (uint16_t addr = 0x00U; addr <= 0xFFU; addr++)
+        {
+            if (iic_sync_probe(_scan_bus_id, addr, 10U) == OS_ERR_NONE)
+            {
+                if (_scan_count < _IIC_SCAN_MAX)
+                    _scan_found[_scan_count++] = (uint8_t)addr;
+            }
+        }
+
+        snprintf(out, len, "I2C bus %u scan (0x00-0xFF):\r\n",
+                 (unsigned)_scan_bus_id);
+
+        if (_scan_count == 0)
+        {
+            strncat(out, "  No devices found.\r\n", len - strlen(out) - 1U);
+            return pdFALSE;
+        }
+
+        _scan_state = 0;
+        return pdTRUE;
+    }
+
+    /* ── One result line per shot ── */
+    if (_scan_state < (int16_t)_scan_count)
+    {
+        snprintf(out, len, "  0x%02X  ACK\r\n",
+                 (unsigned)_scan_found[_scan_state]);
+        _scan_state++;
+        return pdTRUE;
+    }
+
+    /* ── Summary (final shot) ── */
+    snprintf(out, len, "Found: %u device(s) of 256 probed.\r\n",
+             (unsigned)_scan_count);
+    _scan_state = -1;
+    return pdFALSE;
+}
+
 /* ── Registration ─────────────────────────────────────────────────────────── */
 
 void shell_task_mgmt_register_cmds(void)
@@ -301,4 +407,5 @@ void shell_task_mgmt_register_cmds(void)
     FreeRTOS_CLIRegisterCommand(&_cmd_heap);
     FreeRTOS_CLIRegisterCommand(&_cmd_tasks);
     FreeRTOS_CLIRegisterCommand(&_cmd_debug);
+    FreeRTOS_CLIRegisterCommand(&_cmd_iic_scan);
 }
