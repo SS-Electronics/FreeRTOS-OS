@@ -92,7 +92,7 @@ CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.spe
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := include arch irq drivers kernel mm ipc services drv_app shell lib init
+SUBDIRS := include arch irq drivers kernel mm ipc services drv_app drv_ext_chips shell lib init
 
 INCLUDES :=
 
@@ -276,8 +276,7 @@ ifdef APP_DIR
 $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_CONFIG_H): $(BOARD_XML)
 	@echo "### Generating BSP from $< ..."
 	@python3 scripts/gen_board_config.py $< \
-		--outdir $(APP_DIR)/board \
-		--incdir $(APP_DIR)/board
+		--outdir $(APP_DIR)/board
 	@echo "### BSP generation done"
 
 .PHONY: board-gen

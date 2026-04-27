@@ -3,10 +3,12 @@
 gen_board_config.py — Board configuration code generator for FreeRTOS-OS
 =========================================================================
 
-Reads a board XML description and generates two files:
+Reads a board XML description and generates four files, all in --outdir:
 
-  boards/<board_name>/board_config.c   — peripheral tables, API, callback tables
-  include/board/board_device_ids.h     — user-facing device-ID #defines
+  board_config.c       — peripheral tables, API, callback tables
+  board_config.h       — MCU variant, clock macros, struct typedefs, board API
+  board_device_ids.h   — user-facing device-ID #defines
+  board_handles.h      — HAL peripheral handle externs
 
 Supports multiple vendors via pluggable codegen backends:
   STM      → STM32Codegen      (STM32 HAL constants, GPIO_AF, __HAL_RCC_*)
@@ -493,14 +495,13 @@ class BoardConfigGenerator:
 
     # ── Public ────────────────────────────────────────────────────────────────
 
-    def generate(self, c_outdir: str, h_outdir: str):
-        Path(c_outdir).mkdir(parents=True, exist_ok=True)
-        Path(h_outdir).mkdir(parents=True, exist_ok=True)
+    def generate(self, outdir: str):
+        Path(outdir).mkdir(parents=True, exist_ok=True)
 
-        c_path    = Path(c_outdir) / 'board_config.c'
-        h_path    = Path(h_outdir) / 'board_device_ids.h'
-        bh_path   = Path(h_outdir) / 'board_handles.h'
-        bc_h_path = Path(h_outdir) / 'board_config.h'
+        c_path    = Path(outdir) / 'board_config.c'
+        h_path    = Path(outdir) / 'board_device_ids.h'
+        bh_path   = Path(outdir) / 'board_handles.h'
+        bc_h_path = Path(outdir) / 'board_config.h'
 
         # Generate board_device_ids.h first — board_config.h includes it
         h_path.write_text(self._gen_device_ids_h())
@@ -1204,11 +1205,8 @@ def main():
     parser.add_argument('xml',
         help='Path to the board XML file (e.g. boards/stm32f411_devboard.xml)')
     parser.add_argument('--outdir', '-o',
-        help='Directory for board_config.c  '
+        help='Directory for all generated files  '
              '(default: boards/<board_name>/)')
-    parser.add_argument('--incdir', '-i',
-        help='Directory for board_device_ids.h  '
-             '(default: include/board/)')
     args = parser.parse_args()
 
     xml_path = Path(args.xml)
@@ -1218,14 +1216,13 @@ def main():
 
     gen = BoardConfigGenerator(str(xml_path))
 
-    # Resolve output directories relative to project root (parent of scripts/)
-    script_dir  = Path(__file__).parent
+    # Resolve output directory relative to project root (parent of scripts/)
+    script_dir   = Path(__file__).parent
     project_root = script_dir.parent
 
-    c_outdir = Path(args.outdir)  if args.outdir  else project_root / 'boards' / gen.board_name
-    h_outdir = Path(args.incdir)  if args.incdir  else project_root / 'include' / 'board'
+    outdir = Path(args.outdir) if args.outdir else project_root / 'boards' / gen.board_name
 
-    gen.generate(str(c_outdir), str(h_outdir))
+    gen.generate(str(outdir))
 
 
 if __name__ == '__main__':
