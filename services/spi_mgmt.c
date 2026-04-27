@@ -90,10 +90,11 @@
 #include <os/kernel.h>
 #include <drivers/drv_spi.h>
 #include <board/board_config.h>
+#include <board/board_device_ids.h>
 #include <irq/irq_notify.h>
 
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
-#  include <drivers/hal/stm32/hal_spi_stm32.h>
+#include <drivers/hal/stm32/hal_spi_stm32.h>
 #endif
 
 #if (BOARD_SPI_COUNT > 0)

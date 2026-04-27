@@ -521,7 +521,7 @@ class BoardConfigGenerator:
     # ── board_device_ids.h ────────────────────────────────────────────────────
 
     def _gen_device_ids_h(self) -> str:
-        guard = f'BOARD_{self.board_name.upper()}_DEVICE_IDS_H_'
+        guard = f'BOARD_{self.board_name.upper().replace(" ", "_")}_DEVICE_IDS_H_'
         L = []
         L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
         L.append(_INC_GUARD_OPEN.format(guard=guard))
@@ -560,7 +560,7 @@ class BoardConfigGenerator:
 
     def _gen_board_handles_h(self) -> str:
         cg    = self.cg
-        guard = f'BOARD_{self.board_name.upper()}_HANDLES_H_'
+        guard = f'BOARD_{self.board_name.upper().replace(" ", "_")}_HANDLES_H_'
         L     = []
         L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
         L.append(_INC_GUARD_OPEN.format(guard=guard))
