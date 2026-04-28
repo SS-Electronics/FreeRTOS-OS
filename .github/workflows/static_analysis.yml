@@ -145,32 +145,44 @@ jobs:
         run: |
           TOTAL=0
           ERRORS=0
+          CONFIG_NOISE=0
           REPORT="${{ env.REPORTS_DIR }}/misra_report.txt"
           if [[ -f "$REPORT" ]]; then
-            TOTAL=$(grep -c '"severity"'        "$REPORT" 2>/dev/null || true)
-            ERRORS=$(grep -c '"severity": "error"' "$REPORT" 2>/dev/null || true)
+            # Count genuine MISRA rule violations (errorId starts with "c2012-")
+            # Exclude "errorId":"config" entries — these are misra.py tool-internal
+            # errors for unresolvable compile-time constants, not actual rule violations.
+            TOTAL=$(grep '"severity"' "$REPORT" 2>/dev/null \
+                    | grep -v '"errorId": "config"' | wc -l || true)
+            ERRORS=$(grep '"severity": "error"' "$REPORT" 2>/dev/null \
+                     | grep -v '"errorId": "config"' | wc -l || true)
+            CONFIG_NOISE=$(grep -c '"errorId": "config"' "$REPORT" 2>/dev/null || true)
             TOTAL=${TOTAL:-0}
             ERRORS=${ERRORS:-0}
+            CONFIG_NOISE=${CONFIG_NOISE:-0}
           fi
-          echo "total=${TOTAL}"   >> "$GITHUB_OUTPUT"
-          echo "errors=${ERRORS}" >> "$GITHUB_OUTPUT"
-          echo "MISRA total violations: ${TOTAL}  (error-level: ${ERRORS})"
+          echo "total=${TOTAL}"             >> "$GITHUB_OUTPUT"
+          echo "errors=${ERRORS}"           >> "$GITHUB_OUTPUT"
+          echo "config_noise=${CONFIG_NOISE}" >> "$GITHUB_OUTPUT"
+          echo "MISRA genuine violations: ${TOTAL}  (error-level: ${ERRORS})  (config-noise filtered: ${CONFIG_NOISE})"
 
       - name: Annotate job summary
         if: always()
         run: |
           TOTAL="${{ steps.misra_count.outputs.total }}"
           ERRORS="${{ steps.misra_count.outputs.errors }}"
+          CONFIG_NOISE="${{ steps.misra_count.outputs.config_noise }}"
           {
             echo "## MISRA C:2012 Analysis Results"
             echo ""
             echo "| Metric | Value |"
             echo "|---|---|"
-            echo "| Total violations    | \`${TOTAL}\` |"
+            echo "| Genuine violations  | \`${TOTAL}\` |"
             echo "| Error-level         | \`${ERRORS}\` |"
+            echo "| Config noise (filtered) | \`${CONFIG_NOISE}\` |"
             echo "| Branch              | \`${{ github.ref_name }}\` |"
             echo "| Commit              | \`${{ github.sha }}\` |"
             echo ""
+            echo "> \`Config noise\` = \`misra.py\` internal errors for unresolvable compile-time constants — not MISRA rule violations."
             echo "> Run \`./scripts/run_cppcheck.sh --misra\` locally to reproduce."
           } >> "$GITHUB_STEP_SUMMARY"
 

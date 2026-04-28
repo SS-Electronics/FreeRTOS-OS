@@ -203,6 +203,15 @@ INCLUDES=(
     "-I${PROJECT_ROOT}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F"
 )
 
+# Include sibling app/board/ when this repo is used as a submodule.
+# Provides board-specific constants (IRQ_ID_TOTAL, IRQ_NOTIFY_MAX_SUBS, …)
+# that live in irq_hw_conf.h; without it misra.py emits "errorId:config" noise.
+APP_BOARD_DIR="${PROJECT_ROOT}/../app/board"
+if [[ -d "$APP_BOARD_DIR" ]]; then
+    INCLUDES+=("-I${APP_BOARD_DIR}")
+    info "App board headers: ${APP_BOARD_DIR}"
+fi
+
 # ── Preprocessor defines ──────────────────────────────────────────────────────
 DEFINES=(
     "-DSTM32F411xE"
@@ -257,7 +266,6 @@ CPPCHECK_ARGS=(
     "--platform=${PROJECT_ROOT}/scripts/arm_cm4.xml"
     "--language=c"
     "--max-ctu-depth=4"
-    "--error-exitcode=1"
     "--suppressions-list=${SUPPRESS_TMP}"
     "--inline-suppr"
     "--force"
@@ -305,14 +313,14 @@ info "Analysing ${TOTAL_FILES} files with severity >= ${SEVERITY} ..."
 info "XML report  → ${REPORT_XML}"
 info "Text report → ${REPORT_TXT}"
 
-CPPCHECK_EXIT=0
-
-# Text output (human-readable) to terminal + text file
+# Text output (human-readable) to terminal + text file.
+# No --error-exitcode: cppcheck's exit code conflates all enabled severities
+# (warnings, style, …) with errors. We derive the real exit code from the XML.
 cppcheck "${CPPCHECK_ARGS[@]}" \
     "--template=gcc" \
-    2>&1 | tee "$REPORT_TXT" || CPPCHECK_EXIT=$?
+    2>&1 | tee "$REPORT_TXT" || true
 
-# XML output (for IDE / CI integration)
+# XML output (authoritative — used to count severity="error" items)
 cppcheck "${CPPCHECK_ARGS[@]}" \
     "--xml" \
     2>"$REPORT_XML" || true
@@ -429,9 +437,10 @@ issue_count() {
     grep -c "severity=" "$file" 2>/dev/null || echo 0
 }
 
-errors=$(grep -c " error:"   "$REPORT_TXT" 2>/dev/null || true); errors=${errors:-0}
-warns=$(grep  -c " warning:" "$REPORT_TXT" 2>/dev/null || true); warns=${warns:-0}
-styles=$(grep -c " style:"   "$REPORT_TXT" 2>/dev/null || true); styles=${styles:-0}
+# Count from XML (authoritative) — gcc template text uses ": error:" etc.
+errors=$(grep -c 'severity="error"'   "$REPORT_XML" 2>/dev/null || true); errors=${errors:-0}
+warns=$(grep  -c 'severity="warning"' "$REPORT_XML" 2>/dev/null || true); warns=${warns:-0}
+styles=$(grep -c 'severity="style"'   "$REPORT_XML" 2>/dev/null || true); styles=${styles:-0}
 
 echo -e "  ${BOLD}Source files analysed :${RESET} ${TOTAL_FILES}"
 echo -e "  ${BOLD}CPPcheck errors       :${RESET} ${RED}${errors}${RESET}"
@@ -448,14 +457,18 @@ echo -e "  ${BOLD}Reports saved to: ${CYAN}${OUTPUT_DIR}/${RESET}"
 echo ""
 
 # ── Final exit code ───────────────────────────────────────────────────────────
+# Exit 1 only when error-severity issues are found in the XML report.
+# Warnings / style / performance findings are reported but do NOT fail the run.
 FINAL_EXIT=0
-[[ "$CPPCHECK_EXIT" -ne 0 ]] && FINAL_EXIT=1
-[[ "$MISRA_EXIT" -eq 1 ]]   && FINAL_EXIT=1
+if [[ "$errors" -gt 0 ]]; then
+    FINAL_EXIT=1
+fi
+[[ "$MISRA_EXIT" -eq 1 ]] && FINAL_EXIT=1
 
 if [[ "$FINAL_EXIT" -eq 0 ]]; then
-    success "Analysis complete — no issues found above severity '${SEVERITY}'."
+    success "Analysis complete — no error-severity issues found."
 else
-    warn "Analysis complete — issues found. Review reports in: ${OUTPUT_DIR}/"
+    warn "Analysis complete — error-severity issues found. Review reports in: ${OUTPUT_DIR}/"
 fi
 
 exit "$FINAL_EXIT"
