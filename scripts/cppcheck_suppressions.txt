@@ -73,7 +73,13 @@ misra-c2012-8.9
 *:*/board/irq_hw_init_generated.c
 
 # ── CMSIS / STM32 vendor headers ───────────────────────────────────────────────
-# cmsis_gcc.h emits a false #error when __ARM_ARCH_PROFILE is not predefined.
-# The macro is set by arm-none-eabi-gcc at compile time; cppcheck can't see it.
-preprocessorErrorDirective:*/CMSIS_6/*
-preprocessorErrorDirective:*/CMSIS/Core/*
+# cmsis_gcc.h: #error "Unknown Arm architecture profile" — fixed by defining
+# __ARM_ARCH_PROFILE=77 ('M') in run_cppcheck.sh; these are safety-net patterns.
+preprocessorErrorDirective:*cmsis_gcc.h*
+preprocessorErrorDirective:*CMSIS_6*
+preprocessorErrorDirective:*CMSIS/Core*
+
+# cmsis_gcc_m.h: linker-symbol pointer comparison in startup copy/zero loops.
+# __copy_table_start__ / __copy_table_end__ are linker-defined symbols;
+# the loop is correct at run time — cppcheck cannot see the linker script.
+comparePointers:*cmsis_gcc_m.h*

@@ -211,6 +211,9 @@ DEFINES=(
     "-D__FPU_PRESENT=1"
     "-D__FPU_USED=1"
     "-DCORTEX_M4"
+    # GCC sets __ARM_ARCH_PROFILE automatically to 'M' (ASCII 77) for Cortex-M.
+    # cppcheck does not; without it cmsis_gcc.h hits #error "Unknown Arm architecture profile".
+    "-D__ARM_ARCH_PROFILE=77"
     "-DCONFIG_DEFAULT_DEBUG_EN=1"
     "-DCONFIG_DRV_DEBUG_EN=1"
     "-DCONFIG_HAL_UART_MODULE_ENABLED=1"
