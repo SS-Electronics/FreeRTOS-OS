@@ -837,25 +837,36 @@ def _die(msg):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <path/to/irq_table.xml>", file=sys.stderr)
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Generate IRQ table headers and C sources from irq_table.xml."
+    )
+    parser.add_argument("xml", metavar="irq_table.xml",
+                        help="Path to the board irq_table.xml file")
+    parser.add_argument("--outdir", metavar="DIR", default=None,
+                        help="Output directory for all generated files "
+                             "(default: <project_root>/app/board/)")
+    args = parser.parse_args()
 
-    xml_path = sys.argv[1]
+    xml_path = args.xml
     if not os.path.isfile(xml_path):
         _die(f"XML file not found: {xml_path}")
 
-    # Script lives at FreeRTOS-OS/scripts/ — project root is two levels up
-    script_dir   = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(script_dir))
+    if args.outdir:
+        board_out = os.path.abspath(args.outdir)
+    else:
+        # Legacy default: script lives at FreeRTOS-OS/scripts/ — project root is two levels up
+        script_dir   = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(script_dir))
+        board_out    = os.path.join(project_root, "app", "board")
 
-    out_irq_hw_conf_h         = os.path.join(project_root, "app", "board", "irq_hw_conf.h")
-    out_irq_table_c           = os.path.join(project_root, "app", "board", "irq_table_generated.c")
-    out_hw_init_c             = os.path.join(project_root, "app", "board", "irq_hw_init_generated.c")
-    out_hw_init_h             = os.path.join(project_root, "app", "board", "irq_hw_init_generated.h")
-    out_periph_handlers_h     = os.path.join(project_root, "app", "board", "irq_periph_handlers_generated.h")
-    out_periph_vectors_inc    = os.path.join(project_root, "app", "board", "irq_periph_vectors_generated.inc")
-    out_periph_dispatch_c     = os.path.join(project_root, "app", "board", "irq_periph_dispatch_generated.c")
+    out_irq_hw_conf_h         = os.path.join(board_out, "irq_hw_conf.h")
+    out_irq_table_c           = os.path.join(board_out, "irq_table_generated.c")
+    out_hw_init_c             = os.path.join(board_out, "irq_hw_init_generated.c")
+    out_hw_init_h             = os.path.join(board_out, "irq_hw_init_generated.h")
+    out_periph_handlers_h     = os.path.join(board_out, "irq_periph_handlers_generated.h")
+    out_periph_vectors_inc    = os.path.join(board_out, "irq_periph_vectors_generated.inc")
+    out_periph_dispatch_c     = os.path.join(board_out, "irq_periph_dispatch_generated.c")
 
     print(f"gen_irq_table: reading {xml_path}")
     tree = ET.parse(xml_path)

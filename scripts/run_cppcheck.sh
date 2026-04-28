@@ -203,13 +203,43 @@ INCLUDES=(
     "-I${PROJECT_ROOT}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F"
 )
 
-# Include sibling app/board/ when this repo is used as a submodule.
-# Provides board-specific constants (IRQ_ID_TOTAL, IRQ_NOTIFY_MAX_SUBS, …)
-# that live in irq_hw_conf.h; without it misra.py emits "errorId:config" noise.
+# ── Board headers: priority order ────────────────────────────────────────────
+# 1. Sibling app/board/   — real board (submodule / integrated build)
+# 2. demo/board/          — demo build headers (make demo-gen already ran)
+# 3. build/cppcheck-board — last resort: auto-generate from demo XML
+#
+# The selected directory is prepended to INCLUDES so <board/irq_hw_conf.h>
+# resolves to the right irq_hw_conf.h before the fallback in include/.
 APP_BOARD_DIR="${PROJECT_ROOT}/../app/board"
-if [[ -d "$APP_BOARD_DIR" ]]; then
-    INCLUDES+=("-I${APP_BOARD_DIR}")
-    info "App board headers: ${APP_BOARD_DIR}"
+DEMO_BOARD_DIR="${PROJECT_ROOT}/demo/board"
+CPPCHECK_BOARD_DIR="${PROJECT_ROOT}/build/cppcheck-board"
+
+if [[ -d "$APP_BOARD_DIR" && -f "${APP_BOARD_DIR}/irq_hw_conf.h" ]]; then
+    INCLUDES=("-I${APP_BOARD_DIR}" "${INCLUDES[@]}")
+    info "Board headers (app): ${APP_BOARD_DIR}"
+
+elif [[ -f "${DEMO_BOARD_DIR}/irq_hw_conf.h" ]]; then
+    # demo-gen has already run — use its output directly
+    INCLUDES=("-I${DEMO_BOARD_DIR}" "${INCLUDES[@]}")
+    info "Board headers (demo): ${DEMO_BOARD_DIR}"
+
+else
+    # Neither available — generate into build/cppcheck-board/ on the fly
+    CPPCHECK_BOARD_CONF="${CPPCHECK_BOARD_DIR}/board/irq_hw_conf.h"
+    if [[ ! -f "$CPPCHECK_BOARD_CONF" ]]; then
+        info "Generating demo board headers → ${CPPCHECK_BOARD_DIR}/board/ ..."
+        python3 "${PROJECT_ROOT}/scripts/gen_irq_table.py" \
+            "${PROJECT_ROOT}/demo/board/irq_table.xml" \
+            --outdir "${CPPCHECK_BOARD_DIR}/board" \
+            2>/dev/null \
+            || { warn "Demo board generation failed — IRQ constants may be unresolved"; }
+        python3 "${PROJECT_ROOT}/scripts/gen_board_config.py" \
+            "${PROJECT_ROOT}/demo/board/stm32f411_devboard.xml" \
+            --outdir "${CPPCHECK_BOARD_DIR}/board" \
+            2>/dev/null || true
+    fi
+    INCLUDES=("-I${CPPCHECK_BOARD_DIR}/board" "${INCLUDES[@]}")
+    info "Board headers (generated): ${CPPCHECK_BOARD_DIR}/board/"
 fi
 
 # ── Preprocessor defines ──────────────────────────────────────────────────────

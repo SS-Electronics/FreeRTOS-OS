@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  scripts/demo_board/irq_table.xml — Demo board IRQ table for static analysis.
+
+  Purpose
+  ───────
+  This file provides a self-contained board configuration used by:
+    • CPPcheck / MISRA static analysis  (via make cppcheck-board-gen)
+    • CI/CD pipeline                    (generates build/cppcheck-board/board/)
+    • Unit-test builds that need a concrete board without an app tree
+
+  It mirrors the real stm32f411_devboard config so that IRQ ID constants
+  (IRQ_ID_TOTAL, IRQ_NOTIFY_MAX_SUBS, etc.) resolve correctly during analysis
+  without requiring the sibling app/ repository to be checked out.
+
+  Regenerate board headers:
+    make cppcheck-board-gen             ← from FreeRTOS-OS/
+    make cppcheck-board-gen APP_DIR=.   ← same
+
+  Generated output (gitignored):
+    build/cppcheck-board/board/irq_hw_conf.h           ← included by cppcheck
+    build/cppcheck-board/board/irq_table_generated.c
+    build/cppcheck-board/board/irq_hw_init_generated.*
+    build/cppcheck-board/board/irq_periph_*
+-->
+
+<irq_table board="demo_stm32f411">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Software IRQ capacity — drives irq_hw_conf.h generation
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <config max_uart="4"  uart_events="3"
+          max_i2c="4"   i2c_events="3"
+          max_spi="4"   spi_events="4"
+          max_exti="16"
+          notify_max_subs="4"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       UART peripherals
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <uart dev_id="0" label="UART_DEBUG" irqn="USART1_IRQn" priority="5" hal_inst="USART1"/>
+  <uart dev_id="1" label="UART_APP"   irqn="USART2_IRQn" priority="5" hal_inst="USART2"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       I2C peripherals
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <i2c dev_id="0" label="I2C_SENSOR"
+       irqn_ev="I2C1_EV_IRQn" priority_ev="5"
+       irqn_er="I2C1_ER_IRQn" priority_er="5"
+       hal_inst="I2C1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SPI peripherals
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <spi dev_id="0" label="SPI_FLASH" irqn="SPI1_IRQn" priority="5" hal_inst="SPI1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       GPIO EXTI lines
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <exti line="0" label="BTN_USER" irqn="EXTI0_IRQn" priority="6"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       RCC peripheral clock enables
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <sys_clk inst="SYSCFG"/>
+  <sys_clk inst="PWR"/>
+  <gpio_clk port="A"/>
+  <gpio_clk port="B"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       System / core IRQs
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <sys name="SysTick"       irqn="SysTick_IRQn"       priority="15" action="set_priority"/>
+  <sys name="PendSV"        irqn="PendSV_IRQn"         priority="15" action="set_priority"/>
+  <sys name="SVCall"        irqn="SVCall_IRQn"          priority="14" action="set_priority"/>
+
+  <sys name="TIM1_UP_TIM10" irqn="TIM1_UP_TIM10_IRQn" priority="1"  action="enable"
+       irq_id="TIM_TICK"    flow="edge"
+       dispatch="hal_timebase_stm32_irq_handler()"
+       dispatch_include="&lt;drivers/hal/stm32/hal_timebase_stm32.h&gt;"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STM32F411 peripheral vector table
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <vector_table device="STM32F411">
+    <entry irqn="0"  handler="WWDG_IRQHandler"                comment="Window Watchdog"/>
+    <entry irqn="1"  handler="PVD_IRQHandler"                 comment="PVD through EXTI line"/>
+    <entry irqn="2"  handler="TAMP_STAMP_IRQHandler"          comment="Tamper and TimeStamp"/>
+    <entry irqn="3"  handler="RTC_WKUP_IRQHandler"            comment="RTC Wakeup"/>
+    <entry irqn="4"  handler="FLASH_IRQHandler"               comment="Flash global"/>
+    <entry irqn="5"  handler="RCC_IRQHandler"                 comment="RCC global"/>
+    <entry irqn="6"  handler="EXTI0_IRQHandler"               comment="EXTI Line 0"/>
+    <entry irqn="7"  handler="EXTI1_IRQHandler"               comment="EXTI Line 1"/>
+    <entry irqn="8"  handler="EXTI2_IRQHandler"               comment="EXTI Line 2"/>
+    <entry irqn="9"  handler="EXTI3_IRQHandler"               comment="EXTI Line 3"/>
+    <entry irqn="10" handler="EXTI4_IRQHandler"               comment="EXTI Line 4"/>
+    <entry irqn="11" handler="DMA1_Stream0_IRQHandler"        comment="DMA1 Stream 0"/>
+    <entry irqn="12" handler="DMA1_Stream1_IRQHandler"        comment="DMA1 Stream 1"/>
+    <entry irqn="13" handler="DMA1_Stream2_IRQHandler"        comment="DMA1 Stream 2"/>
+    <entry irqn="14" handler="DMA1_Stream3_IRQHandler"        comment="DMA1 Stream 3"/>
+    <entry irqn="15" handler="DMA1_Stream4_IRQHandler"        comment="DMA1 Stream 4"/>
+    <entry irqn="16" handler="DMA1_Stream5_IRQHandler"        comment="DMA1 Stream 5"/>
+    <entry irqn="17" handler="DMA1_Stream6_IRQHandler"        comment="DMA1 Stream 6"/>
+    <entry irqn="18" handler="ADC_IRQHandler"                 comment="ADC1 ADC2 ADC3"/>
+    <entry irqn="23" handler="EXTI9_5_IRQHandler"             comment="EXTI Lines 5-9"/>
+    <entry irqn="24" handler="TIM1_BRK_TIM9_IRQHandler"       comment="TIM1 Break and TIM9"/>
+    <entry irqn="25" handler="TIM1_UP_TIM10_IRQHandler"       comment="TIM1 Update and TIM10"/>
+    <entry irqn="26" handler="TIM1_TRG_COM_TIM11_IRQHandler"  comment="TIM1 Trigger/Comm and TIM11"/>
+    <entry irqn="27" handler="TIM1_CC_IRQHandler"             comment="TIM1 Capture Compare"/>
+    <entry irqn="28" handler="TIM2_IRQHandler"                comment="TIM2"/>
+    <entry irqn="29" handler="TIM3_IRQHandler"                comment="TIM3"/>
+    <entry irqn="30" handler="TIM4_IRQHandler"                comment="TIM4"/>
+    <entry irqn="31" handler="I2C1_EV_IRQHandler"             comment="I2C1 Event"/>
+    <entry irqn="32" handler="I2C1_ER_IRQHandler"             comment="I2C1 Error"/>
+    <entry irqn="33" handler="I2C2_EV_IRQHandler"             comment="I2C2 Event"/>
+    <entry irqn="34" handler="I2C2_ER_IRQHandler"             comment="I2C2 Error"/>
+    <entry irqn="35" handler="SPI1_IRQHandler"                comment="SPI1"/>
+    <entry irqn="36" handler="SPI2_IRQHandler"                comment="SPI2"/>
+    <entry irqn="37" handler="USART1_IRQHandler"              comment="USART1"/>
+    <entry irqn="38" handler="USART2_IRQHandler"              comment="USART2"/>
+    <entry irqn="40" handler="EXTI15_10_IRQHandler"           comment="EXTI Lines 10-15"/>
+    <entry irqn="41" handler="RTC_Alarm_IRQHandler"           comment="RTC Alarm A and B"/>
+    <entry irqn="42" handler="OTG_FS_WKUP_IRQHandler"         comment="USB OTG FS Wakeup"/>
+    <entry irqn="47" handler="DMA1_Stream7_IRQHandler"        comment="DMA1 Stream 7"/>
+    <entry irqn="49" handler="SDIO_IRQHandler"                comment="SDIO"/>
+    <entry irqn="50" handler="TIM5_IRQHandler"                comment="TIM5"/>
+    <entry irqn="51" handler="SPI3_IRQHandler"                comment="SPI3"/>
+    <entry irqn="56" handler="DMA2_Stream0_IRQHandler"        comment="DMA2 Stream 0"/>
+    <entry irqn="57" handler="DMA2_Stream1_IRQHandler"        comment="DMA2 Stream 1"/>
+    <entry irqn="58" handler="DMA2_Stream2_IRQHandler"        comment="DMA2 Stream 2"/>
+    <entry irqn="59" handler="DMA2_Stream3_IRQHandler"        comment="DMA2 Stream 3"/>
+    <entry irqn="60" handler="DMA2_Stream4_IRQHandler"        comment="DMA2 Stream 4"/>
+    <entry irqn="67" handler="OTG_FS_IRQHandler"              comment="USB OTG FS"/>
+    <entry irqn="68" handler="DMA2_Stream5_IRQHandler"        comment="DMA2 Stream 5"/>
+    <entry irqn="69" handler="DMA2_Stream6_IRQHandler"        comment="DMA2 Stream 6"/>
+    <entry irqn="70" handler="DMA2_Stream7_IRQHandler"        comment="DMA2 Stream 7"/>
+    <entry irqn="71" handler="USART6_IRQHandler"              comment="USART6"/>
+    <entry irqn="72" handler="I2C3_EV_IRQHandler"             comment="I2C3 Event"/>
+    <entry irqn="73" handler="I2C3_ER_IRQHandler"             comment="I2C3 Error"/>
+    <entry irqn="81" handler="FPU_IRQHandler"                 comment="FPU"/>
+    <entry irqn="84" handler="SPI4_IRQHandler"                comment="SPI4"/>
+    <entry irqn="85" handler="SPI5_IRQHandler"                comment="SPI5"/>
+  </vector_table>
+
+</irq_table>

@@ -53,6 +53,12 @@ jobs:
           sudo apt-get install -y cppcheck python3 python3-pygments
           cppcheck --version
 
+      - name: Generate demo board headers
+        run: |
+          make cppcheck-board-gen
+          echo "Generated files in demo/board/:"
+          ls demo/board/
+
       - name: Run CPPcheck (warnings and above)
         id: cppcheck_run
         run: |
@@ -127,6 +133,12 @@ jobs:
           for f in "${MISRA_CANDIDATES[@]}"; do
             if [[ -f "$f" ]]; then echo "MISRA addon: $f"; break; fi
           done
+
+      - name: Generate demo board headers
+        run: |
+          make cppcheck-board-gen
+          echo "Generated files in demo/board/:"
+          ls demo/board/
 
       - name: Run CPPcheck + MISRA C:2012
         id: misra_run

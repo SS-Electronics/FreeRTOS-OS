@@ -66,6 +66,23 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# ── Demo build generated outputs ──────────────────────────────────────────────
+# Recreated by: make demo-gen
+# Source files (tracked): demo/board/*.xml  demo/board/mcu_config.h
+#                         demo/kconfig.conf demo/app_main.c demo/Makefile
+#                         demo/os_conf_include/
+demo/board/irq_hw_conf.h
+demo/board/irq_hw_init_generated.c
+demo/board/irq_hw_init_generated.h
+demo/board/irq_periph_dispatch_generated.c
+demo/board/irq_periph_handlers_generated.h
+demo/board/irq_periph_vectors_generated.inc
+demo/board/irq_table_generated.c
+demo/board/board_config.c
+demo/board/board_config.h
+demo/board/board_device_ids.h
+demo/board/board_handles.h
+
 # ── Static analysis (CPPcheck + MISRA) ────────────────────────────────────────
 # Generated reports — run ./scripts/run_cppcheck.sh to regenerate
 reports/
