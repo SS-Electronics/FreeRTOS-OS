@@ -1,0 +1,6 @@
+{
+    "script": "misra",
+    "args": [
+        "--no-summary"
+    ]
+}

@@ -65,3 +65,28 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# ── Static analysis (CPPcheck + MISRA) ────────────────────────────────────────
+# Generated reports — run ./scripts/run_cppcheck.sh to regenerate
+reports/
+
+# cppcheck intermediate files (generated and cleaned by run_cppcheck.sh)
+*.dump
+*.ctu-info
+
+# ── Doxygen generated output ─────────────────────────────────────────────────
+# HTML docs are regenerated with: make docs  (or: doxygen Doxyfile)
+docs/*.html
+docs/*.js
+docs/*.css
+docs/*.png
+docs/*.svg
+docs/*.map
+docs/*.md5
+docs/*.dot
+docs/search/
+docs/doxygen_sqlite3.db
+
+# ── CI/CD local artefacts ─────────────────────────────────────────────────────
+.act/
+ci-reports/

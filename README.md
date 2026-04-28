@@ -20,6 +20,7 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
 | [docs/DMA.md](docs/DMA.md) | Linux-style DMA engine, STM32F4 HAL backend, slave/memcpy/cyclic transfers |
 | [docs/DEBUG.md](docs/DEBUG.md) | VSCode debug setup, OpenOCD, GDB, ITM/SWO |
 | [docs/OS_INSIDE.md](docs/OS_INSIDE.md) | Internals deep-dive: ISR priority rules, post-mortems, debug recipes |
+| [docs/CHECK.md](docs/CHECK.md) | CPPcheck + MISRA C:2012 static analysis: setup, options, deviation table |
 
 ---
 
@@ -545,6 +546,30 @@ Default: **STM32F411xE** (⭐). Change with `make menuconfig` → *Target MCU pa
 | `STM32F407xx` | Cortex-M4F @ 168 MHz | 1 MB | 192 KB |
 | `STM32F446xx` | Cortex-M4F @ 180 MHz | 512 KB | 128 KB |
 | `STM32F429xx` | Cortex-M4F @ 180 MHz | 2 MB | 256 KB |
+
+---
+
+## Static Analysis
+
+FreeRTOS-OS ships a complete CPPcheck + MISRA C:2012 analysis workflow.
+
+```bash
+# Install CPPcheck (once per machine)
+./scripts/install_cppcheck.sh
+
+# Run CPPcheck (warnings and above)
+./scripts/run_cppcheck.sh
+
+# Run CPPcheck + MISRA C:2012 checks
+./scripts/run_cppcheck.sh --misra
+
+# Generate HTML reports
+./scripts/run_cppcheck.sh --misra --severity=style --html
+```
+
+Reports are written to `reports/cppcheck/` (git-ignored). A GitHub Actions pipeline runs the checks automatically on every push and pull request.
+
+See **[docs/CHECK.md](docs/CHECK.md)** for the full reference: options, report formats, MISRA deviation table, and CI/CD integration.
 
 ---
 

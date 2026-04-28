@@ -1,0 +1,207 @@
+# static_analysis.yml
+# CPPcheck + MISRA C:2012 static analysis for FreeRTOS-OS.
+#
+# Triggered on:
+#   - Every push to main / dev branches
+#   - Every pull request targeting main / dev
+#
+# Jobs:
+#   cppcheck  — general static analysis (fails on error-severity findings)
+#   misra     — MISRA C:2012 rule compliance (reports violations as annotations)
+#
+# Artefacts:
+#   Reports are uploaded and retained for 30 days.
+
+name: Static Analysis
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "**.c"
+      - "**.h"
+      - "scripts/run_cppcheck.sh"
+      - "scripts/cppcheck_suppressions.txt"
+      - ".github/workflows/static_analysis.yml"
+  pull_request:
+    branches: [main, dev]
+
+concurrency:
+  group: static-analysis-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CPPCHECK_VERSION: "2.13"   # minimum required version
+  REPORTS_DIR: reports/cppcheck
+
+jobs:
+  # ── Job 1: CPPcheck General Analysis ────────────────────────────────────────
+  cppcheck:
+    name: CPPcheck (error + warning)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install CPPcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y cppcheck python3 python3-pygments
+          cppcheck --version
+
+      - name: Cache CPPcheck results
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.REPORTS_DIR }}
+          key: cppcheck-${{ runner.os }}-${{ hashFiles('**/*.c', '**/*.h', 'scripts/cppcheck_suppressions.txt') }}
+          restore-keys: |
+            cppcheck-${{ runner.os }}-
+
+      - name: Run CPPcheck (warnings and above)
+        id: cppcheck_run
+        run: |
+          chmod +x scripts/run_cppcheck.sh
+          ./scripts/run_cppcheck.sh \
+            --severity=warning \
+            --output-dir="${{ env.REPORTS_DIR }}" \
+            --jobs=2
+        continue-on-error: true  # upload reports even on failure
+
+      - name: Annotate PR with CPPcheck findings
+        if: github.event_name == 'pull_request'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ env.REPORTS_DIR }}/cppcheck_report.xml
+          category: cppcheck
+        continue-on-error: true  # SARIF upload is best-effort
+
+      - name: Upload CPPcheck reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cppcheck-reports-${{ github.run_number }}
+          path: |
+            ${{ env.REPORTS_DIR }}/cppcheck_report.txt
+            ${{ env.REPORTS_DIR }}/cppcheck_report.xml
+          retention-days: 30
+
+      - name: Fail if errors found
+        if: steps.cppcheck_run.outcome == 'failure'
+        run: |
+          echo "::error::CPPcheck found error-severity issues. Review the uploaded report."
+          echo "── CPPcheck errors ──────────────────────────────────"
+          grep " error:" "${{ env.REPORTS_DIR }}/cppcheck_report.txt" || true
+          exit 1
+
+  # ── Job 2: MISRA C:2012 Compliance ──────────────────────────────────────────
+  misra:
+    name: MISRA C:2012
+    runs-on: ubuntu-24.04
+    # MISRA runs in parallel with cppcheck — no dependency between jobs
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install CPPcheck + MISRA dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y cppcheck python3 python3-pygments
+          python3 -c "import pygments; print('pygments OK')"
+          ls /usr/lib/x86_64-linux-gnu/cppcheck/addons/misra.py
+
+      - name: Run CPPcheck + MISRA C:2012
+        id: misra_run
+        run: |
+          chmod +x scripts/run_cppcheck.sh
+          ./scripts/run_cppcheck.sh \
+            --misra \
+            --severity=warning \
+            --output-dir="${{ env.REPORTS_DIR }}" \
+            --jobs=2
+        continue-on-error: true  # violations are reported, not blocking by default
+
+      - name: Count MISRA violations
+        id: misra_count
+        run: |
+          VIOLATIONS=0
+          if [[ -f "${{ env.REPORTS_DIR }}/misra_report.txt" ]]; then
+            VIOLATIONS=$(grep -c '"severity"' "${{ env.REPORTS_DIR }}/misra_report.txt" 2>/dev/null || echo 0)
+          fi
+          echo "count=${VIOLATIONS}" >> "$GITHUB_OUTPUT"
+          echo "MISRA violations found: ${VIOLATIONS}"
+
+      - name: Annotate job summary
+        if: always()
+        run: |
+          VIOLATIONS="${{ steps.misra_count.outputs.count }}"
+          {
+            echo "## MISRA C:2012 Analysis Results"
+            echo ""
+            echo "| Metric | Value |"
+            echo "|---|---|"
+            echo "| Total MISRA violations | \`${VIOLATIONS}\` |"
+            echo "| Branch | \`${{ github.ref_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo ""
+            echo "> Run \`./scripts/run_cppcheck.sh --misra\` locally to reproduce."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload MISRA reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: misra-reports-${{ github.run_number }}
+          path: |
+            ${{ env.REPORTS_DIR }}/misra_report.txt
+            ${{ env.REPORTS_DIR }}/misra_cppcheck.xml
+          retention-days: 30
+
+      - name: Fail if MISRA error-level violations found
+        # Only hard-fail on violations classified as 'error' severity.
+        # Style/advisory violations are informational.
+        run: |
+          if [[ -f "${{ env.REPORTS_DIR }}/misra_report.txt" ]]; then
+            ERRORS=$(grep '"severity": "error"' "${{ env.REPORTS_DIR }}/misra_report.txt" | wc -l || echo 0)
+            if [[ "$ERRORS" -gt 0 ]]; then
+              echo "::error::${ERRORS} MISRA error-severity violation(s) found."
+              exit 1
+            fi
+          fi
+
+  # ── Job 3: Doxygen Docs Check ────────────────────────────────────────────────
+  docs:
+    name: Doxygen Build
+    runs-on: ubuntu-24.04
+    needs: [cppcheck]   # run after cppcheck so reports exist if referenced
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Doxygen + Graphviz
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Build Doxygen docs
+        working-directory: ${{ github.workspace }}
+        run: doxygen Doxyfile
+        continue-on-error: true  # doc warnings don't block the build
+
+      - name: Upload Doxygen HTML
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: doxygen-html-${{ github.run_number }}
+          path: docs/
+          retention-days: 7

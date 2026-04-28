@@ -1,0 +1,79 @@
+# cppcheck_suppressions.txt
+# Suppression list for FreeRTOS-OS CPPcheck analysis.
+#
+# Format: checkId:filepath_pattern:lineNumber
+#   - Omit lineNumber to suppress on all lines.
+#   - Use * as a wildcard for checkId to suppress all checks on a path.
+#
+# Run with: cppcheck --suppressions-list=scripts/cppcheck_suppressions.txt ...
+#
+# ── Rationale ─────────────────────────────────────────────────────────────────
+# Third-party / auto-generated code is excluded at the source-list level in
+# run_cppcheck.sh, so suppressions here cover only project code patterns that
+# are intentional or false-positives inherent to embedded bare-metal C.
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+# ── Intentional embedded patterns ─────────────────────────────────────────────
+
+# Infinite loops are the norm for RTOS tasks (while(1) / for(;;))
+endlessLoop
+
+# Volatile-qualified peripheral register accesses trigger redundantAssignment
+redundantAssignment
+
+# Register bit-field casts from uint32_t to smaller types are intentional
+invalidPointerCast
+
+# cppcheck may flag __attribute__((packed)) structs as uninitialized
+uninitStructMember
+
+# memset/memcpy on structs with padding fields — safe in this context
+memsetClassFloat
+
+# Interrupt handlers use implicit fall-through in switch-case intentionally
+implicitFallthrough
+
+
+# ── MISRA-specific suppressions (documented deviations) ───────────────────────
+
+# Rule 15.5 – A function should have a single point of exit.
+# FreeRTOS assert macros use immediate return; accepted as project deviation.
+misra-c2012-15.5
+
+# Rule 21.6 – Standard library input/output functions shall not be used.
+# ITM/SWO debug printf is used only when CONFIG_DEFAULT_DEBUG_EN=1.
+misra-c2012-21.6
+
+# Rule 11.4 – A cast should not be performed between a pointer to object type
+# and an integer type. Required for MMIO register address mapping.
+misra-c2012-11.4
+
+# Rule 11.6 – A cast shall not be performed between pointer to void and
+# arithmetic type. FreeRTOS task parameter passing uses void*.
+misra-c2012-11.6
+
+# Rule 2.5 – A project should not contain unused macro definitions.
+# CONFIG_* macros from autoconf.h are not all consumed in every TU.
+misra-c2012-2.5
+
+# Rule 5.4 – Macro identifiers shall be distinct from any other identifier.
+# STM32 HAL header guard names collide; not under our control.
+misra-c2012-5.4
+
+# Rule 8.9 – An object should be defined at block scope if its identifier
+# only appears in a single function. Static ISR tables must be file-scope.
+misra-c2012-8.9
+
+
+# ── Auto-generated board files ─────────────────────────────────────────────────
+# These files are machine-generated; only include path matters, not style.
+*:*/board/irq_periph_dispatch_generated.c
+*:*/board/irq_table_generated.c
+*:*/board/irq_hw_init_generated.c
+
+# ── CMSIS / STM32 vendor headers ───────────────────────────────────────────────
+# cmsis_gcc.h emits a false #error when __ARM_ARCH_PROFILE is not predefined.
+# The macro is set by arm-none-eabi-gcc at compile time; cppcheck can't see it.
+preprocessorErrorDirective:*/CMSIS_6/*
+preprocessorErrorDirective:*/CMSIS/Core/*

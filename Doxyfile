@@ -38,6 +38,7 @@ STRIP_FROM_PATH        = ./include ./
 # Input — project-owned source only (vendor libs in arch/devices are excluded)
 #-----------------------------------------------------------------------------
 INPUT                  = README.md    \
+                         ./docs       \
                          ./include    \
                          ./kernel     \
                          ./mm         \
