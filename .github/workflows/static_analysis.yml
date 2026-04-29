@@ -17,7 +17,7 @@ name: Static Analysis
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, staging]
     paths:
       - "**.c"
       - "**.h"
@@ -25,7 +25,7 @@ on:
       - "scripts/cppcheck_suppressions.txt"
       - ".github/workflows/static_analysis.yml"
   pull_request:
-    branches: [main, dev]
+    branches: [main, staging]
 
 concurrency:
   group: static-analysis-${{ github.ref }}

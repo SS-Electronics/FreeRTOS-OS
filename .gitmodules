@@ -10,3 +10,12 @@
 [submodule "lib/lib-fsm"]
 	path = lib/lib-fsm
 	url = https://github.com/SS-Electronics/lib-fsm.git
+[submodule "lib/tflite-micro"]
+	path = lib/tflite-micro
+	url = https://github.com/tensorflow/tflite-micro.git
+[submodule "arch/arm/CMSIS-NN"]
+	path = arch/arm/CMSIS-NN
+	url = https://github.com/ARM-software/CMSIS-NN.git
+[submodule "lib/CMSIS-DSP"]
+	path = lib/CMSIS-DSP
+	url = https://github.com/ARM-software/CMSIS-DSP.git

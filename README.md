@@ -21,6 +21,7 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
 | [docs/DEBUG.md](docs/DEBUG.md) | VSCode debug setup, OpenOCD, GDB, ITM/SWO |
 | [docs/OS_INSIDE.md](docs/OS_INSIDE.md) | Internals deep-dive: ISR priority rules, post-mortems, debug recipes |
 | [docs/CHECK.md](docs/CHECK.md) | CPPcheck + MISRA C:2012 static analysis: setup, options, deviation table |
+| [docs/DSP.md](docs/DSP.md) | CMSIS-DSP integration: XML module selection, generator, PID controller API |
 
 ---
 
@@ -70,6 +71,13 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
 │              Hardware Abstraction Layer (HAL)                    │
 │   STM32F4xx HAL — driven by Kconfig → autoconf.h                │
 │   CMSIS-Core · Startup · Linker script                           │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │
+┌────────────────────────────▼─────────────────────────────────────┐
+│            ARM CMSIS-DSP (optional, per-module)                  │
+│   app/board/dsp_dev.xml → arm_dsp_gen.py →                      │
+│   dsp_config.h · dsp_config.mk                                   │
+│   PID · FFT · FIR/IIR · Statistics · Matrix · …                 │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -142,6 +150,23 @@ Re-run whenever you edit `app/board/irq_table.xml` (adding a peripheral interrup
 
 ---
 
+### 4 — DSP Configuration (`arm_dsp_gen.py`)
+
+Reads the DSP module selection XML and generates a C header and Makefile fragment that control which CMSIS-DSP modules are compiled.
+
+```bash
+python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml
+# Reads:   app/board/dsp_dev.xml
+# Writes:  app/board/dsp_config.h     — CONFIG_ARM_DSP_* #defines for firmware
+#          app/board/dsp_config.mk    — CONFIG_ARM_DSP_* variables for lib/Makefile
+```
+
+Edit `app/board/dsp_dev.xml` to enable or disable individual DSP function groups (`basic_math`, `controller`, `filtering`, `transform`, etc.), then re-run the generator and rebuild. Only enabled modules are compiled; disabled modules produce zero code and zero flash cost.
+
+See [docs/DSP.md](docs/DSP.md) for the full reference: XML schema, module dependency rules, flash budget, and PID controller usage.
+
+---
+
 ### When to Re-run Each Generator
 
 | Change made | Command(s) to re-run |
@@ -149,7 +174,8 @@ Re-run whenever you edit `app/board/irq_table.xml` (adding a peripheral interrup
 | Kconfig option (MCU, heap size, UART count…) | `make menuconfig` → `make config-outputs` |
 | Board XML (pin, UART, peripheral assignment) | `make board-gen` |
 | IRQ table XML (priority, new IRQ, new EXTI) | `make irq_gen` |
-| Any of the above | `make menuconfig` → `make config-outputs` → `make board-gen` → `make irq_gen` |
+| DSP XML (enable/disable a DSP module) | `python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml` |
+| Any of the above | `make menuconfig` → `make config-outputs` → `make board-gen` → `make irq_gen` → `arm_dsp_gen.py` |
 
 After any generator run, rebuild with `make app`.
 
@@ -408,6 +434,7 @@ All targets are invoked from the project root (`FreeRTOS-OS-App/`).
 | `make config-outputs` | `FreeRTOS-OS/.config` | `config/autoconf.h`, `config/autoconf.mk`, `config/stm32f4xx_hal_conf.h` |
 | `make board-gen` | `app/board/stm32f411_devboard.xml` | `app/board/board_config.c`, `board_device_ids.h`, `board_handles.h`, `mcu_config.h` |
 | `make irq_gen` | `app/board/irq_table.xml` | `irq/irq_table.c`, `app/board/irq_hw_init_generated.c/.h`, `irq_periph_handlers_generated.h`, `irq_periph_vectors_generated.inc` |
+| `python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml` | `app/board/dsp_dev.xml` | `app/board/dsp_config.h`, `app/board/dsp_config.mk` |
 
 ### Prerequisites
 
@@ -578,7 +605,7 @@ See **[docs/CHECK.md](docs/CHECK.md)** for the full reference: options, report f
 FreeRTOS-OS is distributed under the **GNU General Public License v3.0**.
 See `COPYING` or <https://www.gnu.org/licenses/gpl-3.0.html>.
 
-Submodule licenses: FreeRTOS-Kernel — MIT · STM32F4xx HAL — BSD 3-Clause · CMSIS-6 — Apache 2.0 · CANopen stack — Apache 2.0 · ringbuffer — GPL v2.
+Submodule licenses: FreeRTOS-Kernel — MIT · STM32F4xx HAL — BSD 3-Clause · CMSIS-6 — Apache 2.0 · CMSIS-DSP — Apache 2.0 · CANopen stack — Apache 2.0 · ringbuffer — GPL v2.
 
 ---
 
