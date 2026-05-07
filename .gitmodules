@@ -19,3 +19,6 @@
 [submodule "lib/CMSIS-DSP"]
 	path = lib/CMSIS-DSP
 	url = https://github.com/ARM-software/CMSIS-DSP.git
+[submodule "lib/lib-behavior-tree"]
+	path = lib/lib-behavior-tree
+	url = https://github.com/SS-Electronics/lib-behavior-tree.git
