@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-gen_stm32_hal_conf.py — Generate arch/devices/device_conf/stm32f4xx_hal_conf.h
-                         from the values in include/config/autoconf.h.
+gen_stm32_hal_conf.py — Generate stm32f4xx_hal_conf.h or stm32h7xx_hal_conf.h
+                         from the values in autoconf.h.
+
+The output family (F4 or H7) is auto-detected from CONFIG_TARGET_MCU in
+autoconf.h ("STM32H7…" → H7, everything else → F4).
 
 Usage:
     python3 scripts/gen_stm32_hal_conf.py <autoconf_h> <output_path>
@@ -16,7 +19,8 @@ import re
 
 # ── HAL modules: (short_name, include_file) ──────────────────────────────────
 # Order controls the #include sequence, which matters for STM32 HAL.
-HAL_MODULES = [
+
+_HAL_MODULES_F4 = [
     ("RCC",        "stm32f4xx_hal_rcc.h"),
     ("GPIO",       "stm32f4xx_hal_gpio.h"),
     ("EXTI",       "stm32f4xx_hal_exti.h"),
@@ -44,8 +48,43 @@ HAL_MODULES = [
     ("HCD",        "stm32f4xx_hal_hcd.h"),
 ]
 
-# ── Module groups for the enable-block comments ───────────────────────────────
-MODULE_GROUPS = [
+_HAL_MODULES_H7 = [
+    ("RCC",        "stm32h7xx_hal_rcc.h"),
+    ("GPIO",       "stm32h7xx_hal_gpio.h"),
+    ("EXTI",       "stm32h7xx_hal_exti.h"),
+    ("DMA",        "stm32h7xx_hal_dma.h"),
+    ("MDMA",       "stm32h7xx_hal_mdma.h"),
+    ("CORTEX",     "stm32h7xx_hal_cortex.h"),
+    ("ADC",        "stm32h7xx_hal_adc.h"),
+    ("DAC",        "stm32h7xx_hal_dac.h"),
+    ("CRC",        "stm32h7xx_hal_crc.h"),
+    ("FLASH",      "stm32h7xx_hal_flash.h"),
+    ("FDCAN",      "stm32h7xx_hal_fdcan.h"),
+    ("I2C",        "stm32h7xx_hal_i2c.h"),
+    ("SMBUS",      "stm32h7xx_hal_smbus.h"),
+    ("I2S",        "stm32h7xx_hal_i2s.h"),
+    ("IWDG",       "stm32h7xx_hal_iwdg.h"),
+    ("LPTIM",      "stm32h7xx_hal_lptim.h"),
+    ("PWR",        "stm32h7xx_hal_pwr.h"),
+    ("RNG",        "stm32h7xx_hal_rng.h"),
+    ("RTC",        "stm32h7xx_hal_rtc.h"),
+    ("SDMMC",      "stm32h7xx_hal_sdmmc.h"),
+    ("SPI",        "stm32h7xx_hal_spi.h"),
+    ("TIM",        "stm32h7xx_hal_tim.h"),
+    ("UART",       "stm32h7xx_hal_uart.h"),
+    ("USART",      "stm32h7xx_hal_usart.h"),
+    ("IRDA",       "stm32h7xx_hal_irda.h"),
+    ("SMARTCARD",  "stm32h7xx_hal_smartcard.h"),
+    ("WWDG",       "stm32h7xx_hal_wwdg.h"),
+    ("ETH",        "stm32h7xx_hal_eth.h"),
+    ("CRYP",       "stm32h7xx_hal_cryp.h"),
+    ("HASH",       "stm32h7xx_hal_hash.h"),
+    ("OSPI",       "stm32h7xx_hal_ospi.h"),
+    ("PCD",        "stm32h7xx_hal_pcd.h"),
+    ("HCD",        "stm32h7xx_hal_hcd.h"),
+]
+
+_MODULE_GROUPS_F4 = [
     ("Core",             ["CORTEX", "PWR", "RCC", "GPIO", "EXTI",
                           "FLASH", "DMA", "IWDG", "WWDG", "CRC"]),
     ("Communication",    ["UART", "USART", "SPI", "I2C", "I2S",
@@ -57,8 +96,20 @@ MODULE_GROUPS = [
     ("RTC & Security",   ["RTC", "RNG"]),
 ]
 
-# ── Register-callback modules (all default 0U) ────────────────────────────────
-CALLBACK_MODULES = [
+_MODULE_GROUPS_H7 = [
+    ("Core",             ["CORTEX", "PWR", "RCC", "GPIO", "EXTI",
+                          "FLASH", "DMA", "MDMA", "IWDG", "WWDG", "CRC"]),
+    ("Communication",    ["UART", "USART", "SPI", "I2C", "I2S", "FDCAN",
+                          "IRDA", "SMARTCARD", "SMBUS", "ETH"]),
+    ("Timer",            ["TIM", "LPTIM"]),
+    ("Analog",           ["ADC", "DAC"]),
+    ("USB",              ["PCD", "HCD"]),
+    ("Storage",          ["SDMMC", "OSPI"]),
+    ("RTC & Security",   ["RTC", "RNG", "CRYP", "HASH"]),
+]
+
+# ── Register-callback modules ──────────────────────────────────────────────────
+_CALLBACK_MODULES_F4 = [
     "ADC", "CAN", "CEC", "CRYP", "DAC", "DCMI", "DFSDM", "DMA2D", "DSI",
     "ETH", "HASH", "HCD", "I2C", "FMPI2C", "FMPSMBUS", "I2S", "IRDA",
     "LPTIM", "LTDC", "MMC", "NAND", "NOR", "PCCARD", "PCD", "QSPI", "RNG",
@@ -66,7 +117,15 @@ CALLBACK_MODULES = [
     "SPI", "TIM", "UART", "USART", "WWDG",
 ]
 
-# ── Clock / scalar config items ───────────────────────────────────────────────
+_CALLBACK_MODULES_H7 = [
+    "ADC", "CRYP", "DAC", "DCMI", "DFSDM", "DMA", "DMA2D", "DSI",
+    "ETH", "FDCAN", "HASH", "HCD", "I2C", "I2S", "IRDA",
+    "JPEG", "LPTIM", "LTDC", "MDMA", "MMC", "NAND", "NOR", "OSPI",
+    "PCD", "RNG", "RTC", "SAI", "SD", "SMARTCARD", "SDRAM", "SRAM",
+    "SMBUS", "SPDIFRX", "SPI", "TIM", "UART", "USART", "WWDG",
+]
+
+# ── Clock / scalar config items (common to F4 and H7) ────────────────────────
 CLOCK_ITEMS = [
     ("CONFIG_HSE_VALUE",           "HSE_VALUE"),
     ("CONFIG_HSE_STARTUP_TIMEOUT", "HSE_STARTUP_TIMEOUT"),
@@ -76,6 +135,20 @@ CLOCK_ITEMS = [
     ("CONFIG_LSE_STARTUP_TIMEOUT", "LSE_STARTUP_TIMEOUT"),
     ("CONFIG_EXTERNAL_CLOCK_VALUE","EXTERNAL_CLOCK_VALUE"),
 ]
+
+# H7-specific clock items not present on F4
+CLOCK_ITEMS_H7 = [
+    ("CONFIG_CSI_VALUE", "CSI_VALUE"),
+]
+
+# Default CSI value for H7 when not set in Kconfig (hardware constant: 4 MHz)
+_H7_CSI_DEFAULT = 4000000
+
+
+def _detect_family(cfg: dict) -> str:
+    """Return 'H7' when CONFIG_TARGET_MCU starts with STM32H7, else 'F4'."""
+    mcu = cfg.get("CONFIG_TARGET_MCU", "")
+    return "H7" if mcu.upper().startswith("STM32H7") else "F4"
 
 
 def parse_autoconf(path):
@@ -116,13 +189,28 @@ def section(title):
 
 
 def generate(cfg, out_path):
+    family = _detect_family(cfg)
+
+    if family == "H7":
+        hal_modules    = _HAL_MODULES_H7
+        module_groups  = _MODULE_GROUPS_H7
+        cb_modules     = _CALLBACK_MODULES_H7
+        guard          = "__STM32H7xx_HAL_CONF_H"
+        fname          = "stm32h7xx_hal_conf.h"
+    else:
+        hal_modules    = _HAL_MODULES_F4
+        module_groups  = _MODULE_GROUPS_F4
+        cb_modules     = _CALLBACK_MODULES_F4
+        guard          = "__STM32F4xx_HAL_CONF_H"
+        fname          = "stm32f4xx_hal_conf.h"
+
     L = []
 
     # ── File header ──────────────────────────────────────────────────────────
     L += [
         "/**",
         " ******************************************************************************",
-        " * @file    stm32f4xx_hal_conf.h",
+        f" * @file    {fname}",
         " * @brief   HAL configuration — generated from menuconfig (.config)",
         " *",
         " * AUTO-GENERATED by scripts/gen_stm32_hal_conf.py",
@@ -136,8 +224,8 @@ def generate(cfg, out_path):
         " ******************************************************************************",
         " */",
         "",
-        "#ifndef __STM32F4xx_HAL_CONF_H",
-        "#define __STM32F4xx_HAL_CONF_H",
+        f"#ifndef {guard}",
+        f"#define {guard}",
         "",
         "#ifdef __cplusplus",
         'extern "C" {',
@@ -153,7 +241,7 @@ def generate(cfg, out_path):
     L.append("#define HAL_MODULE_ENABLED   /* master HAL enable — always on */")
     L.append("")
 
-    for group_name, mods in MODULE_GROUPS:
+    for group_name, mods in module_groups:
         enabled = [m for m in mods
                    if cfg.get(f"CONFIG_HAL_{m}_MODULE_ENABLED") == 1]
         if enabled:
@@ -168,6 +256,16 @@ def generate(cfg, out_path):
     for cfg_key, macro in CLOCK_ITEMS:
         val = cfg.get(cfg_key)
         if val is not None:
+            L += [
+                f"#if !defined({macro})",
+                f"  #define {macro:<28} ((uint32_t){val}U)",
+                f"#endif",
+                "",
+            ]
+
+    if family == "H7":
+        for cfg_key, macro in CLOCK_ITEMS_H7:
+            val = cfg.get(cfg_key, _H7_CSI_DEFAULT)
             L += [
                 f"#if !defined({macro})",
                 f"  #define {macro:<28} ((uint32_t){val}U)",
@@ -197,8 +295,8 @@ def generate(cfg, out_path):
     L += section("Register-callback switches  —  all off by default.\n"
                  " * Enable per-peripheral if you need runtime-swappable callbacks.")
 
-    max_len = max(len(f"USE_HAL_{m}_REGISTER_CALLBACKS") for m in CALLBACK_MODULES)
-    for mod in CALLBACK_MODULES:
+    max_len = max(len(f"USE_HAL_{m}_REGISTER_CALLBACKS") for m in cb_modules)
+    for mod in cb_modules:
         name = f"USE_HAL_{mod}_REGISTER_CALLBACKS"
         L.append(f"#define {name:<{max_len}}   0U")
 
@@ -226,8 +324,7 @@ def generate(cfg, out_path):
     # ── Conditional HAL includes (only enabled modules) ───────────────────────
     L += section("HAL driver includes  —  only for modules enabled in menuconfig")
 
-    mod_to_inc = dict(HAL_MODULES)
-    for mod, inc in HAL_MODULES:
+    for mod, inc in hal_modules:
         if cfg.get(f"CONFIG_HAL_{mod}_MODULE_ENABLED") == 1:
             L.append(f'#include "{inc}"')
 
@@ -241,7 +338,7 @@ def generate(cfg, out_path):
         "}",
         "#endif",
         "",
-        "#endif /* __STM32F4xx_HAL_CONF_H */",
+        f"#endif /* {guard} */",
         "",
     ]
 

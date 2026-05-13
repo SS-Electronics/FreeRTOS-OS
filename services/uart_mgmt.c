@@ -185,6 +185,11 @@ static void uart_mgmt_thread(void *arg)
                 IPC_MQUEUE_RING_BUFFER, (int32_t)d->dev_id,
                 (int32_t)sizeof(uint8_t), PIPE_UART_1_DRV_RX_SIZE);
         }
+
+        /* Bind printk ring-buffer pointer now that the TX queue exists.
+         * printk() calls before UART hw_init() go to the buffer;
+         * they will be drained once tx_start() fires after hw_init. */
+        printk_init();
     }
 
     os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT);
@@ -233,6 +238,9 @@ static void uart_mgmt_thread(void *arg)
                     irq_register(IRQ_ID_UART_ERROR(d->dev_id), _uart_err_cb, h);
                 }
             }
+
+            /* UART hardware is up — enable printk so tasks can output. */
+            printk_enable();
         }
     }
 

@@ -48,14 +48,31 @@ obj-y += kernel/FreeRTOS-Plus-CLI/FreeRTOS_CLI.o
 
 
 #####################################################################
-#                     Device STM32F401xE 
+#                     Device STM32F411xE
 #####################################################################
 ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
-# Portable part 
 
 INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F
 
 obj-y += kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F/port.o
 
+endif
+
+#------------------------------------------------------------------
+
+
+
+
+#####################################################################
+#                     Device STM32H723xx
+#####################################################################
+ifeq ($(CONFIG_TARGET_MCU),"STM32H723xx")
+
+# ARM_CM7/r0p1 portable — handles all Cortex-M7 silicon (r0p1 and r1p1).
+# The "r0p1" label refers to the errata workaround in port.c, not a
+# silicon restriction; this port is the correct choice for H723 (r1p1).
+INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1
+
+obj-y += kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.o
 
 endif

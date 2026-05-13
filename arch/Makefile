@@ -100,8 +100,57 @@ obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_i2c.o
 obj-y += arch/devices/STM/stm32f4xx-hal-driver/Src/stm32f4xx_hal_spi.o
 
 
-#---------- Associate Linker script for target MCU -------------- 
+#---------- Associate Linker script for target MCU --------------
 LINKER_SCRIPT += $(CURDIR)/arch/devices/STM/STM32F4xx/STM32F411/stm32_f411_FLASH.ld
+
+endif
+
+#------------------------------------------------------------------
+
+
+
+
+#####################################################################
+#                     Device STM32H723xx
+#####################################################################
+ifeq ($(CONFIG_TARGET_MCU),"STM32H723xx")
+
+#---------- Include paths --------------
+INCLUDES += -I$(CURDIR)/arch/devices
+INCLUDES += -I$(CURDIR)/arch/devices/STM/STM32H7xx
+INCLUDES += -I$(CURDIR)/arch/devices/STM/stm32h7xx-hal-driver/Inc
+INCLUDES += -I$(CURDIR)/arch/arm/CMSIS_6/CMSIS/Core/Include
+
+#---------- Symbol Definition to compiler --------------
+SYMBOL_DEF += -DUSE_HAL_DRIVER
+
+#---------- Device-level files (startup + H7 CMSIS system) ------
+obj-y += arch/devices/STM/STM32H7xx/STM32H723/startup_stm32h723zx.o
+obj-y += arch/devices/STM/STM32H7xx/system_stm32h7xx.o
+
+#---------- Driver files --------------
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_rcc.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_rcc_ex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_gpio.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_cortex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_flash.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_flash_ex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_pwr.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_pwr_ex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_dma.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_dma_ex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_tim.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_tim_ex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_uart.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_uart_ex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_i2c.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_i2c_ex.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_spi.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_spi_ex.o
+
+#---------- Associate Linker script for target MCU --------------
+LINKER_SCRIPT += $(CURDIR)/arch/devices/STM/STM32H7xx/STM32H723/stm32_h723_FLASH.ld
 
 endif
 

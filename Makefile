@@ -32,8 +32,9 @@ KCONFIG_FILE  				?= Kconfig
 KCONFIG_CONFIG 				?= .config
 # autoconf.mk  — included by sub-Makefiles for conditional compilation
 AUTOCONF_MK     			:= autoconf.mk
-# autoconf.h   — included by C source / headers for CONFIG_* symbols
-AUTOCONF_H      			:= config/autoconf.h
+# autoconf.h — in $(APP_DIR)/board/ when APP_DIR is set; else config/
+# Uses deferred assignment (=) so APP_DIR is resolved at rule-expansion time.
+AUTOCONF_H      			= $(if $(APP_DIR),$(APP_DIR)/board/autoconf.h,config/autoconf.h)
 ##############################################################
 
 
@@ -79,7 +80,9 @@ CC_WARNINGS					:= -Wall
 CC_TARGET_PROP				:= 
 CC_LINKER_INPUT				:= -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 CC_ASSEMBLER_FLAGS			:= -x assembler-with-cpp
-CC_LINKER_FLAGS				:= -mcpu=cortex-m4 -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+# CPU-specific flags (-mcpu, -mfpu, -mfloat-abi, -mthumb) are set per-target
+# in CC_TARGET_PROP below and appended to the link command — not hardcoded here.
+CC_LINKER_FLAGS				:= -Wl,--gc-sections -static --specs=nano.specs -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 ##############################################################
 
 
@@ -96,9 +99,11 @@ SUBDIRS := include arch irq drivers kernel mm ipc services drv_app drv_ext_chips
 
 INCLUDES :=
 
-# When APP_DIR is set, add it first so app/board/ headers shadow include/board/ stubs
+# When APP_DIR is set, add it first so app/board/ headers shadow include/board/ stubs.
+# Also add APP_DIR/board/ directly so <autoconf.h>, <board/board_handles.h> etc. resolve.
 ifdef APP_DIR
 INCLUDES += -I$(APP_DIR)
+INCLUDES += -I$(APP_DIR)/board
 endif
 
 LINKER_SCRIPT :=
@@ -156,10 +161,17 @@ TARGET_SYSMBOL_DEF += -D$(patsubst "%",%,$(CONFIG_TARGET_MCU))
 STM32_HAL_CONF_H :=
 
 ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
-	STM32_HAL_CONF_H   := arch/devices/device_conf/stm32f4xx_hal_conf.h
-	OPENOCD_TARGET     += arch/debug_cfg/stm32_f411xx_debug.cfg
-	OPENOCD_INTERFACE  += interface/stlink.cfg
-	CC_TARGET_PROP     += -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+STM32_HAL_CONF_H   := $(if $(APP_DIR),$(APP_DIR)/board/stm32f4xx_hal_conf.h,config/stm32f4xx_hal_conf.h)
+OPENOCD_TARGET     += arch/debug_cfg/stm32_f411xx_debug.cfg
+OPENOCD_INTERFACE  += interface/stlink.cfg
+CC_TARGET_PROP     += -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+endif
+
+ifeq ($(CONFIG_TARGET_MCU),"STM32H723xx")
+STM32_HAL_CONF_H   := $(if $(APP_DIR),$(APP_DIR)/board/stm32h7xx_hal_conf.h,config/stm32h7xx_hal_conf.h)
+OPENOCD_TARGET     += arch/debug_cfg/stm32_h723xx_debug.cfg
+OPENOCD_INTERFACE  += interface/stlink.cfg
+CC_TARGET_PROP     += -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
 endif
 
 export OPENOCD_INTERFACE
@@ -335,6 +347,31 @@ demo-clean:
 	@$(MAKE) clean
 	@echo "### [demo] Clean complete"
 
+# ── STM32H723 demo targets ─────────────────────────────────────────────────
+# Mirror of demo / demo-gen above but using H723 board XML, IRQ table, and
+# Kconfig preset.  Outputs land in the same demo/board/ directory.
+
+.PHONY: demo-gen-h723
+demo-gen-h723:
+	@echo "### [demo-h723] Generating IRQ headers from $(DEMO_DIR)/board/irq_table_h723.xml ..."
+	@python3 scripts/gen_irq_table.py \
+		$(DEMO_DIR)/board/irq_table_h723.xml \
+		--outdir $(DEMO_DIR)/board
+	@echo "### [demo-h723] Generating board BSP from $(DEMO_DIR)/board/stm32h723_devboard.xml ..."
+	@python3 scripts/gen_board_config.py \
+		$(DEMO_DIR)/board/stm32h723_devboard.xml \
+		--outdir $(DEMO_DIR)/board
+	@echo "### [demo-h723] Board generation done — outputs in $(DEMO_DIR)/board/"
+
+.PHONY: demo-h723
+demo-h723: demo-gen-h723
+	@echo "### [demo-h723] Activating H723 Kconfig from $(DEMO_DIR)/kconfig_h723.conf ..."
+	@cp $(DEMO_DIR)/kconfig_h723.conf .config
+	@$(MAKE) config-outputs
+	@echo "### [demo-h723] Building firmware → build/demo-h723.elf ..."
+	@$(MAKE) all APP_DIR=$(DEMO_DIR) TARGET_NAME=demo-h723
+	@echo "### [demo-h723] Build complete: build/demo-h723.elf"
+
 # cppcheck-board-gen reuses demo-gen so analysis and builds share the same
 # generated headers in demo/board/.  run_cppcheck.sh also checks this dir.
 .PHONY: cppcheck-board-gen
@@ -388,7 +425,7 @@ $(BUILD)/$(TARGET_NAME).elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo 'Linking together...'
 	@echo '**********************************************'
 
-	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) -T"$(LINKER_SCRIPT)" -o $@ $(OBJS)
+	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) $(CC_TARGET_PROP) -T"$(LINKER_SCRIPT)" -o $@ $(OBJS)
 
 	@echo '##############################################'
 	@echo ' '
@@ -573,7 +610,8 @@ install-prerequisites: install-toolchain install-openocd install-kconfig install
 
 ##############################################################
 .PHONY: print-interface print-target flash docs clean-docs \
-        demo demo-gen demo-clean cppcheck-board-gen clean-cppcheck-board
+        demo demo-gen demo-clean demo-h723 demo-gen-h723 \
+        cppcheck-board-gen clean-cppcheck-board
 
 print-interface:
 	@echo $(OPENOCD_INTERFACE)

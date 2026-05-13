@@ -27,15 +27,18 @@ config TARGET_MCU
     default "STM32F411xE"
     help
       The HAL symbol passed to the STM32 HAL layer.
-      Examples: STM32F411xE, STM32F405xx, STM32F429xx.
+      Examples: STM32F411xE, STM32H723xx.
       This must match the CMSIS device header guard symbol.
+      F4 variants: STM32F411xE, STM32F405xx, STM32F429xx.
+      H7 variants: STM32H723xx, STM32H733xx, STM32H743xx.
 
 config CPU_ARCH
     string "CPU architecture"
     default "ARM-CM4F"
     help
       Used to select the correct FreeRTOS portable layer.
-      STM32F4xx → ARM-CM4F (hard-float ABI).
+      STM32F4xx → ARM-CM4F (hard-float ABI, fpv4-sp-d16).
+      STM32H7xx → ARM-CM7  (hard-float ABI, fpv5-d16).
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +86,55 @@ config EXTERNAL_CLOCK_VALUE
     help
       Only relevant when I2S is clocked from an external source
       (I2S_CKIN pin). Unused on most boards.
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STM32H7 Communication Peripherals
+# Extra peripherals present on H723 but absent on F411.
+# Leave all at n for F411 targets; enable selectively for H7 targets.
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "STM32H7 Peripherals (H723 / H7xx only)"
+
+config HAL_FDCAN_MODULE_ENABLED
+    bool "FDCAN (Flexible Data-rate CAN)"
+    default n
+    help
+      STM32H723 has two FDCAN controllers. Enable when using CAN bus.
+
+config HAL_DAC_MODULE_ENABLED
+    bool "DAC (2-channel 12-bit)"
+    default n
+
+config HAL_ETH_MODULE_ENABLED
+    bool "Ethernet MAC (ETH) — requires external PHY"
+    default n
+
+config HAL_MDMA_MODULE_ENABLED
+    bool "Master DMA (MDMA) — cross-domain transfers"
+    default n
+
+config HAL_LPTIM_MODULE_ENABLED
+    bool "Low-power timer (LPTIM1..5)"
+    default n
+
+config HAL_CRYP_MODULE_ENABLED
+    bool "Cryptography accelerator (AES/DES/TDES)"
+    default n
+
+config HAL_HASH_MODULE_ENABLED
+    bool "Hash processor (HASH)"
+    default n
+
+config HAL_OSPI_MODULE_ENABLED
+    bool "OctoSPI (OSPI1/2) — external Flash / PSRAM"
+    default n
+
+config HAL_SDMMC_MODULE_ENABLED
+    bool "SDMMC (SD/eMMC controller)"
+    default n
 
 endmenu
 

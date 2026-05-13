@@ -408,8 +408,114 @@ Type 'help' for available commands.
 
 3. **A ring buffer has one logical consumer.** Never have two tasks calling `ringbuffer_getchar` on the same buffer. If multiple consumers are needed, use the IRQ subscriber chain (`irq_register` / `request_irq`) to fan-out notifications, each subscriber writing to its own buffer.
 
-4. **`printk` and the shell must be on different UARTs.** `COMM_PRINTK_HW_ID != UART_SHELL_HW_ID` is a hard requirement for usable interactive sessions. Verify this after any board bring-up where only one physical UART is wired.
+4. **`printk` and the shell must be on different UARTs — unless only one UART is available.** On multi-UART boards, `COMM_PRINTK_HW_ID != UART_SHELL_HW_ID` is a hard requirement for usable interactive sessions. On single-UART boards (e.g. NUCLEO-H723ZG where the STLink VCP is the only accessible port), both can share `UART_SHELL_HW_ID`; `printk` output will appear inline with the shell prompt.
 
 ---
 
-*Last updated: 2026-04-22 — Post-mortem: USART2 silent / ISR priority + ringbuffer_getchar; Shell silent / Makefile + FreeRTOS.h + ring buffer consumer + UART assignment*
+## Post-Mortem: H723 HAL Tick Silent — HAL Timebase Timer Mismatch (TIM1 vs TIM6)
+
+*Board: NUCLEO-H723ZG (STM32H723ZG) · Date: 2026-05-14*
+
+### Symptom
+
+After porting to STM32H723, FreeRTOS ran (idle task visible via OpenOCD), but `HAL_GetTick()` appeared to return 0 and HAL driver timeouts behaved incorrectly. The HAL tick counter was not advancing.
+
+### Root Cause
+
+`hal_timebase_stm32.c` contains an `#if defined(STM32H7)` branch that was added to use TIM6 for the HAL timebase on H7, matching the generated IRQ dispatch. However, the generated `irq_periph_dispatch_generated.c` for H723 routes:
+
+```c
+void TIM6_DAC_IRQHandler(void) { hal_timebase_stm32_irq_handler(); }  /* actual tick */
+void TIM1_UP_IRQHandler(void)  { }                                     /* empty stub */
+```
+
+The original H7 code called `HAL_InitTick()` with TIM1 + `TIM1_UP_IRQn`. TIM1 fired, but the empty `TIM1_UP_IRQHandler` stub swallowed the interrupt — `hal_timebase_stm32_irq_handler()` was never called, so `HAL_IncTick()` and `g_ms_ticks` were never incremented.
+
+### Fix
+
+Added an `#if defined(STM32H7)` split in `HAL_InitTick()` to use **TIM6** with `TIM6_DAC_IRQn` on H7:
+
+```c
+#if defined(STM32H7)
+    drv_rcc_periph_clk_en(DRV_RCC_PERIPH_TIM6);
+    uwTimclock = (READ_BIT(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1) != 0U)
+                 ? (2U * HAL_RCC_GetPCLK1Freq()) : HAL_RCC_GetPCLK1Freq();
+    _htim_base.Instance = TIM6;
+    ...
+    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+#else  /* F4: TIM1 on APB2 */
+    _htim_base.Instance = TIM1;
+    HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+#endif
+```
+
+Also added `DRV_RCC_PERIPH_TIM6` to the `drv_rcc_periph_t` enum and the `hal_rcc_stm32_periph_clk_en()` switch.
+
+**Files changed:** `drivers/hal/stm32/hal_timebase_stm32.c`, `drivers/hal/stm32/hal_rcc_stm32.c`, `include/drivers/drv_rcc.h`
+
+### Lesson
+
+When generating the IRQ dispatch table (`gen_irq_table.py`) for a new MCU, verify that the HAL timebase timer in `hal_timebase_stm32.c` matches the timer routed in `irq_periph_dispatch_generated.c`. On H7, the generated table uses TIM6 (because TIM10 does not exist and `TIM1_UP_TIM10_IRQn` is an alias that maps to `TIM1_UP_IRQn`, which is stubbed out). Always confirm with OpenOCD: halt, read `TIMx->CNT` and `TIMx->CR1` to verify which timer is actually running.
+
+---
+
+## Post-Mortem: H723 UART Silent — `printk_init` / `printk_enable` Never Called
+
+*Board: NUCLEO-H723ZG (STM32H723ZG) · Date: 2026-05-14*
+
+### Symptom
+
+After confirming FreeRTOS was running (heartbeat LED toggling, OpenOCD showed idle task), no output appeared on `/dev/ttyACM0` — not even the shell banner. USART3 registers confirmed via OpenOCD that the hardware was correctly initialized: BRR=0x22C (115200 baud at 64 MHz PCLK1), CR1: UE=1, TE=1, RE=1, RXNEIE=1, TEACK=1, REACK=1.
+
+### Root Cause
+
+`uart_mgmt_thread` in `services/uart_mgmt.c` contains this comment at the top of the file:
+
+```
+ *  2. On thread entry (immediately, before delay):
+ *       → registers UART TX/RX IPC ring-buffer queues
+ *       → calls printk_init() / printk_enable()
+```
+
+But the actual code **never called `printk_init()` or `printk_enable()`**. As a result:
+
+- `_printk_rb` remained `NULL` — `printk_init()` binds it to the TX ring buffer
+- `_printk_enabled` remained `0` — every `printk()` call silently returned 0
+
+The shell banner uses `_shell_write()` which bypasses the `_printk_enabled` gate and writes directly to the TX ring buffer. It was being sent but lost because the STLink VCP discards bytes transmitted before the host opens `/dev/ttyACM0`. The heartbeat's `printk()` calls were also silently dropped.
+
+### Diagnosis
+
+OpenOCD confirmed USART3 ISR=0x006000D0: TC=1, TXE=1, TEACK=1, REACK=1 — transmitter idle and ready. TXEIE=0 at halt time, consistent with TX having completed or never started. Suspicion moved from hardware to software after reading UART register state. Traced `_printk_enabled` in the map file; confirmed it was 0 at runtime via memory read. Source audit revealed `printk_init()`/`printk_enable()` were never called from `uart_mgmt_thread`.
+
+### Fix
+
+Added two calls to `uart_mgmt_thread`:
+
+```c
+/* After IPC ring-buffer registration — bind printk TX pointer */
+printk_init();
+
+/* ... 20 ms delay, UART hardware init ... */
+
+/* After all UART hardware initialized — allow printk output */
+printk_enable();
+```
+
+`printk_init()` must run after IPC queues are registered (so the TX ring buffer handle exists). `printk_enable()` must run after `drv_uart_register()` completes (so `h->initialized = 1` and `drv_uart_tx_start()` will not reject the call). At `~20 ms` after scheduler start, heartbeat's `printk()` at `T=500 ms` produces output.
+
+**File changed:** `services/uart_mgmt.c`
+
+### STLink VCP data-before-open behavior
+
+A secondary finding: data sent by the MCU before the host opens `/dev/ttyACM0` is silently discarded by the STLink USB CDC ACM layer. Always open the terminal **before** resetting or flashing the board, or design the firmware to output something periodically (like heartbeat `printk`) so that connecting at any time catches subsequent output.
+
+### Prevention Guidelines (updated)
+
+5. **`uart_mgmt_thread` must call `printk_init()` after queue registration and `printk_enable()` after UART hardware init.** If either is missing, `printk()` is a no-op. Verify at board bring-up with a simple heartbeat printk and confirm output on the serial port before building on top of it.
+
+6. **Open the serial terminal before resetting the board.** STLink VCP buffers are not preserved across host-port-open. Any data sent before the host opens the port is dropped. Periodic output (heartbeat) ensures data is visible whenever the terminal connects.
+
+---
+
+*Last updated: 2026-05-14 — Post-mortems: H723 TIM6/TIM1 timebase mismatch; uart_mgmt_thread missing printk_init/printk_enable; STLink VCP discard-before-open*

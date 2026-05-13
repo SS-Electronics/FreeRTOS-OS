@@ -318,7 +318,7 @@ def parse_dispatch_data(root):
                     'kind': 'uart', 'hal_inst': hal_inst,
                     'guard': '', 'label': label,
                 }
-                extra_includes.add('<drivers/com/hal/stm32/hal_uart_stm32.h>')
+                extra_includes.add('<drivers/hal/stm32/hal_uart_stm32.h>')
 
         elif tag == "i2c":
             irqn_ev  = elem.get("irqn_ev")
@@ -337,7 +337,7 @@ def parse_dispatch_data(root):
                         'guard': 'HAL_I2C_MODULE_ENABLED', 'label': None,
                     }
                 if irqn_ev or irqn_er:
-                    extra_includes.add('<drivers/com/hal/stm32/hal_iic_stm32.h>')
+                    extra_includes.add('<drivers/hal/stm32/hal_iic_stm32.h>')
 
         elif tag == "spi":
             irqn     = elem.get("irqn")
@@ -348,7 +348,7 @@ def parse_dispatch_data(root):
                     'kind': 'spi', 'hal_inst': hal_inst,
                     'guard': 'HAL_SPI_MODULE_ENABLED', 'label': label,
                 }
-                extra_includes.add('<drivers/com/hal/stm32/hal_spi_stm32.h>')
+                extra_includes.add('<drivers/hal/stm32/hal_spi_stm32.h>')
 
         elif tag == "sys":
             dispatch_call    = elem.get("dispatch")

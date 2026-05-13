@@ -107,6 +107,9 @@
  * @warning
  * Assumes PLL and prescaler configuration follow STM32 reference manual.
  */
+/* H7 provides SystemCoreClockUpdate() in system_stm32h7xx.c (D1/D2/D3 domain aware).
+ * Compile this F4-only version only for non-H7 targets. */
+#if !defined(STM32H7)
 __SECTION_OS __USED
 void SystemCoreClockUpdate(void)
 {
@@ -146,6 +149,7 @@ void SystemCoreClockUpdate(void)
     tmp = AHBPrescTable[(RCC->CFGR & RCC_CFGR_HPRE) >> 4U];
     SystemCoreClock >>= tmp;
 }
+#endif /* !STM32H7 */
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Clock Configuration                                                       */
@@ -165,6 +169,20 @@ void SystemCoreClockUpdate(void)
  *
  * @pre HAL_Init() must be called before this function
  */
+#if defined(STM32H7)
+/* ── H7 bring-up: use HSI 64 MHz (reset default, no PLL) ────────────────── *
+ * SystemInit() in system_stm32h7xx.c leaves the CPU on HSI 64 MHz.
+ * USART3 @ 115200 baud is correct at PCLK1 = 64 MHz.
+ * HAL_UART_Init() calls SystemCoreClockUpdate() internally which reads HSI.
+ * PLL configuration can be added here once UART bring-up is confirmed. */
+__SECTION_OS __USED
+static int32_t _stm32_clock_init(void)
+{
+    return OS_ERR_NONE;
+}
+
+#else /* !STM32H7 — F4-family clock init */
+
 __SECTION_OS __USED
 static int32_t _stm32_clock_init(void)
 {
@@ -200,6 +218,8 @@ static int32_t _stm32_clock_init(void)
     return OS_ERR_NONE;
 }
 
+#endif /* STM32H7 */
+
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Clock Query APIs                                                          */
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -231,9 +251,12 @@ static uint32_t _stm32_get_apb2_hz(void)
 
 /* ── Named per-peripheral clock enables ──────────────────────────────────── */
 __SECTION_OS __USED
-void hal_rcc_stm32_pwr_clk_en(void)    
-{ 
-    __HAL_RCC_PWR_CLK_ENABLE(); 
+void hal_rcc_stm32_pwr_clk_en(void)
+{
+#if !defined(STM32H7)
+    __HAL_RCC_PWR_CLK_ENABLE();   /* F4: PWR in APB1 — needs explicit enable */
+#endif
+    /* H7: PWR is in APB4 and always clocked; HAL_PWREx_ConfigSupply() used instead */
 }
 
 __SECTION_OS __USED
@@ -291,8 +314,11 @@ void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
         case DRV_RCC_PERIPH_I2C1:   __HAL_RCC_I2C1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_SPI1:   __HAL_RCC_SPI1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_TIM1:   __HAL_RCC_TIM1_CLK_ENABLE();   break;
+        case DRV_RCC_PERIPH_TIM6:   __HAL_RCC_TIM6_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_SYSCFG: __HAL_RCC_SYSCFG_CLK_ENABLE(); break;
+#if !defined(STM32H7)
         case DRV_RCC_PERIPH_PWR:    __HAL_RCC_PWR_CLK_ENABLE();    break;
+#endif
         default: break;
     }
 }

@@ -161,6 +161,9 @@ class VendorCodegen:
 
 class STM32Codegen(VendorCodegen):
 
+    def __init__(self, mcu: str = ''):
+        self._family = 'H7' if 'H7' in mcu.upper() else 'F4'
+
     _SPEED = {
         'low':       'GPIO_SPEED_FREQ_LOW',
         'medium':    'GPIO_SPEED_FREQ_MEDIUM',
@@ -195,8 +198,9 @@ class STM32Codegen(VendorCodegen):
 
     def all_clk_enable_body(self, ports, uarts, i2cs, spis):
         lines = ['    /* System bus clocks */',
-                 '    __HAL_RCC_SYSCFG_CLK_ENABLE();',
-                 '    __HAL_RCC_PWR_CLK_ENABLE();']
+                 '    __HAL_RCC_SYSCFG_CLK_ENABLE();']
+        if self._family != 'H7':
+            lines.append('    __HAL_RCC_PWR_CLK_ENABLE();   /* F4 only — PWR always clocked on H7 */')
         if uarts:
             lines += ['', '#ifdef HAL_UART_MODULE_ENABLED',
                       '    /* UART peripheral clocks */']
@@ -261,10 +265,15 @@ class STM32Codegen(VendorCodegen):
         'i2c':  'HAL_I2C_MODULE_ENABLED',
         'spi':  'HAL_SPI_MODULE_ENABLED',
     }
-    _HAL_INCLUDE = {
+    _HAL_INCLUDE_F4 = {
         'uart': 'stm32f4xx_hal_uart.h',
         'i2c':  'stm32f4xx_hal_i2c.h',
         'spi':  'stm32f4xx_hal_spi.h',
+    }
+    _HAL_INCLUDE_H7 = {
+        'uart': 'stm32h7xx_hal_uart.h',
+        'i2c':  'stm32h7xx_hal_i2c.h',
+        'spi':  'stm32h7xx_hal_spi.h',
     }
 
     def hal_handle_type(self, periph_type: str) -> str:
@@ -283,8 +292,21 @@ class STM32Codegen(VendorCodegen):
         return self._HAL_MODULE_GUARD.get(periph_type.lower(), '')
 
     def hal_handle_includes(self, periph_type: str) -> list:
-        inc = self._HAL_INCLUDE.get(periph_type.lower(), '')
+        tbl = self._HAL_INCLUDE_H7 if self._family == 'H7' else self._HAL_INCLUDE_F4
+        inc = tbl.get(periph_type.lower(), '')
         return [f'#include "{inc}"'] if inc else []
+
+    def cmsis_psc_tables(self) -> list:
+        """Return C lines for AHBPrescTable and APBPrescTable, family-specific."""
+        if self._family == 'H7':
+            return [
+                'const uint8_t AHBPrescTable[8] = {0, 0, 0, 0, 0, 1, 2, 3};',
+                'const uint8_t APBPrescTable[4] = {0, 1, 2, 3};',
+            ]
+        return [
+            'const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};',
+            'const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};',
+        ]
 
 
 # ── Infineon XMC ──────────────────────────────────────────────────────────────
@@ -460,6 +482,41 @@ _MCU_PERIPH_MAP = {
             'flash_latency':  'FLASH_LATENCY_5',
         },
     },
+
+    # ── STM32H723ZGTx — Cortex-M7, 550 MHz, 1 MB Flash ──────────────────────
+    # PLL1 configuration (HSE=25 MHz source, 550 MHz output):
+    #   ref_clk = 25 / PLLM(5) = 5 MHz
+    #   VCO     = 5  * PLLN(110) = 550 MHz
+    #   sysclk  = 550 / PLLP(1) = 550 MHz
+    # APB prescalers: CDPPRE1(APB1) = /4 → 137.5 MHz, CDPPRE2(APB2) = /2 → 275 MHz
+    'STM32H723ZGTx': {
+        'vendor_var':    'MCU_VAR_STM',
+        'max_uart':      8,   # USART1-3, UART4-5, USART6, UART7-8
+        'max_iic':       4,   # I2C1..I2C4
+        'max_spi':       6,   # SPI1..SPI6
+        'max_tim':       17,  # TIM1..TIM17
+        'note':          'FDCAN1/2, DAC1/2, ETH, MDMA present on H723',
+        'uart_en_order': ['UART_1', 'UART_2', 'UART_3', 'UART_4',
+                          'UART_5', 'UART_6', 'UART_7', 'UART_8'],
+        'uart_ports':    [('UART_1', 'USART1'), ('UART_2', 'USART2'),
+                          ('UART_3', 'USART3'), ('UART_4', 'UART4'),
+                          ('UART_5', 'UART5'),  ('UART_6', 'USART6'),
+                          ('UART_7', 'UART7'),  ('UART_8', 'UART8')],
+        'iic_ports':     [('IIC_1', ''), ('IIC_2', ''), ('IIC_3', ''), ('IIC_4', '')],
+        'tim_ports':     [('TIMER_1', ''), ('TIMER_2', ''),
+                          ('TIMER_3', ''), ('TIMER_4', ''), ('INVALID_TIMER_ID', '')],
+        'clock': {
+            'note':           'STM32H723ZGTx @ 550 MHz  HSE=25 MHz (PLL1: M=5 N=110 P=1)',
+            'pllm':           '5U',
+            'plln':           '110U',
+            'pllp':           '1U',
+            'pllq':           '4U',
+            'sysclk_hz':      '550000000UL',
+            'apb1_hz':        '137500000UL',
+            'apb2_hz':        '275000000UL',
+            'flash_latency':  'FLASH_LATENCY_4',
+        },
+    },
 }
 
 
@@ -490,8 +547,11 @@ class BoardConfigGenerator:
             if role:
                 self.uart_roles[role] = u
 
-        cls     = _VENDOR_MAP.get(self.vendor, STM32Codegen)
-        self.cg = cls()
+        if self.vendor == 'STM':
+            self.cg = STM32Codegen(mcu=self.mcu)
+        else:
+            cls     = _VENDOR_MAP.get(self.vendor, STM32Codegen)
+            self.cg = cls()
 
     # ── Public ────────────────────────────────────────────────────────────────
 
@@ -711,8 +771,12 @@ class BoardConfigGenerator:
             L.append(f'#define BOARD_FLASH_LATENCY     {flash}')
             L.append('')
             L.append('extern          uint32_t SystemCoreClock; /* = BOARD_SYSCLK_HZ at boot — updated by SystemCoreClockUpdate() */')
-            L.append('extern const uint8_t     AHBPrescTable[16];')
-            L.append('extern const uint8_t     APBPrescTable[8];')
+            if self.cg._family == 'H7':
+                L.append('extern const uint8_t     AHBPrescTable[8];')
+                L.append('extern const uint8_t     APBPrescTable[4];')
+            else:
+                L.append('extern const uint8_t     AHBPrescTable[16];')
+                L.append('extern const uint8_t     APBPrescTable[8];')
             L.append('')
 
         # board_pin_t
@@ -846,9 +910,11 @@ class BoardConfigGenerator:
             L.append('/* Placed in .boot_data: valid before the .data copy in Reset_Handler.      */')
             L.append('#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)')
             L.append('#include <def_attributes.h>')
-            L.append('__SECTION_BOOT_DATA uint32_t SystemCoreClock = BOARD_SYSCLK_HZ;')
-            L.append('const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};')
-            L.append('const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};')
+            # H7 defines SystemCoreClock in system_stm32h7xx.c; only F4 needs it here
+            if self.cg._family != 'H7':
+                L.append('__SECTION_BOOT_DATA uint32_t SystemCoreClock = BOARD_SYSCLK_HZ;')
+            for tbl_line in self.cg.cmsis_psc_tables():
+                L.append(tbl_line)
             L.append('#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */')
             L.append('')
 

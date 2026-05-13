@@ -22,3 +22,6 @@
 [submodule "lib/lib-behavior-tree"]
 	path = lib/lib-behavior-tree
 	url = https://github.com/SS-Electronics/lib-behavior-tree.git
+[submodule "arch/devices/STM/stm32h7xx-hal-driver"]
+	path = arch/devices/STM/stm32h7xx-hal-driver
+	url = https://github.com/STMicroelectronics/stm32h7xx-hal-driver.git

@@ -18,7 +18,9 @@
 #include <def_attributes.h>
 #include <device.h>
 
-__SECTION_BOOT 
+/* H7 uses SystemInit() from system_stm32h7xx.c (handles D1/D2/D3 domains + FPU). */
+#if !defined(STM32H7)
+__SECTION_BOOT
 void SystemInit(void)
 {
     /* Enable FPU coprocessors CP10 and CP11 (full access) */
@@ -35,3 +37,4 @@ void SystemInit(void)
 #  endif
 #endif
 }
+#endif /* !STM32H7 */

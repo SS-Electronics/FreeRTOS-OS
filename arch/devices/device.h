@@ -57,31 +57,57 @@
     defined(STM32F411xC) || defined(STM32F401xC) || defined(STM32F401xE) || \
     defined(STM32F415xx) || defined(STM32F417xx) || defined(STM32F427xx) || \
     defined(STM32F429xx) || defined(STM32F437xx) || defined(STM32F439xx) || \
-    defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx)
+    defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx) || \
+    /* STM32H7xx individual variants */                               \
+    defined(STM32H723xx) || defined(STM32H733xx) || defined(STM32H725xx) || \
+    defined(STM32H735xx) || defined(STM32H743xx) || defined(STM32H750xx)
 
 #define DEVICE_VENDOR_STM32     1
 
-/* CMSIS device header — defines core registers, peripheral base addresses,
- * interrupt numbers; selects the correct sub-header via the chip define.  */
+/* ── STM32F4xx family ──────────────────────────────────────────────────────*/
+#if defined(STM32F4)  || \
+    defined(STM32F405xx) || defined(STM32F407xx) || defined(STM32F411xE) || \
+    defined(STM32F411xC) || defined(STM32F401xC) || defined(STM32F401xE) || \
+    defined(STM32F415xx) || defined(STM32F417xx) || defined(STM32F427xx) || \
+    defined(STM32F429xx) || defined(STM32F437xx) || defined(STM32F439xx) || \
+    defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx)
+
+/* CMSIS device header — peripheral registers, base addresses, IRQ numbers */
 #include <stm32f4xx.h>
 
-/* STM32F4xx sub-family pin/peripheral capability header */
+/* F4xx sub-family capability header */
 #if   defined(STM32F411xE) || defined(STM32F411xC)
 #include <STM32F411/stm32_f411xe.h>
 #elif defined(STM32F401xC) || defined(STM32F401xE)
 /* #include <STM32F401/stm32_f401xe.h> */   /* add when porting F401 */
 #endif
 
-/* STM32 HAL — stm32f4xx_hal.h pulls in all modules enabled in hal_conf.h
- * (generated into arch/devices/device_conf/ by make config-outputs).     */
+/* STM32F4 HAL — pulls in all modules enabled in the generated hal_conf.h  */
 #include <stm32f4xx_hal_conf.h>
 #include <stm32f4xx_hal.h>
 
-/* CMSIS system symbols — defined in drivers/hal/stm32/hal_rcc_stm32.c
- * (replaces the old system_stm32f4xx.c).                                 */
+extern const uint8_t AHBPrescTable[16];  /*!< AHB prescaler shift LUT     */
+extern const uint8_t APBPrescTable[8];   /*!< APB prescaler shift LUT     */
+
+/* ── STM32H7xx family ──────────────────────────────────────────────────────*/
+#elif defined(STM32H7) || \
+      defined(STM32H723xx) || defined(STM32H733xx) || defined(STM32H725xx) || \
+      defined(STM32H735xx) || defined(STM32H743xx) || defined(STM32H750xx)
+
+/* CMSIS device header — Cortex-M7 core, peripheral registers, IRQ numbers */
+#include <stm32h7xx.h>
+
+/* STM32H7 HAL — pulls in all modules enabled in the generated hal_conf.h  */
+#include <stm32h7xx_hal_conf.h>
+#include <stm32h7xx_hal.h>
+
+extern const uint8_t AHBPrescTable[8];   /*!< AHB prescaler shift LUT     */
+extern const uint8_t APBPrescTable[4];   /*!< APB prescaler shift LUT     */
+
+#endif /* STM32 family sub-selection */
+
+/* CMSIS system symbols — defined in drivers/hal/stm32/hal_rcc_stm32.c    */
 extern uint32_t      SystemCoreClock;    /*!< System Clock Frequency (Core Clock)  */
-extern const uint8_t AHBPrescTable[16];  /*!< AHB prescaler shift LUT              */
-extern const uint8_t APBPrescTable[8];   /*!< APB prescaler shift LUT              */
 void SystemInit(void);
 void SystemCoreClockUpdate(void);
 

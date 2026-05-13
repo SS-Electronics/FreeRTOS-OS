@@ -1,6 +1,15 @@
 # OS Shell CLI — FreeRTOS-OS
 
-An interactive command-line interface running over UART_APP (USART2, PA2/PA3), built on FreeRTOS+CLI. Connect with PuTTY or any serial terminal at **115200 8N1, no flow control**.
+An interactive command-line interface built on FreeRTOS+CLI. Connect with any serial terminal at **115200 8N1, no flow control**.
+
+UART assignment depends on the board:
+
+| Board | Shell UART | Pins | Port |
+|---|---|---|---|
+| NUCLEO-H723ZG (STM32H723xx) | UART_DEBUG — USART3 | PD8 TX / PD9 RX AF7 | `/dev/ttyACM0` (STLink VCP) |
+| STM32F411 DevBoard | UART_APP — USART2 | PA2 TX / PA3 RX AF7 | `/dev/ttyUSB0` (USB-serial) |
+
+On H723, `printk()` output and the interactive shell share the same UART (`UART_SHELL_HW_ID = 1 = UART_DEBUG = USART3`). On F411, they are on separate UARTs.
 
 ---
 
@@ -47,20 +56,37 @@ An interactive command-line interface running over UART_APP (USART2, PA2/PA3), b
 
 5. (Optional) **Terminal → Local line editing**: set to **Force off** — the firmware handles line editing (backspace, Ctrl-C).
 
-6. Click **Open**. Power-cycle or reset the board. After ~5 seconds the banner appears:
+6. Click **Open**. Power-cycle or reset the board. The banner appears within **~1 second** (H723) or ~5 seconds (F411):
 
    ```
-   === FreeRTOS-OS Shell ===
-   Type 'help' for available commands.
-
-   >
+    +--------------------------------------------+
+    |   ____              ___ _____ ___  ____    |
+    |  |  __| ___ ___ ___|  _|_   _/   \/ ___|  |
+    ...
+    | CPU Clock: 64  MHz
+    | Kernel   : FreeRTOS V11.1.0+
+    +--------------------------------------------+
+     Type 'help' for available commands.
+   OS >
    ```
 
 ---
 
 ### Linux
 
-Connect the USB-to-serial adapter (`/dev/ttyUSB0` or `/dev/ttyACM0`):
+**H723 NUCLEO-H723ZG** — STLink VCP on `/dev/ttyACM0`:
+
+```bash
+# Quickest — set raw mode then read:
+stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0
+
+# Or with screen:
+screen /dev/ttyACM0 115200
+```
+
+> Open the terminal **before** resetting the board — the STLink VCP discards data sent before the host opens the port. The shell banner appears ~1 second after reset.
+
+**F411 DevBoard** — USB-to-serial adapter on `/dev/ttyUSB0`:
 
 **Option A — PuTTY:**
 ```bash
@@ -384,21 +410,42 @@ Lines longer than `SHELL_LINE_BUF_LEN - 1` bytes are silently truncated.
 
 ## printk vs Shell
 
-`printk()` and the shell are on separate UARTs and completely independent:
+### H723 (NUCLEO-H723ZG) — shared UART
+
+On H723 both `printk()` and the interactive shell share a single UART:
+
+| | `printk()` | Shell |
+|---|---|---|
+| UART | UART_DEBUG — USART3, PD8/PD9 | UART_DEBUG — USART3, PD8/PD9 |
+| Terminal | `/dev/ttyACM0` (STLink VCP) | same port |
+| Config key | `UART_SHELL_HW_ID = 1` | `UART_SHELL_HW_ID = 1` |
+
+```c
+/* board/board_device_ids.h (H723 generated) */
+#define UART_DEBUG           1    /* USART3, PD8/PD9 — shell + printk */
+#define UART_SHELL_HW_ID     BOARD_UART_SHELL_ID   /* = UART_DEBUG = 1 */
+```
+
+`printk()` is automatically enabled ~20 ms after scheduler start by `uart_mgmt_thread`. No manual `printk_enable()` call needed from `app_main()`.
+
+### F411 — separate UARTs
+
+On F411 `printk()` and the shell are on separate UARTs:
 
 | | `printk()` | Shell |
 |---|---|---|
 | UART | UART_DEBUG — USART1, PA9/PA10 | UART_APP — USART2, PA2/PA3 |
-| Terminal | ST-Link VCP (e.g. `/dev/ttyACM0`) | USB-to-Serial (e.g. `/dev/ttyUSB0`) |
-| Direction | TX only — log output | TX (output) + RX (keyboard input) |
+| Terminal | ST-Link VCP (`/dev/ttyACM0`) | USB-to-Serial (`/dev/ttyUSB0`) |
 | API | `printk("fmt %d\n", val)` | FreeRTOS+CLI commands |
 | Config key | `COMM_PRINTK_HW_ID = 0` | `UART_SHELL_HW_ID = 1` |
 
 ```c
-/* conf_os.h — separation of debug log and interactive shell */
+/* config/conf_os.h — separation of debug log and interactive shell */
 #define COMM_PRINTK_HW_ID   (0)   /* UART_DEBUG — USART1 — log output  */
 #define UART_SHELL_HW_ID    (1)   /* UART_APP   — USART2 — shell I/O   */
 ```
+
+Keep these on separate UARTs so `printk` log output does not appear mid-line in an interactive shell session. See [docs/OS_INSIDE.md](OS_INSIDE.md) for the post-mortem on why mixing them breaks sessions.
 
 ---
 

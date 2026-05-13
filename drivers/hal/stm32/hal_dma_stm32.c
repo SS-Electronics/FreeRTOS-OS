@@ -189,7 +189,11 @@ static int32_t _slave_config(dma_chan_t *chan, const dma_slave_config_t *cfg)
     DMA_HandleTypeDef     *h   = &ctx->hdma;
 
     h->Init.Direction           = _hal_dir(cfg->direction);
+#if defined(STM32H7)
+    h->Init.Request             = cfg->request;    /* DMAMUX handles routing on H7 */
+#else
     h->Init.Channel             = (uint32_t)cfg->request << DMA_SxCR_CHSEL_Pos;
+#endif
     h->Init.PeriphInc           = (cfg->src_addr_adj == DMA_ADDR_INCREMENT)
                                     ? DMA_PINC_ENABLE : DMA_PINC_DISABLE;
     h->Init.MemInc              = (cfg->dst_addr_adj == DMA_ADDR_INCREMENT)
@@ -248,7 +252,8 @@ __SECTION_OS __USED
 static int32_t _pause(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
-    ctx->hdma.Instance->CR &= ~DMA_SxCR_EN;
+    /* H7 DMA_HandleTypeDef.Instance is void* — cast needed */
+    ((DMA_Stream_TypeDef *)ctx->hdma.Instance)->CR &= ~DMA_SxCR_EN;
     return OS_ERR_NONE;
 }
 
@@ -259,7 +264,7 @@ __SECTION_OS __USED
 static int32_t _resume(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
-    ctx->hdma.Instance->CR |= DMA_SxCR_EN;
+    ((DMA_Stream_TypeDef *)ctx->hdma.Instance)->CR |= DMA_SxCR_EN;
     return OS_ERR_NONE;
 }
 
@@ -270,7 +275,7 @@ __SECTION_OS __USED
 static uint32_t _get_residue(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
-    return ctx->hdma.Instance->NDTR;
+    return ((DMA_Stream_TypeDef *)ctx->hdma.Instance)->NDTR;
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */

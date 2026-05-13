@@ -1,8 +1,11 @@
 # FreeRTOS-OS
 
-A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for ARM Cortex-M4 embedded targets. Provides generic thread management, an intrusive linked-list, an IPC message-queue subsystem, a hardware abstraction layer driven by Kconfig, and a service-thread architecture — all sitting above FreeRTOS without replacing it.
+A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for ARM Cortex-M embedded targets. Provides generic thread management, an intrusive linked-list, an IPC message-queue subsystem, a hardware abstraction layer driven by Kconfig, and a service-thread architecture — all sitting above FreeRTOS without replacing it.
 
-> **Default target:** STM32F411VET6 · ARM Cortex-M4F · 100 MHz · 512 KB Flash · 128 KB RAM
+| Target | Core | Clock | Flash | RAM | Status |
+|---|---|---|---|---|---|
+| STM32F411VET6 | Cortex-M4F | 100 MHz | 512 KB | 128 KB | Supported |
+| **STM32H723ZGTx** | **Cortex-M7** | **64 MHz (HSI)** | **1 MB** | **128 KB DTCM** | **Confirmed running** |
 
 ---
 
@@ -69,8 +72,9 @@ A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for AR
                              │
 ┌────────────────────────────▼─────────────────────────────────────┐
 │              Hardware Abstraction Layer (HAL)                    │
-│   STM32F4xx HAL — driven by Kconfig → autoconf.h                │
-│   CMSIS-Core · Startup · Linker script                           │
+│   STM32F4xx HAL  or  STM32H7xx HAL — driven by Kconfig          │
+│   CMSIS-Core · Startup (F4/H7) · Linker script (F4/H7)          │
+│   H7: SCB_EnableICache/DCache in startup · TIM6 timebase         │
 └────────────────────────────┬─────────────────────────────────────┘
                              │
 ┌────────────────────────────▼─────────────────────────────────────┐
@@ -96,13 +100,13 @@ make menuconfig       # interactive TUI — saves FreeRTOS-OS/.config
 make config-outputs   # reads .config → writes the three files below
 ```
 
-**Outputs written to `FreeRTOS-OS/config/`:**
+**Outputs written to `$(APP_DIR)/board/` (demo build) or `FreeRTOS-OS/config/` (standalone):**
 
 | File | Contents |
 |---|---|
 | `autoconf.h` | `#define CONFIG_*` symbols for every enabled option |
 | `autoconf.mk` | `CONFIG_*=1/0/value` for Makefile conditionals |
-| `stm32f4xx_hal_conf.h` | STM32 HAL module enable/disable flags |
+| `stm32f4xx_hal_conf.h` / `stm32h7xx_hal_conf.h` | STM32 HAL module enable/disable flags (family-specific) |
 
 Re-run both commands whenever you change a Kconfig option (target MCU, heap size, UART count, tick rate, enabled services, etc.).
 
@@ -114,14 +118,15 @@ Reads the board XML descriptor and generates the peripheral table, device-ID con
 
 ```bash
 make board-gen
-# Reads:   app/board/stm32f411_devboard.xml
-# Writes:  app/board/board_config.c
-#          app/board/board_device_ids.h
-#          app/board/board_handles.h
-#          app/board/mcu_config.h
+# Reads:   app/board/stm32f411_devboard.xml   (F4 target)
+#       or demo/board/stm32h723_devboard.xml  (H723 demo)
+# Writes:  <APP_DIR>/board/board_config.c
+#          <APP_DIR>/board/board_device_ids.h
+#          <APP_DIR>/board/board_handles.h
+#          <APP_DIR>/board/mcu_config.h
 ```
 
-Re-run whenever you edit `app/board/stm32f411_devboard.xml` (adding a UART, changing GPIO pin assignments, renaming a device ID, etc.).
+Re-run whenever you edit the board XML (adding a UART, changing GPIO pin assignments, renaming a device ID, etc.).
 
 To use a different board XML:
 ```bash
@@ -353,11 +358,11 @@ make kernel           # OS only    →  FreeRTOS-OS/build/kernel.elf
 make flash-app        # programs app.elf via OpenOCD, verifies, resets target
 
 # ── 7. Connect to the interactive shell ───────────────────────────────────────
-picocom -b 115200 --echo /dev/ttyUSB0
-# Banner appears ~5 s after reset:
-#   === FreeRTOS-OS Shell ===
-#   Type 'help' for available commands.
-#   >
+# H723 NUCLEO — STLink VCP (shell + printk share one port):
+stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0
+# F411 — separate shell UART on USB-serial adapter:
+# screen /dev/ttyUSB0 115200
+# Banner appears ~1 s after reset on H723, ~5 s on F411
 
 # ── 8. Clean ──────────────────────────────────────────────────────────────────
 make clean
@@ -367,7 +372,40 @@ make clean
 
 ---
 
-## Quick Start (existing repo)
+## Quick Start — H723 Demo (NUCLEO-H723ZG)
+
+All commands run from inside `FreeRTOS-OS/`:
+
+```bash
+# ── Build ─────────────────────────────────────────────────────────────────────
+make all APP_DIR=demo TARGET_NAME=demo
+# → build/demo.elf  (237 KB text)
+
+# ── Flash ─────────────────────────────────────────────────────────────────────
+make flash TARGET_NAME=demo
+# → ** Verified OK ** → ** Resetting Target **
+
+# ── Connect — open terminal BEFORE reset so the banner is not missed ──────────
+stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0
+# After reset you should see (within 1 second):
+#
+#  [500] [heartbeat] tick 1
+#
+#   +--------------------------------------------+
+#   |   ____              ___ _____ ___  ____    |
+#   |  |  __| ___ ___ ___|  _|_   _/   \/ ___|  |
+#   ...
+#   | CPU Clock: 64  MHz
+#   | Kernel   : FreeRTOS V11.1.0+
+#   +--------------------------------------------+
+#   Type 'help' for available commands.
+#  OS >
+
+# ── Clean ─────────────────────────────────────────────────────────────────────
+make clean
+```
+
+## Quick Start — F411 App (existing repo)
 
 ```bash
 # ── Clone ─────────────────────────────────────────────────────────────────────
@@ -395,8 +433,7 @@ make kernel           # OS only   → FreeRTOS-OS/build/kernel.elf
 make flash-app        # programs app.elf via OpenOCD, verifies, resets target
 
 # ── Connect to shell ──────────────────────────────────────────────────────────
-picocom -b 115200 --echo /dev/ttyUSB0
-# or: screen /dev/ttyUSB0 115200
+screen /dev/ttyUSB0 115200    # UART_APP (USART2, USB-to-serial)
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
 make clean
@@ -408,9 +445,15 @@ make clean
 
 ## Make Target Reference
 
-All targets are invoked from the project root (`FreeRTOS-OS-App/`).
+### Demo Build (H723 — from `FreeRTOS-OS/`)
 
-### Build
+| Command | Output | Description |
+|---|---|---|
+| `make all APP_DIR=demo TARGET_NAME=demo` | `build/demo.elf` | H723 demo firmware |
+| `make flash TARGET_NAME=demo` | — | Flash `build/demo.elf` via OpenOCD |
+| `make clean` | — | Delete `build/` |
+
+### App Build (F411 — from project root `FreeRTOS-OS-App/`)
 
 | Target | Output | Description |
 |---|---|---|
@@ -431,9 +474,9 @@ All targets are invoked from the project root (`FreeRTOS-OS-App/`).
 | Target | Reads | Writes |
 |---|---|---|
 | `make menuconfig` | `FreeRTOS-OS/Kconfig` | `FreeRTOS-OS/.config` |
-| `make config-outputs` | `FreeRTOS-OS/.config` | `config/autoconf.h`, `config/autoconf.mk`, `config/stm32f4xx_hal_conf.h` |
-| `make board-gen` | `app/board/stm32f411_devboard.xml` | `app/board/board_config.c`, `board_device_ids.h`, `board_handles.h`, `mcu_config.h` |
-| `make irq_gen` | `app/board/irq_table.xml` | `irq/irq_table.c`, `app/board/irq_hw_init_generated.c/.h`, `irq_periph_handlers_generated.h`, `irq_periph_vectors_generated.inc` |
+| `make config-outputs` | `FreeRTOS-OS/.config` | `$(APP_DIR)/board/autoconf.h`, `autoconf.mk`, `stm32{f4,h7}xx_hal_conf.h` |
+| `make board-gen` | `$(APP_DIR)/board/<board>.xml` | `board_config.c`, `board_device_ids.h`, `board_handles.h`, `mcu_config.h` |
+| `make irq_gen` | `$(APP_DIR)/board/irq_table.xml` | `irq/irq_table.c`, `irq_hw_init_generated.c/.h`, `irq_periph_handlers_generated.h`, `irq_periph_vectors_generated.inc` |
 | `python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml` | `app/board/dsp_dev.xml` | `app/board/dsp_config.h`, `app/board/dsp_config.mk` |
 
 ### Prerequisites
@@ -459,14 +502,15 @@ Implement `app_main()` in `app/app_main.c`. The OS calls it after the scheduler 
 #include <os/kernel.h>
 #include <os/kernel_syscall.h>
 #include <services/gpio_mgmt.h>
-#include <services/os_shell_management.h>
 #include <board/board_device_ids.h>
 
-static void heartbeat(void *arg)
+static void heartbeat(void *param)
 {
-    (void)arg;
+    (void)param;
+    uint32_t tick = 0;
     for (;;) {
         gpio_mgmt_post(LED_BOARD, GPIO_MGMT_CMD_TOGGLE, 0, 0);
+        printk("[heartbeat] tick %lu\n", (unsigned long)tick++);
         os_thread_delay(500);
     }
 }
@@ -474,23 +518,27 @@ static void heartbeat(void *arg)
 int app_main(void)
 {
     os_thread_create(heartbeat, "heartbeat", 256, 1, NULL);
-
-    /* Start interactive shell on UART_APP (USART2, PA2/PA3).
-     * Connect PuTTY: 115200 8N1, no flow control. */
-    os_shell_mgmt_start();
-
     return 0;
 }
 ```
 
-`printk()` accepts `printf`-style arguments; output goes to `COMM_PRINTK_HW_ID` (UART_DEBUG, USART1). The shell CLI runs on `UART_SHELL_HW_ID` (UART_APP, USART2). Keep these on separate UARTs so debug log output does not pollute the interactive session.
+`printk()` accepts `printf`-style arguments. `printk_init()` and `printk_enable()` are called automatically by `uart_mgmt_thread` at boot (~20 ms after scheduler start) — no manual call needed in `app_main()`.
 
+The shell CLI and `printk` UART assignment depends on the board:
+
+**STM32H723ZGTx (NUCLEO-H723ZG) — single shell UART:**
 ```
-UART_DEBUG (USART1, PA9/PA10) ── ST-Link VCP ── printk() log output
-UART_APP   (USART2, PA2/PA3)  ── USB-Serial  ── interactive shell (PuTTY)
+UART_DEBUG (dev_id=1, USART3, PD8/PD9) ── STLink VCP ── /dev/ttyACM0
+  └─ shell interactive I/O  +  printk() log output  (shared)
 ```
 
-See [docs/OS_THREAD.md](docs/OS_THREAD.md) for the thread API, [docs/SHELL_CLI.md](docs/SHELL_CLI.md) for shell usage and PuTTY setup.
+**STM32F411VET6 — separate UARTs:**
+```
+UART_DEBUG (dev_id=0, USART1, PA9/PA10)  ── ST-Link VCP  ── printk() log output
+UART_APP   (dev_id=1, USART2, PA2/PA3)   ── USB-Serial   ── interactive shell
+```
+
+See [docs/OS_THREAD.md](docs/OS_THREAD.md) for the thread API, [docs/SHELL_CLI.md](docs/SHELL_CLI.md) for shell usage and connection setup.
 
 ---
 
@@ -549,7 +597,7 @@ FreeRTOS on Cortex-M uses `BASEPRI` to implement critical sections. Any peripher
 
 | NVIC priority | FreeRTOS API allowed? | Used for |
 |---|---|---|
-| 1–4 | **No** — above BASEPRI mask | HAL timebase timer (TIM1) |
+| 1–4 | **No** — above BASEPRI mask | HAL timebase timer (TIM6 on H7 / TIM1 on F4) |
 | 5–14 | **Yes** — `FROM_ISR` variants only | UART, SPI, I2C, EXTI |
 | 15 | Lowest — kernel reserved | SysTick, PendSV |
 
@@ -564,15 +612,25 @@ See [docs/OS_INSIDE.md](docs/OS_INSIDE.md) for the full post-mortem and preventi
 
 ## Supported Devices
 
-Default: **STM32F411xE** (⭐). Change with `make menuconfig` → *Target MCU part number*.
+Change with `make menuconfig` → *Target MCU part number*.
 
-| Config ID | Core | Flash | RAM |
-|---|---|---|---|
-| `STM32F411xE` ⭐ | Cortex-M4F @ 100 MHz | 512 KB | 128 KB |
-| `STM32F405xx` | Cortex-M4F @ 168 MHz | 1 MB | 192 KB |
-| `STM32F407xx` | Cortex-M4F @ 168 MHz | 1 MB | 192 KB |
-| `STM32F446xx` | Cortex-M4F @ 180 MHz | 512 KB | 128 KB |
-| `STM32F429xx` | Cortex-M4F @ 180 MHz | 2 MB | 256 KB |
+**Cortex-M7 (H7 family)**
+
+| Config ID | Core | Clock | Flash | RAM | HAL Timebase |
+|---|---|---|---|---|---|
+| `STM32H723xx` ⭐ | Cortex-M7 | 64 MHz HSI (no PLL) | 1 MB | 128 KB DTCM | TIM6 (`TIM6_DAC_IRQn`) |
+
+**Cortex-M4 (F4 family)**
+
+| Config ID | Core | Clock | Flash | RAM | HAL Timebase |
+|---|---|---|---|---|---|
+| `STM32F411xE` | Cortex-M4F | 100 MHz | 512 KB | 128 KB | TIM1 (`TIM1_UP_TIM10_IRQn`) |
+| `STM32F405xx` | Cortex-M4F | 168 MHz | 1 MB | 192 KB | TIM1 |
+| `STM32F407xx` | Cortex-M4F | 168 MHz | 1 MB | 192 KB | TIM1 |
+| `STM32F446xx` | Cortex-M4F | 180 MHz | 512 KB | 128 KB | TIM1 |
+| `STM32F429xx` | Cortex-M4F | 180 MHz | 2 MB | 256 KB | TIM1 |
+
+> **H7 note:** On H7 the HAL timebase uses TIM6 (dispatched via `TIM6_DAC_IRQHandler`), not TIM1. `TIM1_UP_IRQHandler` is an empty stub in the generated dispatch table. See [docs/OS_INSIDE.md](docs/OS_INSIDE.md) for the post-mortem.
 
 ---
 

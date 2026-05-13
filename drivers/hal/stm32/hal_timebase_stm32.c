@@ -79,11 +79,10 @@
 /* Static TIM handle                                                         */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-/**
- * @brief Internal TIM1 handle used for HAL timebase
- */
+/* H7: TIM6 (APB1 basic timer) — dispatched via TIM6_DAC_IRQHandler in generated code.
+ * F4: TIM1 (APB2 advanced timer) — dispatched via TIM1_UP_TIM10_IRQHandler. */
 __SECTION_OS_DATA __USED
-static TIM_HandleTypeDef _htim1;
+static TIM_HandleTypeDef _htim_base;
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* HAL Tick Initialization                                                   */
@@ -113,33 +112,69 @@ static TIM_HandleTypeDef _htim1;
 __SECTION_OS __USED
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 {
+    uint32_t          uwTimclock;
+    uint32_t          uwPrescalerValue;
+    HAL_StatusTypeDef status;
+
+#if defined(STM32H7)
+    /* TIM6 on D2APB1. When D2PPRE1 == /1 (reset default), TIM6 clock = PCLK1.
+     * When D2PPRE1 > /1, TIM6 clock = 2 × PCLK1. */
+    drv_rcc_periph_clk_en(DRV_RCC_PERIPH_TIM6);
+    uwTimclock = (READ_BIT(RCC->D2CFGR, RCC_D2CFGR_D2PPRE1) != 0U)
+                 ? (2U * HAL_RCC_GetPCLK1Freq())
+                 : HAL_RCC_GetPCLK1Freq();
+    uwPrescalerValue = (uwTimclock / 1000000U) - 1U;
+
+    _htim_base.Instance               = TIM6;
+    _htim_base.Init.Period            = (1000000U / 1000U) - 1U;
+    _htim_base.Init.Prescaler         = uwPrescalerValue;
+    _htim_base.Init.ClockDivision     = 0;
+    _htim_base.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    _htim_base.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+    status = HAL_TIM_Base_Init(&_htim_base);
+    if (status == HAL_OK)
+    {
+        status = HAL_TIM_Base_Start_IT(&_htim_base);
+        if (status == HAL_OK)
+        {
+            HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+            if (TickPriority < (1UL << __NVIC_PRIO_BITS))
+            {
+                HAL_NVIC_SetPriority(TIM6_DAC_IRQn, TickPriority, 0U);
+                uwTickPrio = TickPriority;
+            }
+            else
+            {
+                status = HAL_ERROR;
+            }
+        }
+    }
+
+#else /* F4: TIM1 on APB2 */
+
     RCC_ClkInitTypeDef clkconfig;
-    uint32_t           uwTimclock;
-    uint32_t           uwPrescalerValue;
     uint32_t           pFLatency;
-    HAL_StatusTypeDef  status;
 
     drv_rcc_periph_clk_en(DRV_RCC_PERIPH_TIM1);
-
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
     uwTimclock       = 2U * HAL_RCC_GetPCLK2Freq();
     uwPrescalerValue = (uwTimclock / 1000000U) - 1U;
 
-    _htim1.Instance               = TIM1;
-    _htim1.Init.Period            = (1000000U / 1000U) - 1U;
-    _htim1.Init.Prescaler         = uwPrescalerValue;
-    _htim1.Init.ClockDivision     = 0;
-    _htim1.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    _htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    _htim_base.Instance               = TIM1;
+    _htim_base.Init.Period            = (1000000U / 1000U) - 1U;
+    _htim_base.Init.Prescaler         = uwPrescalerValue;
+    _htim_base.Init.ClockDivision     = 0;
+    _htim_base.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    _htim_base.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
-    status = HAL_TIM_Base_Init(&_htim1);
+    status = HAL_TIM_Base_Init(&_htim_base);
     if (status == HAL_OK)
     {
-        status = HAL_TIM_Base_Start_IT(&_htim1);
+        status = HAL_TIM_Base_Start_IT(&_htim_base);
         if (status == HAL_OK)
         {
             HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
-
             if (TickPriority < (1UL << __NVIC_PRIO_BITS))
             {
                 HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, TickPriority, 0U);
@@ -151,6 +186,8 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
             }
         }
     }
+
+#endif /* STM32H7 */
 
     return status;
 }
@@ -171,7 +208,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 __SECTION_OS __USED
 void HAL_SuspendTick(void)
 {
-    __HAL_TIM_DISABLE_IT(&_htim1, TIM_IT_UPDATE);
+    __HAL_TIM_DISABLE_IT(&_htim_base, TIM_IT_UPDATE);
 }
 
 /**
@@ -183,7 +220,7 @@ void HAL_SuspendTick(void)
 __SECTION_OS __USED
 void HAL_ResumeTick(void)
 {
-    __HAL_TIM_ENABLE_IT(&_htim1, TIM_IT_UPDATE);
+    __HAL_TIM_ENABLE_IT(&_htim_base, TIM_IT_UPDATE);
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -223,7 +260,7 @@ void hal_timebase_stm32_irq_handler(void)
     BaseType_t pxHPT = pdFALSE;
 
     /* Always service hardware first */
-    __HAL_TIM_CLEAR_FLAG(&_htim1, TIM_FLAG_UPDATE);
+    __HAL_TIM_CLEAR_FLAG(&_htim_base, TIM_FLAG_UPDATE);
 
     /* Update system ticks */
     g_ms_ticks++;

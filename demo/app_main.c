@@ -78,8 +78,11 @@ static void uart_echo_task(void *param)
 static void heartbeat_task(void *param)
 {
     (void)param;
+    uint32_t tick = 0;
+    printk("[boot] FreeRTOS-OS running\n");
     for (;;) {
         gpio_mgmt_post(LED_BOARD, GPIO_MGMT_CMD_TOGGLE, 0, 0);
+        printk("[heartbeat] tick %lu\n", (unsigned long)tick++);
         os_thread_delay(HEARTBEAT_PERIOD);
     }
 }

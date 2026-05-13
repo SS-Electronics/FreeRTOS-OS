@@ -186,7 +186,14 @@ The single private queue is the only way into the thread. The driver handles the
 ```
 uart_mgmt_thread()
 │
-├─ os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT)     // 4000 ms
+├─ for i in 0 .. bc->uart_count - 1:              // register IPC ring buffers
+│       global_uart_tx_mqueue_list[i] = ipc_mqueue_register(...)
+│       global_uart_rx_mqueue_list[i] = ipc_mqueue_register(...)
+│
+├─ printk_init()    ← binds _printk_rb to TX ring buffer for UART_SHELL_HW_ID
+│                     (must run after queues registered, before hw init)
+│
+├─ os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT)     // 20 ms (H723) / 4000 ms (F411)
 │
 ├─ ops = hal_uart_stm32_get_ops()     // or infineon variant
 │
@@ -199,7 +206,10 @@ uart_mgmt_thread()
 │           d->stop_bits, d->parity, d->mode)
 │       drv_uart_register(d->dev_id, ops,         // binds ops, calls hw_init()
 │           d->baudrate, timeout=10)              //  → HAL_UART_Init()
-│                                                 //  → start_rx_it() → ISR armed
+│                                                 //  → h->initialized = 1
+│
+├─ printk_enable()  ← sets _printk_enabled = 1; printk() now produces output
+│                     (must run after hw_init sets h->initialized = 1)
 │
 └─ for (;;):
        msg ← xQueueReceive(_mgmt_queue, portMAX_DELAY)

@@ -68,6 +68,31 @@
 #include <drivers/drv_irq.h>
 #include <board/board_config.h>
 
+/* ── H7 / F4 USART register compatibility shim ──────────────────────────── */
+/* F4: SR (status) + DR (data). H7: ISR (status) + RDR/TDR (data) + ICR (clear). */
+#if defined(STM32H7)
+#  define _USART_SR(inst)              READ_REG((inst)->ISR)
+#  define _USART_READ_DR(inst)         (READ_REG((inst)->RDR) & 0xFFU)
+#  define _USART_WRITE_DR(inst, byte)  WRITE_REG((inst)->TDR, (byte))
+/* H7 error flags live in ISR and must be cleared via ICR */
+#  define _USART_CLR_ERRORS(inst, fl) \
+     WRITE_REG((inst)->ICR, (fl) & (USART_ISR_PE | USART_ISR_FE | \
+                                    USART_ISR_ORE | USART_ISR_NE))
+/* Status-bit name aliases (ISR replaces SR) */
+#  define USART_SR_PE   USART_ISR_PE
+#  define USART_SR_FE   USART_ISR_FE
+#  define USART_SR_ORE  USART_ISR_ORE
+#  define USART_SR_NE   USART_ISR_NE
+#  define USART_SR_RXNE USART_ISR_RXNE_RXFNE
+#  define USART_SR_TXE  USART_ISR_TXE_TXFNF
+#  define USART_SR_TC   USART_ISR_TC
+#else /* F4 */
+#  define _USART_SR(inst)              READ_REG((inst)->SR)
+#  define _USART_READ_DR(inst)         (READ_REG((inst)->DR) & 0xFFU)
+#  define _USART_WRITE_DR(inst, byte)  WRITE_REG((inst)->DR, (byte))
+#  define _USART_CLR_ERRORS(inst, fl)  ((void)(fl))   /* F4 clears on DR read */
+#endif
+
 /**
  * @brief Retrieve next byte from TX ring buffer.
  *
@@ -297,11 +322,11 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
         if (h == NULL || !h->initialized || h->hw.huart.Instance != instance)
             continue;
 
-        uint32_t sr = READ_REG(instance->SR);
+        uint32_t sr  = _USART_SR(instance);
         uint32_t cr1 = READ_REG(instance->CR1);
         uint32_t cr3 = READ_REG(instance->CR3);
         uint32_t errorflags = sr & (USART_SR_PE | USART_SR_FE |
-                                   USART_SR_ORE | USART_SR_NE);
+                                    USART_SR_ORE | USART_SR_NE);
 
         BaseType_t hpt = pdFALSE;
 
@@ -309,7 +334,7 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
         {
             if ((sr & USART_SR_RXNE) && (cr1 & USART_CR1_RXNEIE))
             {
-                uint8_t byte = (uint8_t)(READ_REG(instance->DR) & 0xFFU);
+                uint8_t byte = (uint8_t)_USART_READ_DR(instance);
                 drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(id), &byte, &hpt);
                 portYIELD_FROM_ISR(hpt);
                 return;
@@ -319,7 +344,8 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
         if (errorflags && ((cr3 & USART_CR3_EIE) ||
                            (cr1 & (USART_CR1_RXNEIE | USART_CR1_PEIE))))
         {
-            uint8_t byte = (uint8_t)(READ_REG(instance->DR) & 0xFFU);
+            uint8_t byte = (uint8_t)_USART_READ_DR(instance);
+            _USART_CLR_ERRORS(instance, errorflags);
 
             if (sr & USART_SR_RXNE)
                 drv_irq_dispatch_from_isr(IRQ_ID_UART_RX(id), &byte, &hpt);
@@ -334,7 +360,7 @@ void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
             uint8_t byte;
             if (drv_uart_tx_get_next_byte(id, &byte) == OS_ERR_NONE)
             {
-                WRITE_REG(instance->DR, byte);
+                _USART_WRITE_DR(instance, byte);
             }
             else
             {
