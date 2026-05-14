@@ -25,6 +25,7 @@ obj-y += drivers/drv_time.o
 obj-y += drivers/drv_cpu.o
 obj-y += drivers/drv_rcc.o
 obj-y += drivers/drv_irq.o
+obj-y += drivers/drv_adc.o
 
 # ── Vendor HAL backend — STM32 ─────────────────────────────────────────────
 # Common to all supported STM32 targets (F4xx and H7xx)
@@ -38,6 +39,7 @@ obj-y += drivers/hal/stm32/hal_gpio_stm32.o
 obj-y += drivers/hal/stm32/hal_timebase_stm32.o
 obj-y += drivers/hal/stm32/hal_rcc_stm32.o
 obj-y += drivers/hal/stm32/hal_dma_stm32.o
+obj-y += drivers/hal/stm32/hal_adc_stm32.o
 endif
 
 # ── Vendor HAL backend — Infineon ──────────────────────────────────────────

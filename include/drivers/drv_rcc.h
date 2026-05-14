@@ -80,9 +80,16 @@ typedef enum {
     DRV_RCC_PERIPH_TIM6,
     DRV_RCC_PERIPH_SYSCFG,
     DRV_RCC_PERIPH_PWR,
+    DRV_RCC_PERIPH_USART3,
+    DRV_RCC_PERIPH_ADC12,
+    DRV_RCC_PERIPH_DMA1,
+    DRV_RCC_PERIPH_DMA2,
     DRV_RCC_PERIPH_GPIOA,
     DRV_RCC_PERIPH_GPIOB,
     DRV_RCC_PERIPH_GPIOC,
+    DRV_RCC_PERIPH_GPIOD,
+    DRV_RCC_PERIPH_GPIOE,
+    DRV_RCC_PERIPH_GPIOF,
 } drv_rcc_periph_t;
 
 /* ── HAL ops table ────────────────────────────────────────────────────── */

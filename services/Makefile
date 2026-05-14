@@ -33,3 +33,7 @@ obj-y += services/gpio_mgmt.o
 ifeq ($(CONFIG_INC_SERVICE_OS_SHELL_MGMT),1)
 obj-y += services/os_shell_management.o
 endif
+
+ifeq ($(CONFIG_INC_SERVICE_ADC_MGMT),1)
+obj-y += services/adc_mgmt.o
+endif

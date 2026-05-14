@@ -316,6 +316,16 @@ void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
         case DRV_RCC_PERIPH_TIM1:   __HAL_RCC_TIM1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_TIM6:   __HAL_RCC_TIM6_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_SYSCFG: __HAL_RCC_SYSCFG_CLK_ENABLE(); break;
+        case DRV_RCC_PERIPH_USART3: __HAL_RCC_USART3_CLK_ENABLE(); break;
+#if defined(STM32H7)
+        case DRV_RCC_PERIPH_ADC12:  __HAL_RCC_ADC12_CLK_ENABLE();  break;
+        case DRV_RCC_PERIPH_DMA1:   __HAL_RCC_DMA1_CLK_ENABLE();   break;
+        case DRV_RCC_PERIPH_DMA2:   __HAL_RCC_DMA2_CLK_ENABLE();   break;
+#else /* F4 */
+        case DRV_RCC_PERIPH_ADC12:  __HAL_RCC_ADC1_CLK_ENABLE();   break;
+        case DRV_RCC_PERIPH_DMA1:   __HAL_RCC_DMA1_CLK_ENABLE();   break;
+        case DRV_RCC_PERIPH_DMA2:   __HAL_RCC_DMA2_CLK_ENABLE();   break;
+#endif
 #if !defined(STM32H7)
         case DRV_RCC_PERIPH_PWR:    __HAL_RCC_PWR_CLK_ENABLE();    break;
 #endif
@@ -334,6 +344,9 @@ void hal_rcc_stm32_gpio_clk_en(void *port)
     if      (port == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
     else if (port == GPIOB) { __HAL_RCC_GPIOB_CLK_ENABLE(); }
     else if (port == GPIOC) { __HAL_RCC_GPIOC_CLK_ENABLE(); }
+    else if (port == GPIOD) { __HAL_RCC_GPIOD_CLK_ENABLE(); }
+    else if (port == GPIOE) { __HAL_RCC_GPIOE_CLK_ENABLE(); }
+    else if (port == GPIOF) { __HAL_RCC_GPIOF_CLK_ENABLE(); }
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
