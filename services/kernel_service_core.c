@@ -118,7 +118,7 @@
 #  include <services/uart_mgmt.h>
 #endif
 
-#if (BOARD_IIC_COUNT > 0)
+#if (BOARD_IIC_COUNT > 0) && defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
 #  include <services/iic_mgmt.h>
 #endif
 
@@ -164,7 +164,7 @@ status_t os_kernel_thread_register(void)
     }
 #endif
 
-#if (BOARD_IIC_COUNT > 0)
+#if (BOARD_IIC_COUNT > 0) && defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
     if (iic_mgmt_start() != OS_ERR_NONE)
     {
         LOG_E("KERN", "I2C management service failed to start");

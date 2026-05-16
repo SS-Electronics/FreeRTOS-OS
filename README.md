@@ -445,13 +445,21 @@ make clean
 
 ## Make Target Reference
 
-### Demo Build (H723 — from `FreeRTOS-OS/`)
+### Demo Builds (standalone OS — from `FreeRTOS-OS/`)
+
+These targets run `make config-outputs` and `make clean` internally. No `app/` directory required.
 
 | Command | Output | Description |
 |---|---|---|
-| `make all APP_DIR=demo TARGET_NAME=demo` | `build/demo.elf` | H723 demo firmware |
-| `make flash TARGET_NAME=demo` | — | Flash `build/demo.elf` via OpenOCD |
+| `make demo` | `build/demo.elf` + `.hex` | F411 standalone OS demo |
+| `make demo-h723` | `build/demo-h723.elf` + `.hex` | H723 standalone OS demo |
+| `make demo-gen` | board headers | Generate F411 demo board headers (used by CPPcheck) |
+| `make demo-gen-h723` | board headers | Generate H723 demo board headers |
+| `make flash TARGET_NAME=demo` | — | Flash F411 demo via OpenOCD |
+| `make flash TARGET_NAME=demo-h723` | — | Flash H723 demo via OpenOCD |
 | `make clean` | — | Delete `build/` |
+
+> **Cross-target switching (local only):** When switching between `make demo` / `make demo-h723` and the ECG app build locally, run `make clean` before the ECG `make all` — the demo targets clean themselves internally but the ECG app build does not. In CI each job starts from a clean checkout so this is not an issue.
 
 ### ECG H723 App Build (device-full-stack — from `FreeRTOS-OS/`)
 
@@ -751,17 +759,22 @@ FreeRTOS-OS ships a complete CPPcheck + MISRA C:2012 analysis workflow.
 # Install CPPcheck (once per machine)
 ./scripts/install_cppcheck.sh
 
-# Run CPPcheck (warnings and above)
-./scripts/run_cppcheck.sh
+# Generate demo board headers first (needed for include resolution)
+make demo-gen
+
+# Run CPPcheck (warnings and above — 0 errors expected)
+bash scripts/run_cppcheck.sh --severity=warning
 
 # Run CPPcheck + MISRA C:2012 checks
-./scripts/run_cppcheck.sh --misra
+bash scripts/run_cppcheck.sh --misra
 
 # Generate HTML reports
-./scripts/run_cppcheck.sh --misra --severity=style --html
+bash scripts/run_cppcheck.sh --misra --severity=style --html
 ```
 
-Reports are written to `reports/cppcheck/` (git-ignored). A GitHub Actions pipeline runs the checks automatically on every push and pull request.
+**Excluded from analysis:** `lib/CMSIS-DSP/Ne10/` (Cortex-A NEON), `lib/CMSIS-DSP/PythonWrapper/`, `lib/CMSIS-DSP/Scripts/`, and any file matching `*neon*` — these are vendor code targeting Cortex-A or Python and produce false positives on Cortex-M analysis. Suppressions for `unknownMacro` in CMSIS-DSP Source/ are in `scripts/cppcheck_suppressions.txt`.
+
+Reports are written to `reports/cppcheck/` (git-ignored). GitHub Actions runs CPPcheck automatically on every push and pull request (job: `cppcheck`).
 
 See **[docs/CHECK.md](docs/CHECK.md)** for the full reference: options, report formats, MISRA deviation table, and CI/CD integration.
 
@@ -774,6 +787,12 @@ See **[docs/CHECK.md](docs/CHECK.md)** for the full reference: options, report f
 | 2026-05-16 | Build system | `CONFIG_BOARD` Make variable defaults to `stm32f411_devboard`; not written to `autoconf.mk`, so H723 ECG builds fail looking for the F411 XML. | Pass `CONFIG_BOARD=stm32h723_devboard` on every `make all` and `make flash` for the ECG app. |
 | 2026-05-16 | `app/board/irq_periph_handlers_generated.h` | Only 5 active ISR handlers declared; `irq_periph_vectors_generated.inc` references ~75 additional names (DMA, TIM1–TIM8, I2C, SPI, WWDG…) that were undeclared in the startup TU → linker error. | Added `__attribute__((weak, alias("Default_Handler")))` declarations for all 75 unused peripheral vectors. Active handlers remain plain `void Foo_IRQHandler(void);` declarations. |
 | 2026-05-16 | `drivers/hal/stm32/hal_iic_stm32.c` | File-level guard was `#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)` only — missing `&& defined(HAL_I2C_MODULE_ENABLED)`. With I2C disabled in kconfig, HAL I2C types/functions are absent → compile error. `hal_spi_stm32.c` already had the correct pattern. | Changed opening `#if` to include `&& defined(HAL_I2C_MODULE_ENABLED)`; updated closing `#endif` comment. |
+| 2026-05-16 | `demo/kconfig.conf` (F411 standalone) | Missing HAL_CORTEX/PWR/EXTI/FLASH/ADC module enables, all clock CONFIG_ constants, and all CONFIG_RTOS_* keys → many undeclared symbols during F411 demo build. | Rewrote `demo/kconfig.conf` with all required CONFIG_ keys. |
+| 2026-05-16 | `drivers/Makefile` | `drv_adc.o` and `hal_adc_stm32.o` compiled unconditionally; F411 demo kconfig has no ADC HAL → `ADC_HandleTypeDef` unknown type. | Gated both entries behind `ifeq ($(CONFIG_HAL_ADC_MODULE_ENABLED),1)`. |
+| 2026-05-16 | `drivers/hal/stm32/hal_rcc_stm32.c` | `DRV_RCC_PERIPH_TIM6`, `DRV_RCC_PERIPH_USART3`, and `GPIOF` referenced without `#if defined(STM32H7)` guards → undefined symbols on F411 build. | Added `#if defined(STM32H7)` guards in `periph_clk_en` switch and `gpio_clk_en`. |
+| 2026-05-16 | `services/kernel_service_core.c` | `iic_mgmt_start()` guarded only by `BOARD_IIC_COUNT > 0`, not by `CONFIG_INC_SERVICE_IIC_MGMT`. ECG kconfig disables IIC service but H723 board has I2C hardware → call compiled in without the service object → linker error. | Changed both include guard and call guard to require `(BOARD_IIC_COUNT > 0) && defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)`. |
+| 2026-05-16 | `scripts/run_cppcheck.sh` | CMSIS-DSP Ne10 (Cortex-A NEON), PythonWrapper, and Scripts/ files collected by `find` → 87 false-positive CPPcheck errors. `__ALIGNED` macro undefined → additional errors. | Added exclusion patterns for Ne10/PythonWrapper/Scripts/neon; added `-D__ALIGNED(x)=__attribute__((aligned(x)))` and related CMSIS defines. |
+| 2026-05-16 | `FreeRTOS-OS/Makefile` (`demo`, `demo-h723` targets) | Cross-target stale objects relinked when switching between demo and ECG app builds locally. | Added `$(MAKE) clean` before `$(MAKE) all` inside each demo target. |
 
 ---
 

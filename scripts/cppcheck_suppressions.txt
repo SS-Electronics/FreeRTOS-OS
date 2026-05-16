@@ -72,6 +72,13 @@ misra-c2012-8.9
 *:*/board/irq_table_generated.c
 *:*/board/irq_hw_init_generated.c
 
+# ── CMSIS-DSP vendor library (Source/) ────────────────────────────────────────
+# unknownMacro in template-expansion macros (CFFTINIT_F16, etc.) that are
+# defined within the same TU via #define — cppcheck misses them under --force.
+unknownMacro:*CMSIS-DSP/Source/*
+# MatrixFunctions.c: __ALIGNED resolved by -D in run_cppcheck.sh; belt-and-suspenders.
+unknownMacro:*CMSIS-DSP/Source/MatrixFunctions/MatrixFunctions.c
+
 # ── CMSIS / STM32 vendor headers ───────────────────────────────────────────────
 # cmsis_gcc.h: #error "Unknown Arm architecture profile" — fixed by defining
 # __ARM_ARCH_PROFILE=77 ('M') in run_cppcheck.sh; these are safety-net patterns.

@@ -140,7 +140,13 @@ for dir in "${PROJECT_SRC_DIRS[@]}"; do
         while IFS= read -r -d '' f; do
             FILE_LIST+="${f}"$'\n'
             TOTAL_FILES=$((TOTAL_FILES + 1))
-        done < <(find "$dir" -name "*.c" -not -path "*/build/*" -print0 2>/dev/null)
+        done < <(find "$dir" -name "*.c" \
+            -not -path "*/build/*" \
+            -not -path "*/CMSIS-DSP/Ne10/*" \
+            -not -path "*/CMSIS-DSP/PythonWrapper/*" \
+            -not -path "*/CMSIS-DSP/Scripts/*" \
+            -not -iname "*neon*" \
+            -print0 2>/dev/null)
     fi
 done
 
@@ -265,6 +271,10 @@ DEFINES=(
     "-DCONFIG_INC_SERVICE_UART_MGMT=1"
     "-DCONFIG_INC_SERVICE_IIC_MGMT=1"
     "-DCONFIG_INC_SERVICE_OS_SHELL_MGMT=1"
+    # CMSIS defines — resolve macros that cppcheck cannot derive through includes
+    "-D__ALIGNED(x)=__attribute__((aligned(x)))"
+    "-D__STATIC_INLINE=static inline"
+    "-D__STATIC_FORCEINLINE=static inline"
 )
 
 # ── Output directory setup ────────────────────────────────────────────────────

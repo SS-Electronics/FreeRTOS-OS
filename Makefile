@@ -326,6 +326,8 @@ demo: demo-gen
 	@echo "### [demo] Activating demo Kconfig from $(DEMO_DIR)/kconfig.conf ..."
 	@cp $(DEMO_DIR)/kconfig.conf .config
 	@$(MAKE) config-outputs
+	@echo "### [demo] Cleaning stale build artifacts ..."
+	@$(MAKE) clean
 	@echo "### [demo] Building firmware → build/demo.elf ..."
 	@$(MAKE) all APP_DIR=$(DEMO_DIR) TARGET_NAME=demo
 	@echo "### [demo] Build complete: build/demo.elf"
@@ -368,6 +370,8 @@ demo-h723: demo-gen-h723
 	@echo "### [demo-h723] Activating H723 Kconfig from $(DEMO_DIR)/kconfig_h723.conf ..."
 	@cp $(DEMO_DIR)/kconfig_h723.conf .config
 	@$(MAKE) config-outputs
+	@echo "### [demo-h723] Cleaning stale build artifacts ..."
+	@$(MAKE) clean
 	@echo "### [demo-h723] Building firmware → build/demo-h723.elf ..."
 	@$(MAKE) all APP_DIR=$(DEMO_DIR) TARGET_NAME=demo-h723
 	@echo "### [demo-h723] Build complete: build/demo-h723.elf"
