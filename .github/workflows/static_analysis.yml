@@ -217,7 +217,44 @@ jobs:
           echo "::error::${ERRORS} MISRA error-severity violation(s) found. See misra_report.txt artefact."
           exit 1
 
-  # ── Job 3: Doxygen Docs Check ────────────────────────────────────────────────
+  # ── Job 3: Firmware Build (H723 demo) ───────────────────────────────────────
+  build:
+    name: Firmware Build (STM32H723 demo)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi python3
+          arm-none-eabi-gcc --version
+
+      - name: Generate demo config outputs
+        run: |
+          cp demo/kconfig_h723.conf .config
+          make config-outputs APP_DIR=demo
+
+      - name: Build H723 demo firmware
+        run: |
+          make all APP_DIR=demo TARGET_NAME=demo CONFIG_BOARD=stm32h723_devboard 2>&1
+          arm-none-eabi-size build/demo.elf
+
+      - name: Upload firmware ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-demo-h723-${{ github.run_number }}
+          path: |
+            build/demo.elf
+            build/demo.hex
+          retention-days: 14
+
+  # ── Job 4: Doxygen Docs Check ────────────────────────────────────────────────
   docs:
     name: Doxygen Build
     runs-on: ubuntu-24.04

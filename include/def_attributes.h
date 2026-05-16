@@ -41,3 +41,7 @@ along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>. */
 #ifndef __KEEP
 #define __KEEP                   __attribute__((keep))
 #endif
+
+/* Not initialised at startup — persists across soft (NVIC) resets.
+ * Requires .noinit section in linker script placed outside [__bss_start__, __bss_end__]. */
+#define __SECTION_NOINIT         __attribute__((section(".noinit")))

@@ -43,7 +43,9 @@ extern "C" {
 status_t os_kernel_thread_register(void);
 int32_t  task_mgr_start(void);
 
-
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+int32_t  wdog_service_start(void);
+#endif
 
 
 

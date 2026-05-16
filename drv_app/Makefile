@@ -6,6 +6,12 @@ include autoconf.mk
 INCLUDES += -I$(CURDIR)/include/drv_app
 
 obj-y += drv_app/uart_app.o
-obj-y += drv_app/spi_app.o
-obj-y += drv_app/iic_app.o
 obj-y += drv_app/gpio_app.o
+
+ifeq ($(CONFIG_HAL_SPI_MODULE_ENABLED),1)
+obj-y += drv_app/spi_app.o
+endif
+
+ifeq ($(CONFIG_INC_SERVICE_IIC_MGMT),1)
+obj-y += drv_app/iic_app.o
+endif

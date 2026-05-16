@@ -634,6 +634,95 @@ Change with `make menuconfig` → *Target MCU part number*.
 
 ---
 
+## Medical-Grade Safety Layer (IEC 62304 / IEC 60601-1)
+
+The ECG device-full-stack variant ships a complete safety subsystem above the FreeRTOS kernel. It is fully optional and Kconfig-gated; standard demo and F411 builds are unaffected.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                       Safety Subsystem                              │
+│                                                                     │
+│   log/slog.c         — structured severity logger (ring buffer,     │
+│                         severity levels, tick timestamp, IRQ-safe)  │
+│                                                                     │
+│   safety/wdog.c      — IWDG hw init + per-task sw watchdog bitmask │
+│   safety/safe_state.c — coordinated shutdown → direct UART →       │
+│                         AIRCR reset; .noinit record survives reset   │
+│   drivers/hal/stm32/stm32_exceptions.c — naked fault trampolines,  │
+│                         register dump, .noinit fault_record_t,      │
+│                         reset instead of infinite loop              │
+│                                                                     │
+│   init/main.c        — boot_phase_t FSM (10 phases), checks prior  │
+│                         fault + safe-state records before scheduler │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Key files
+
+| File | Purpose |
+|---|---|
+| `include/log/slog.h` + `log/slog.c` | 32-entry ring buffer logger; `LOG_E/W/I/D()` macros; printk echo for ERROR+WARN |
+| `include/safety/wdog.h` + `safety/wdog.c` | IWDG init + SW task-bitmask watchdog service thread |
+| `include/safety/safe_state.h` + `safety/safe_state.c` | `safety_enter_safe_state(reason)` — noreturn coordinated shutdown |
+| `include/safety/fault_handler.h` | Boot-time API to query/clear `.noinit` fault records |
+| `include/def_err.h` | 15 error codes (`OS_ERR_NONE` … `OS_ERR_NOT_INIT`) for IEC 62304 traceability |
+| `include/def_attributes.h` | `__SECTION_NOINIT` macro — places data outside `.bss` zero-clear |
+
+### Kconfig keys (ECG H723 app)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `CONFIG_INC_SERVICE_WDOG` | `n` | Enable IWDG + sw-watchdog service thread |
+| `CONFIG_HAL_IWDG_MODULE_ENABLED` | `n` | Pull `stm32h7xx_hal_iwdg.c` into the build |
+| `PROC_SERVICE_WDOG_STACK_SIZE` | `512` | Watchdog service task stack words |
+| `PROC_SERVICE_WDOG_PRIORITY` | `4` | Watchdog service priority (above app tasks) |
+| `SLOG_PRINTK_MIN_LEVEL` | `1` | Minimum slog level echoed to printk (0=ERROR only, 1=+WARN, 2=+INFO) |
+
+### Watchdog design
+
+```
+wdog_hw_init()   — called from main() BEFORE scheduler; IWDG cannot stop
+                   H7: IWDG1, LSI/64, ~4 s; F4: IWDG, same prescaler
+wdog_sw_init()   — called from app_main() to register per-task bitmask slots
+wdog_task_kick() — called inside every critical task each iteration
+
+Slots (ECG app):
+  WDOG_SLOT_HEARTBEAT (0) — heartbeat_task, every 500 ms
+  WDOG_SLOT_ECG_ACQ   (1) — ecg_acquire_task, per completed window + idle retry
+  WDOG_SLOT_ECG_INF   (2) — ecg_infer_task, every ulTaskNotifyTake (2 s timeout)
+
+wdog_service_thread checks every 1000 ms:
+  • all slots set → kick IWDG + clear bitmask
+  • any slot missing → increment missed_checks counter
+  • missed_checks >= 3 → safety_enter_safe_state(SAFE_REASON_WATCHDOG) → AIRCR reset
+```
+
+### Boot state machine (`init/main.c`)
+
+```c
+BOOT_HAL_INIT      (0) — HAL_Init()
+BOOT_CLK_INIT      (1) — _stm32_clock_init()
+BOOT_PERIPH_CLK    (2) — peripheral RCC enables
+BOOT_IRQ_INIT      (3) — IRQ table init
+BOOT_IPC_INIT      (4) — IPC queues
+BOOT_SLOG_INIT     (5) — slog_init()        ← first LOG_ call after this
+BOOT_PREV_FAULT_CHK(6) — check .noinit fault + safe-state records
+BOOT_SERVICES_INIT (7) — OS services (wdog_service_start() first)
+BOOT_WDOG_HW_INIT  (8) — wdog_hw_init()    ← IWDG starts, cannot stop
+BOOT_APP_INIT      (9) — app_main()
+BOOT_SCHEDULER    (10) — vTaskStartScheduler()
+```
+
+Any phase failure calls `safety_enter_safe_state(SAFE_REASON_BOOT_FAIL)`.
+
+### `.noinit` RAM section
+
+Placed after `._user_heap_stack` in `stm32_h723_FLASH.ld` (DTCM), outside `[__bss_start__, __bss_end__]`. The startup zero-loop does not touch it, so `fault_record_t` (magic `0xDEADC0DE`) and the safe-state record (magic `0xC0DEBEEF`) survive NVIC soft reset and are inspected at `BOOT_PREV_FAULT_CHK`.
+
+---
+
 ## Static Analysis
 
 FreeRTOS-OS ships a complete CPPcheck + MISRA C:2012 analysis workflow.

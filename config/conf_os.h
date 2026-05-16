@@ -111,6 +111,17 @@
 #define TIMEOUT_IIC_PIPE_OP             (2)
 #define IIC_ACK_TIMEOUT_MS              (100)
 
+/* ── Watchdog service thread properties ─────────────────────────────── */
+/* Must run at a priority HIGHER than the tasks it monitors so it can
+ * detect a runaway lower-priority task.  Priority 4 = one step above
+ * the highest app task (ECG_INFER @ prio 2 and ECG_ACQ @ prio 2).    */
+#define PROC_SERVICE_WDOG_STACK_SIZE    (512)
+#define PROC_SERVICE_WDOG_PRIORITY      (4)
+
+/* ── Structured logger echo threshold ───────────────────────────────── */
+/* Messages at or below this level are echoed to printk() immediately.
+ * 0 = ERROR only, 1 = +WARN, 2 = +INFO, 3 = +DEBUG                   */
+#define SLOG_PRINTK_MIN_LEVEL           (1)
 
 
 #endif /* OS_CONFIG_OS_CONF_OS_CONFIG_H_ */

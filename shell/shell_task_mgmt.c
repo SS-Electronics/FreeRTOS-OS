@@ -46,7 +46,9 @@
 #include <shell/shell_task_mgmt.h>
 #include <os/kernel_task_mgr.h>
 #include <os/kernel_syscall.h>
+#if defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
 #include <drv_app/iic_app.h>
+#endif
 #include <board/board_config.h>
 
 #include <FreeRTOS.h>
@@ -65,7 +67,9 @@ static BaseType_t _cmd_help_fn    (char *out, size_t len, const char *in);
 static BaseType_t _cmd_version_fn (char *out, size_t len, const char *in);
 static BaseType_t _cmd_uptime_fn  (char *out, size_t len, const char *in);
 static BaseType_t _cmd_reboot_fn  (char *out, size_t len, const char *in);
+#if defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
 static BaseType_t _cmd_iic_scan_fn(char *out, size_t len, const char *in);
+#endif
 
 /* ── CLI command descriptors ──────────────────────────────────────────────── */
 
@@ -114,12 +118,14 @@ static const CLI_Command_Definition_t _cmd_reboot = {
     _cmd_reboot_fn, 0
 };
 
+#if defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
 static const CLI_Command_Definition_t _cmd_iic_scan = {
     "iic-scan",
     "iic-scan <bus_id>\r\n"
     "  Probe full I2C address range (0x00-0xFF) on the given bus.\r\n",
     _cmd_iic_scan_fn, 1
 };
+#endif
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
@@ -315,6 +321,8 @@ static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in)
 
 /* ── iic-scan command ─────────────────────────────────────────────────────── */
 
+#if defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
+
 /*
  * Multi-shot state:
  *   -1           first call — parse arg, run scan, print header
@@ -395,6 +403,8 @@ static BaseType_t _cmd_iic_scan_fn(char *out, size_t len, const char *in)
     return pdFALSE;
 }
 
+#endif /* CONFIG_INC_SERVICE_IIC_MGMT */
+
 /* ── Registration ─────────────────────────────────────────────────────────── */
 
 void shell_task_mgmt_register_cmds(void)
@@ -407,5 +417,7 @@ void shell_task_mgmt_register_cmds(void)
     FreeRTOS_CLIRegisterCommand(&_cmd_heap);
     FreeRTOS_CLIRegisterCommand(&_cmd_tasks);
     FreeRTOS_CLIRegisterCommand(&_cmd_debug);
+#if defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
     FreeRTOS_CLIRegisterCommand(&_cmd_iic_scan);
+#endif
 }

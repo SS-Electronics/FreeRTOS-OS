@@ -281,6 +281,20 @@ _sidata = LOADADDR(.data_generic);
     . = ALIGN(8);
   } > DTCM
 
+  /* Not-initialised section — placed AFTER _estack/_heap so it is never
+   * touched by the .bss clear loop [__bss_start__, __bss_end__].
+   * Contents survive NVIC soft resets; cleared only on power-on or VBAT loss.
+   * Used for fault records and safe-state reason persistence. */
+  .noinit (NOLOAD) :
+  {
+    . = ALIGN(4);
+    __noinit_start = .;
+    KEEP(*(.noinit))
+    KEEP(*(.noinit.*))
+    . = ALIGN(4);
+    __noinit_end = .;
+  } > DTCM
+
   /DISCARD/ :
   {
     libc.a ( * )

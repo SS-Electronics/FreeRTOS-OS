@@ -149,6 +149,17 @@ obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_i2c_ex.o
 obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_spi.o
 obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_spi_ex.o
 
+# ADC — enabled when CONFIG_HAL_ADC_MODULE_ENABLED=y
+ifeq ($(CONFIG_HAL_ADC_MODULE_ENABLED),1)
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_adc.o
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_adc_ex.o
+endif
+
+# IWDG — enabled when CONFIG_HAL_IWDG_MODULE_ENABLED=y
+ifeq ($(CONFIG_HAL_IWDG_MODULE_ENABLED),1)
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_iwdg.o
+endif
+
 #---------- Associate Linker script for target MCU --------------
 LINKER_SCRIPT += $(CURDIR)/arch/devices/STM/STM32H7xx/STM32H723/stm32_h723_FLASH.ld
 

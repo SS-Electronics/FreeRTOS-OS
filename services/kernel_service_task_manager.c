@@ -140,6 +140,12 @@
 #include <os/kernel_services.h>
 #include <os/kernel_task_mgr.h>
 #include <os/kernel.h>
+#include <log/slog.h>
+#include <safety/safe_state.h>
+
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+#  include <safety/wdog.h>
+#endif
 
 
 /* ── Module state ─────────────────────────────────────────────────────────── */
@@ -254,16 +260,23 @@ __SECTION_OS __USED
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
     (void)xTask;
-    (void)pcTaskName;
     _stack_overflow_count++;
-    taskDISABLE_INTERRUPTS();
-    for (;;) {}
+
+    /* Log the task name before losing context — slog ring-buffer write is
+     * irq-disabled and does NOT call printk, so it is safe here.          */
+    LOG_E("MGMT", "Stack overflow in task: %s", pcTaskName ? pcTaskName : "?");
+
+    /* Enter safe state — logs to UART, resets MCU. Never returns. */
+    safety_enter_safe_state(SAFE_REASON_STACK_OVF);
 }
 
 __SECTION_OS __USED
 void vApplicationMallocFailedHook(void)
 {
     _malloc_fail_count++;
+    LOG_E("MGMT", "Heap malloc failed — free=%u bytes",
+          (unsigned)xPortGetFreeHeapSize());
+    safety_enter_safe_state(SAFE_REASON_MALLOC_FAIL);
 }
 
 /* ── Service start ────────────────────────────────────────────────────────── */
@@ -294,6 +307,11 @@ void thread_task_mgmt(void *arg)
 
         _health.stack_overflow_count = _stack_overflow_count;
         _health.malloc_fail_count    = _malloc_fail_count;
+
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+        _health.wdog_kick_mask     = wdog_get_kick_mask();
+        _health.wdog_missed_checks = wdog_get_missed_checks();
+#endif
 
         vTaskDelay(pdMS_TO_TICKS(TASK_MGR_SCAN_PERIOD_MS));
     }

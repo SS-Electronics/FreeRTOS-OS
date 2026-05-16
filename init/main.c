@@ -3,116 +3,38 @@
  * @author  Subhajit Roy (subhajitroy005@gmail.com)
  *
  * @module  core
- * @brief   Primary OS boot entry point and scheduler handoff
+ * @brief   Primary OS boot entry point — medical device grade boot state machine
  *
  * @details
- * This file contains the main firmware entry routine executed after MCU reset
- * startup completes. Control reaches this file after the startup assembly
- * code initializes memory sections and calls @c main().
+ * Boot sequence is implemented as an explicit state machine so every phase
+ * has a named identity traceable to IEC 62304 software unit design.
  *
- * This module is responsible for performing the complete system bring-up
- * sequence before handing control to the FreeRTOS scheduler.
+ * At entry from Reset_Handler (after .data copy / .bss clear):
  *
- * Boot responsibilities:
- * - Vendor HAL initialization
- * - System clock / PLL configuration
- * - Global peripheral clock enable
- * - IRQ descriptor and dispatch initialization
- * - IPC subsystem initialization
- * - OS service thread registration
- * - Application task registration
- * - CPU interrupt priority preparation for FreeRTOS
- * - Scheduler start
+ *  BOOT_HAL_INIT       — vendor HAL_Init(), enable FPU/cache
+ *  BOOT_CLK_INIT       — generic clock driver, PLL / HSI
+ *  BOOT_PERIPH_CLK     — global peripheral bus clock enable
+ *  BOOT_IRQ_INIT       — NVIC group config, IRQ descriptor table
+ *  BOOT_IPC_INIT       — IPC message queue subsystem
+ *  BOOT_SLOG_INIT      — structured logger (ring buffer, pre-scheduler)
+ *  BOOT_PREV_FAULT_CHK — check .noinit for fault / safe-state record
+ *  BOOT_SERVICES_INIT  — register all OS service threads
+ *  BOOT_WDOG_HW_INIT   — start hardware IWDG (irreversible)
+ *  BOOT_APP_INIT       — call app_main() (creates app tasks)
+ *  BOOT_SCHEDULER      — hand off to vTaskStartScheduler()
  *
- * Startup flow:
- * @code
- * Reset_Handler()
- *      ↓
- * SystemInit()
- *      ↓
- * .data copy / .bss clear
- *      ↓
- * main()
- *      ↓
- * HAL_Init()
- *      ↓
- * drv_rcc_clock_init()
- *      ↓
- * board_clk_enable()
- *      ↓
- * irq_hw_init_all()
- *      ↓
- * ipc_mqueue_init()
- *      ↓
- * os_kernel_thread_register()
- *      ↓
- * app_main()
- *      ↓
- * drv_cpu_interrupt_prio_set()
- *      ↓
- * vTaskStartScheduler()
- * @endcode
- *
- * Runtime interrupt model:
- * @code
- * Peripheral IRQ
- *      ↓
- * Vector table ISR
- *      ↓
- * HAL IRQ Handler
- *      ↓
- * irq_notify_from_isr()
- *      ↓
- * Generic subscriber callbacks
- *      ↓
- * Service thread wakeup / app notification
- * @endcode
+ * On any failure: log via slog (ERROR level), enter safe state.
  *
  * Application integration:
- * - User applications may override @c app_main()
- * - app_main() should create tasks, queues, timers, callbacks
- * - app_main() must return after initialization
- * - Scheduler starts only after app_main() completes
- *
- * Failure handling:
- * Any initialization failure causes boot to halt in an infinite loop and
- * the scheduler is never started.
- *
- * @dependencies
- * def_attributes.h, def_compiler.h, def_std.h,
- * device.h, board/board_config.h, board/irq_hw_init_generated.h,
- * drivers/drv_cpu.h, drivers/drv_irq.h, drivers/drv_rcc.h,
- * os/kernel.h, os/kernel_services.h, ipc/mqueue.h
- *
- * @note
- * - This file is the firmware entry point
- * - app_main() is weak and intended for user override
- * - FreeRTOS enables interrupts when scheduler starts
- * - Service threads are created before scheduler start
- *
- * @warning
- * - app_main() must not block forever
- * - If heap is insufficient scheduler may fail to start
- * - Incorrect IRQ priority setup can break RTOS behavior
- *
- * @license
- * FreeRTOS-OS is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version
- * 3 of the License, or (at your option) any later version.
- *
- * FreeRTOS-OS is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ *  - Override app_main() with __WEAK semantics
+ *  - app_main() creates tasks, configures software watchdog, returns 0
+ *  - Scheduler starts only after app_main() returns successfully
  */
 
 #include <def_attributes.h>
 #include <def_compiler.h>
 #include <def_std.h>
+#include <def_err.h>
 
 #include <device.h>
 #include <board/board_config.h>
@@ -126,98 +48,142 @@
 #include <os/kernel_services.h>
 #include <ipc/mqueue.h>
 
-/* ── Weak application entry point ─────────────────────────────────────────── */
+#include <log/slog.h>
+#include <safety/safe_state.h>
+#include <safety/fault_handler.h>
 
-__WEAK 
-int app_main(void) 
-{ 
-    return OS_ERR_NONE; 
-}
-
-
-/* ── OS entry point ───────────────────────────────────────────────────────── */
-__SECTION_BOOT __USED 
-void main(void)
-{
-    status_t os_init_status = OS_ERR_NONE;
-
-    /** Driver level HAL Initialization: Vendor specific */
-#if(CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
-
-    HAL_StatusTypeDef hal_status = HAL_Init();
-
-    if(hal_status == HAL_ERROR)
-    {
-        goto os_exit;
-    }
-
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+#  include <safety/wdog.h>
 #endif
 
-    /** Drv Clock Init: Generic */
-    os_init_status = drv_rcc_clock_init();
+/* ── Boot phase enumeration ───────────────────────────────────────────────── */
 
-    if(os_init_status == OS_ERR_OP)
-    {
-        goto os_exit;
-    }
+typedef enum
+{
+    BOOT_HAL_INIT       = 0,
+    BOOT_CLK_INIT       = 1,
+    BOOT_PERIPH_CLK     = 2,
+    BOOT_IRQ_INIT       = 3,
+    BOOT_IPC_INIT       = 4,
+    BOOT_SLOG_INIT      = 5,
+    BOOT_PREV_FAULT_CHK = 6,
+    BOOT_SERVICES_INIT  = 7,
+    BOOT_WDOG_HW_INIT   = 8,
+    BOOT_APP_INIT       = 9,
+    BOOT_SCHEDULER      = 10,
+} boot_phase_t;
 
-    /*     Enable all RCC clocks (sys bus, peripherals, GPIO ports) so every
-     *     HAL_xxx_MspInit() can configure GPIO and NVIC without enabling clocks
-     *     itself.  Must run before irq_hw_init_all() and before any peripheral
-     *     management thread calls HAL_xxx_Init(). */
+/* Current boot phase — readable from debugger */
+static volatile boot_phase_t _boot_phase = BOOT_HAL_INIT;
+
+/* ── Weak application entry point ─────────────────────────────────────────── */
+
+__WEAK
+int app_main(void)
+{
+    return OS_ERR_NONE;
+}
+
+/* ── Boot helper: log phase entry, update tracker ────────────────────────── */
+
+static void _boot_enter(boot_phase_t phase, const char *name)
+{
+    _boot_phase = phase;
+    LOG_I("BOOT", "Phase %d: %s", (int)phase, name);
+}
+
+/* ── OS boot entry point ──────────────────────────────────────────────────── */
+
+__SECTION_BOOT __USED
+void main(void)
+{
+    int32_t st;
+
+    /* ── BOOT_HAL_INIT ──────────────────────────────────────────────────── */
+    _boot_enter(BOOT_HAL_INIT, "HAL_INIT");
+
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+    if (HAL_Init() == HAL_ERROR)
+        safety_enter_safe_state(SAFE_REASON_BOOT_FAIL);
+#endif
+
+    /* ── BOOT_CLK_INIT ──────────────────────────────────────────────────── */
+    _boot_enter(BOOT_CLK_INIT, "CLK_INIT");
+    st = drv_rcc_clock_init();
+    if (st != OS_ERR_NONE)
+        safety_enter_safe_state(SAFE_REASON_BOOT_FAIL);
+
+    /* ── BOOT_PERIPH_CLK ────────────────────────────────────────────────── */
+    _boot_enter(BOOT_PERIPH_CLK, "PERIPH_CLK");
     board_clk_enable();
 
-     /*   Configure NVIC group bits required by FreeRTOS before any
-     *    interrupt-driven peripheral is initialised. */
+    /* ── BOOT_IRQ_INIT ──────────────────────────────────────────────────── */
+    _boot_enter(BOOT_IRQ_INIT, "IRQ_INIT");
     drv_cpu_interrupt_prio_set();
-
-    
-    /*     Initialise irq_desc table and bind irq_chip to all hardware-backed
-     *     software IRQ IDs.  Must run before any request_irq() call.
-     *     TIM1 (HAL tick) is already firing at this point; hal_timebase_stm32_irq_handler
-     *     uses an early-boot fallback until handle_irq is populated here. */
     irq_hw_init_all();
 
-    /*     Reset IPC queue list sentinel — each service registers its own
-     *     ring-buffer queues during thread startup. */
-    os_init_status = ipc_mqueue_init();
+    /* ── BOOT_IPC_INIT ──────────────────────────────────────────────────── */
+    _boot_enter(BOOT_IPC_INIT, "IPC_INIT");
+    st = ipc_mqueue_init();
+    if (st != OS_ERR_NONE)
+        safety_enter_safe_state(SAFE_REASON_BOOT_FAIL);
 
-    if(os_init_status == OS_ERR_OP)
+    /* ── BOOT_SLOG_INIT — must run before any LOG_x() below ─────────────── */
+    _boot_enter(BOOT_SLOG_INIT, "SLOG_INIT");
+    slog_init();
+    LOG_I("BOOT", "FreeRTOS-OS medical-grade boot");
+
+    /* ── BOOT_PREV_FAULT_CHK ────────────────────────────────────────────── */
+    _boot_enter(BOOT_PREV_FAULT_CHK, "PREV_FAULT_CHK");
+
+    if (safety_was_safe_state_reset())
     {
-        goto os_exit;
+        safe_state_reason_t r = safety_get_last_reason();
+        LOG_W("BOOT", "Previous session ended in SAFE STATE reason=%d", (int)r);
+        safety_clear_record();
     }
 
-    /*     Register all OS service tasks in one call.
-     *     See services/kernel_service_core.c for the full registration table. */
-    os_init_status = os_kernel_thread_register();
-
-    if(os_init_status == OS_ERR_OP)
+    if (fault_handler_was_fault_reset())
     {
-        goto os_exit;
+        uint32_t pc, lr, cfsr, hfsr, ftype, tick;
+        fault_handler_get_fields(&pc, &lr, &cfsr, &hfsr, &ftype, &tick);
+        LOG_W("BOOT", "Previous FAULT type=%u PC=0x%08X LR=0x%08X CFSR=0x%08X tick=%u",
+              (unsigned)ftype, (unsigned)pc, (unsigned)lr,
+              (unsigned)cfsr, (unsigned)tick);
+        fault_handler_clear();
     }
 
-    /*    Application layer.  app_main() creates tasks, optionally registers
-     *    additional IRQ subscribers via irq_register(), then returns.
-     *    Tasks are driven by the scheduler; app_main must not block. */
-    os_init_status = app_main();
-
-    if(os_init_status == OS_ERR_OP)
+    /* ── BOOT_SERVICES_INIT ─────────────────────────────────────────────── */
+    _boot_enter(BOOT_SERVICES_INIT, "SERVICES_INIT");
+    st = os_kernel_thread_register();
+    if (st != OS_ERR_NONE)
     {
-        goto os_exit;
+        LOG_E("BOOT", "Service registration failed (status=%d)", (int)st);
+        safety_enter_safe_state(SAFE_REASON_BOOT_FAIL);
     }
 
-    
-    /*    Hand over to FreeRTOS.  Interrupts are enabled for the first time
-     *    inside vPortSVCHandler when the first task context loads. */
+    /* ── BOOT_WDOG_HW_INIT — start IWDG (cannot be stopped after this) ─── */
+    _boot_enter(BOOT_WDOG_HW_INIT, "WDOG_HW_INIT");
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+    wdog_hw_init();
+#endif
+
+    /* ── BOOT_APP_INIT ──────────────────────────────────────────────────── */
+    _boot_enter(BOOT_APP_INIT, "APP_INIT");
+    st = app_main();
+    if (st != OS_ERR_NONE)
+    {
+        LOG_E("BOOT", "app_main() failed (status=%d)", (int)st);
+        safety_enter_safe_state(SAFE_REASON_BOOT_FAIL);
+    }
+
+    /* ── BOOT_SCHEDULER ─────────────────────────────────────────────────── */
+    _boot_enter(BOOT_SCHEDULER, "SCHEDULER_START");
+    LOG_I("BOOT", "Handing off to FreeRTOS scheduler");
+
     vTaskStartScheduler();
 
-
-    /** If any of the initialization is failed do not start OS */
-    
-    os_exit:
-
-    while (true) 
-    {
-
-    }
+    /* vTaskStartScheduler() should never return (only if heap exhausted) */
+    LOG_E("BOOT", "vTaskStartScheduler returned — heap likely exhausted");
+    safety_enter_safe_state(SAFE_REASON_BOOT_FAIL);
 }

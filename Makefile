@@ -95,7 +95,7 @@ CC_LINKER_FLAGS				:= -Wl,--gc-sections -static --specs=nano.specs -Wl,--start-g
 BUILD   := build
 
 # Subdirectories
-SUBDIRS := include arch irq drivers kernel mm ipc services drv_app drv_ext_chips shell lib init
+SUBDIRS := include arch irq drivers kernel mm ipc services drv_app drv_ext_chips shell lib init safety log
 
 INCLUDES :=
 

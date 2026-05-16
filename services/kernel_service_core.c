@@ -112,6 +112,7 @@
 #include <os/kernel.h>
 #include <services/gpio_mgmt.h>
 #include <services/os_shell_management.h>
+#include <log/slog.h>
 
 #if (BOARD_UART_COUNT > 0)
 #  include <services/uart_mgmt.h>
@@ -125,36 +126,73 @@
 #  include <services/spi_mgmt.h>
 #endif
 
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+#  include <safety/wdog.h>
+#endif
+
+#if defined(CONFIG_INC_SERVICE_ADC_MGMT) && (CONFIG_INC_SERVICE_ADC_MGMT == 1)
+#  include <services/adc_mgmt.h>
+#endif
+
 status_t os_kernel_thread_register(void)
 {
     status_t status = OS_ERR_NONE;
 
+    /* Watchdog service — started FIRST so it is the first task created.
+     * The startup grace period (WDOG_STARTUP_DELAY_MS) delays its first
+     * check, giving lower-priority services time to initialise.           */
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+    if (wdog_service_start() != OS_ERR_NONE)
+    {
+        LOG_E("KERN", "Watchdog service failed to start");
+        status = OS_ERR_OP;
+    }
+#endif
+
     /* GPIO management service (always enabled) */
     if (gpio_mgmt_start() != OS_ERR_NONE)
-        status |= OS_ERR_OP;
+    {
+        LOG_E("KERN", "GPIO management service failed to start");
+        status = OS_ERR_OP;
+    }
 
 #if (BOARD_UART_COUNT > 0)
     if (uart_mgmt_start() != OS_ERR_NONE)
-        status |= OS_ERR_OP;
+    {
+        LOG_E("KERN", "UART management service failed to start");
+        status = OS_ERR_OP;
+    }
 #endif
 
 #if (BOARD_IIC_COUNT > 0)
     if (iic_mgmt_start() != OS_ERR_NONE)
-        status |= OS_ERR_OP;
+    {
+        LOG_E("KERN", "I2C management service failed to start");
+        status = OS_ERR_OP;
+    }
 #endif
 
 #if (BOARD_SPI_COUNT > 0)
     if (spi_mgmt_start() != OS_ERR_NONE)
-        status |= OS_ERR_OP;
+    {
+        LOG_E("KERN", "SPI management service failed to start");
+        status = OS_ERR_OP;
+    }
 #endif
 
     /* Task health monitoring service */
     if (task_mgr_start() != OS_ERR_NONE)
-        status |= OS_ERR_OP;
+    {
+        LOG_E("KERN", "Task manager service failed to start");
+        status = OS_ERR_OP;
+    }
 
-    /* Shell service (internally waits for UART initialization) */
+    /* Shell service (internally waits for UART initialisation) */
     if (os_shell_mgmt_start() != OS_ERR_NONE)
-        status |= OS_ERR_OP;
+    {
+        LOG_E("KERN", "Shell management service failed to start");
+        status = OS_ERR_OP;
+    }
 
     return status;
 }

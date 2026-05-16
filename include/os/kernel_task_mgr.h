@@ -46,6 +46,10 @@ typedef struct {
 
     uint32_t        stack_overflow_count;
     uint32_t        malloc_fail_count;
+
+    /* Watchdog state (populated when CONFIG_INC_SERVICE_WDOG=1) */
+    uint32_t        wdog_kick_mask;     /* last software kick bitmask snapshot */
+    uint32_t        wdog_missed_checks; /* consecutive missed check count       */
 } sys_health_t;
 
 #ifdef __cplusplus
