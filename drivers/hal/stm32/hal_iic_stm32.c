@@ -49,7 +49,7 @@
 
 #include <board/board_config.h>
 
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && defined(HAL_I2C_MODULE_ENABLED)
 
 #include <drivers/drv_iic.h>
 #include <drivers/hal/stm32/hal_iic_stm32.h>
@@ -345,4 +345,4 @@ void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
     }
 }
 
-#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM */
+#endif /* CONFIG_DEVICE_VARIANT == MCU_VAR_STM && HAL_I2C_MODULE_ENABLED */

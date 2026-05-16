@@ -453,6 +453,26 @@ make clean
 | `make flash TARGET_NAME=demo` | — | Flash `build/demo.elf` via OpenOCD |
 | `make clean` | — | Delete `build/` |
 
+### ECG H723 App Build (device-full-stack — from `FreeRTOS-OS/`)
+
+> **`CONFIG_BOARD` is required.** The Makefile default is `stm32f411_devboard`. `autoconf.mk` does NOT override it. Omitting `CONFIG_BOARD=stm32h723_devboard` causes a build failure trying to open the F411 XML.
+
+```bash
+cd FreeRTOS-OS
+cp ../app/kconfig_ecg_h723.conf .config && make config-outputs
+make all  APP_DIR=../app TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard
+make flash            TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard
+```
+
+| Command | Output | Description |
+|---|---|---|
+| `make all APP_DIR=../app TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard` | `build/ecg_h723.elf` | ECG inference firmware (220 KB text, 126 KB BSS+data) |
+| `make flash TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard` | — | Flash via OpenOCD (verify + reset) |
+
+Connect: `stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0`
+
+To test all features on-board: invoke `/flash-and-test` in the Claude Code session (project-local skill at `.claude/commands/flash-and-test.md`).
+
 ### App Build (F411 — from project root `FreeRTOS-OS-App/`)
 
 | Target | Output | Description |
@@ -744,6 +764,16 @@ FreeRTOS-OS ships a complete CPPcheck + MISRA C:2012 analysis workflow.
 Reports are written to `reports/cppcheck/` (git-ignored). A GitHub Actions pipeline runs the checks automatically on every push and pull request.
 
 See **[docs/CHECK.md](docs/CHECK.md)** for the full reference: options, report formats, MISRA deviation table, and CI/CD integration.
+
+---
+
+## Known Bugs / Fixes
+
+| Date | Component | Root Cause | Fix |
+|---|---|---|---|
+| 2026-05-16 | Build system | `CONFIG_BOARD` Make variable defaults to `stm32f411_devboard`; not written to `autoconf.mk`, so H723 ECG builds fail looking for the F411 XML. | Pass `CONFIG_BOARD=stm32h723_devboard` on every `make all` and `make flash` for the ECG app. |
+| 2026-05-16 | `app/board/irq_periph_handlers_generated.h` | Only 5 active ISR handlers declared; `irq_periph_vectors_generated.inc` references ~75 additional names (DMA, TIM1–TIM8, I2C, SPI, WWDG…) that were undeclared in the startup TU → linker error. | Added `__attribute__((weak, alias("Default_Handler")))` declarations for all 75 unused peripheral vectors. Active handlers remain plain `void Foo_IRQHandler(void);` declarations. |
+| 2026-05-16 | `drivers/hal/stm32/hal_iic_stm32.c` | File-level guard was `#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)` only — missing `&& defined(HAL_I2C_MODULE_ENABLED)`. With I2C disabled in kconfig, HAL I2C types/functions are absent → compile error. `hal_spi_stm32.c` already had the correct pattern. | Changed opening `#if` to include `&& defined(HAL_I2C_MODULE_ENABLED)`; updated closing `#endif` comment. |
 
 ---
 

@@ -39,14 +39,16 @@ extern "C" {
 #define HAL_EXTI_MODULE_ENABLED
 #define HAL_FLASH_MODULE_ENABLED
 #define HAL_DMA_MODULE_ENABLED
+#define HAL_IWDG_MODULE_ENABLED
 
 /* Communication */
 #define HAL_UART_MODULE_ENABLED
-#define HAL_SPI_MODULE_ENABLED
-#define HAL_I2C_MODULE_ENABLED
 
 /* Timer */
 #define HAL_TIM_MODULE_ENABLED
+
+/* Analog */
+#define HAL_ADC_MODULE_ENABLED
 
 
 /* ##########################################################################
@@ -168,10 +170,10 @@ extern "C" {
 #include "stm32h7xx_hal_exti.h"
 #include "stm32h7xx_hal_dma.h"
 #include "stm32h7xx_hal_cortex.h"
+#include "stm32h7xx_hal_adc.h"
 #include "stm32h7xx_hal_flash.h"
-#include "stm32h7xx_hal_i2c.h"
+#include "stm32h7xx_hal_iwdg.h"
 #include "stm32h7xx_hal_pwr.h"
-#include "stm32h7xx_hal_spi.h"
 #include "stm32h7xx_hal_tim.h"
 #include "stm32h7xx_hal_uart.h"
 

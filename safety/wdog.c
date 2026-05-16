@@ -98,8 +98,17 @@ static void wdog_service_thread(void *arg)
 {
     (void)arg;
 
-    /* Startup grace period: allow critical tasks to reach their first kick */
-    vTaskDelay(pdMS_TO_TICKS(WDOG_STARTUP_DELAY_MS));
+    /* Startup grace period: allow tasks to reach their first kick while keeping
+     * the IWDG alive.  A single long vTaskDelay() is wrong here — LSI variation
+     * makes the hardware timeout shorter than the nominal 4 s (observed ~3.2 s
+     * on H723 with LSI ≈ 38 kHz).  Kick the IWDG every WDOG_CHECK_PERIOD_MS
+     * throughout the grace period so hardware reset cannot fire prematurely. */
+    for (uint32_t _elapsed = 0U; _elapsed < WDOG_STARTUP_DELAY_MS;
+         _elapsed += WDOG_CHECK_PERIOD_MS)
+    {
+        vTaskDelay(pdMS_TO_TICKS(WDOG_CHECK_PERIOD_MS));
+        HAL_IWDG_Refresh(&_hiwdg);
+    }
     LOG_I("WDOG", "Watchdog service active, req_mask=0x%02X", (unsigned)_req_mask);
 
     for (;;)
