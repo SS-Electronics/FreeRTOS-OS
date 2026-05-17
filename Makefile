@@ -613,6 +613,83 @@ install-prerequisites: install-toolchain install-openocd install-kconfig install
 
 
 ##############################################################
+# Simplified build interface
+# ──────────────────────────────────────────────────────────
+# TARGET selects the MCU variant.  Valid values:
+#   stm32f411   STM32F411xE  (Cortex-M4)  devboard
+#   stm32h723   STM32H723ZGTx (Cortex-M7) devboard
+#
+# Standalone OS  (demo board — no sibling app/ required):
+#   make os  TARGET=stm32f411
+#   make os  TARGET=stm32h723
+#
+# Application firmware (config from app/ directory):
+#   make app TARGET=stm32h723
+#
+# Flash after a successful build:
+#   make os-flash  TARGET=stm32f411
+#   make app-flash TARGET=stm32h723
+
+TARGET ?= stm32f411
+
+ifeq ($(TARGET),stm32f411)
+  _OS_KCONF     := $(DEMO_DIR)/kconfig.conf
+  _OS_GEN       := demo-gen
+  _CONFIG_BOARD := stm32f411_devboard
+  _APP_KCONF    := ../app/kconfig_f411.conf
+  _APP_ELF      := app-stm32f411
+else ifeq ($(TARGET),stm32h723)
+  _OS_KCONF     := $(DEMO_DIR)/kconfig_h723.conf
+  _OS_GEN       := demo-gen-h723
+  _CONFIG_BOARD := stm32h723_devboard
+  _APP_KCONF    := ../app/kconfig_ecg_h723.conf
+  _APP_ELF      := ecg_h723
+else
+  $(error TARGET='$(TARGET)' is not valid. Valid targets: stm32f411  stm32h723)
+endif
+
+.PHONY: os os-flash app app-gen app-flash
+
+# os — standalone FreeRTOS-OS using the demo board for the selected TARGET
+os: $(_OS_GEN)
+	@echo "### [os/$(TARGET)] Kconfig: $(_OS_KCONF)"
+	@cp $(_OS_KCONF) .config
+	@$(MAKE) config-outputs
+	@$(MAKE) clean
+	@$(MAKE) all APP_DIR=$(DEMO_DIR) TARGET_NAME=$(TARGET) CONFIG_BOARD=$(_CONFIG_BOARD)
+	@echo "### [os/$(TARGET)] Done: build/$(TARGET).elf"
+
+os-flash:
+	@$(MAKE) flash TARGET_NAME=$(TARGET)
+
+# app-gen — regenerate board BSP files from the app/ board XML
+app-gen:
+	@echo "### [app/$(TARGET)] Regenerating board BSP from ../app/board/$(_CONFIG_BOARD).xml ..."
+	@python3 scripts/gen_board_config.py \
+		../app/board/$(_CONFIG_BOARD).xml \
+		--outdir ../app/board
+	@echo "### [app/$(TARGET)] Board BSP done"
+
+# app — FreeRTOS-OS + application, config sourced from app/
+app: app-gen
+	@if [ ! -f "$(_APP_KCONF)" ]; then \
+		echo "### Error: $(_APP_KCONF) not found."; \
+		echo "###        Create a Kconfig preset for TARGET=$(TARGET) under app/."; \
+		exit 1; \
+	fi
+	@echo "### [app/$(TARGET)] Kconfig: $(_APP_KCONF)"
+	@cp $(_APP_KCONF) .config
+	@$(MAKE) config-outputs
+	@$(MAKE) clean
+	@$(MAKE) all APP_DIR=../app TARGET_NAME=$(_APP_ELF) CONFIG_BOARD=$(_CONFIG_BOARD)
+	@echo "### [app/$(TARGET)] Done: build/$(_APP_ELF).elf"
+
+app-flash:
+	@$(MAKE) flash TARGET_NAME=$(_APP_ELF)
+##############################################################
+
+
+##############################################################
 .PHONY: print-interface print-target flash docs clean-docs \
         demo demo-gen demo-clean demo-h723 demo-gen-h723 \
         cppcheck-board-gen clean-cppcheck-board

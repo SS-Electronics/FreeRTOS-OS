@@ -539,6 +539,7 @@ class BoardConfigGenerator:
         self.i2cs  = periph.findall('i2c')
         self.spis  = periph.findall('spi')
         self.gpios = periph.findall('gpio')
+        self.adcs  = periph.findall('adc')
 
         # Detect role-assigned UARTs (role="shell", role="debug", …)
         self.uart_roles = {}   # role_name → uart element
@@ -572,7 +573,8 @@ class BoardConfigGenerator:
         print(f'[gen_board_config] Board   : {self.board_name}')
         print(f'[gen_board_config] Vendor  : {self.vendor}  MCU: {self.mcu}')
         print(f'[gen_board_config] UART    : {len(self.uarts)}   '
-              f'I2C: {len(self.i2cs)}   SPI: {len(self.spis)}   GPIO: {len(self.gpios)}')
+              f'I2C: {len(self.i2cs)}   SPI: {len(self.spis)}   '
+              f'GPIO: {len(self.gpios)}   ADC: {len(self.adcs)}')
         print(f'[gen_board_config] -> {c_path}')
         print(f'[gen_board_config] -> {h_path}')
         print(f'[gen_board_config] -> {bh_path}')
@@ -601,6 +603,7 @@ class BoardConfigGenerator:
         section('iic',  self.i2cs,  'I2C')
         section('spi',  self.spis,  'SPI')
         section('gpio', self.gpios, 'GPIO')
+        section('adc',  self.adcs,  'ADC')
 
         # Emit role-based UART aliases
         if self.uart_roles:
@@ -856,6 +859,20 @@ class BoardConfigGenerator:
         L.append('} board_gpio_desc_t;')
         L.append('')
 
+        # board_adc_desc_t
+        L.append('#ifdef HAL_ADC_MODULE_ENABLED')
+        L.append('typedef struct {')
+        L.append('    uint8_t      dev_id;')
+        L.append('    ADC_TypeDef *instance;     /**< ADC1 / ADC2 / ADC3              */')
+        L.append('    uint32_t     channel;      /**< ADC_CHANNEL_x                   */')
+        L.append('    uint32_t     resolution;   /**< ADC_RESOLUTION_12B etc.         */')
+        L.append('    uint32_t     sample_time;  /**< ADC_SAMPLETIME_x                */')
+        L.append('    IRQn_Type    irqn;')
+        L.append('    uint32_t     irq_priority;')
+        L.append('} board_adc_desc_t;')
+        L.append('#endif /* HAL_ADC_MODULE_ENABLED */')
+        L.append('')
+
         # board_config_t
         L.append('typedef struct {')
         L.append('    const char              *board_name;')
@@ -868,6 +885,10 @@ class BoardConfigGenerator:
         L.append('    uint8_t                  spi_count;')
         L.append('    const board_gpio_desc_t *gpio_table;')
         L.append('    uint8_t                  gpio_count;')
+        L.append('#ifdef HAL_ADC_MODULE_ENABLED')
+        L.append('    const board_adc_desc_t  *adc_table;')
+        L.append('    uint8_t                  adc_count;')
+        L.append('#endif /* HAL_ADC_MODULE_ENABLED */')
         L.append('} board_config_t;')
         L.append('')
 
@@ -1017,6 +1038,20 @@ class BoardConfigGenerator:
             L.append('};')
             L.append('')
 
+        # ── ADC table
+        if self.adcs:
+            L.append('/* ── ADC table ──────────────────────────────────────────────────────────── */')
+            L.append('#ifdef HAL_ADC_MODULE_ENABLED')
+            L.append('static const board_adc_desc_t _adc_table[BOARD_ADC_COUNT] = {')
+            for i, a in enumerate(self.adcs):
+                L.extend(self._adc_entry(a, i))
+            L.append('};')
+            L.append('#else')
+            L.append('#undef  BOARD_ADC_COUNT')
+            L.append('#define BOARD_ADC_COUNT 0')
+            L.append('#endif /* HAL_ADC_MODULE_ENABLED */')
+            L.append('')
+
         # ── Top-level board_config_t
         shell_u   = self.uart_roles.get('shell')
         shell_uid = shell_u.get('id', 'UART_APP') if shell_u else '0'
@@ -1036,6 +1071,10 @@ class BoardConfigGenerator:
         L.append(f'    .spi_count     = {"BOARD_SPI_COUNT" if self.spis else "0"},')
         L.append(f'    .gpio_table    = {"_gpio_table" if self.gpios else "NULL"},')
         L.append(f'    .gpio_count    = {"BOARD_GPIO_COUNT" if self.gpios else "0"},')
+        L.append('#ifdef HAL_ADC_MODULE_ENABLED')
+        L.append(f'    .adc_table     = {"_adc_table" if self.adcs else "NULL"},')
+        L.append(f'    .adc_count     = {"BOARD_ADC_COUNT" if self.adcs else "0"},')
+        L.append('#endif /* HAL_ADC_MODULE_ENABLED */')
         L.append('};')
         L.append('')
 
@@ -1212,6 +1251,29 @@ class BoardConfigGenerator:
             f'        .speed         = {cg.gpio_speed(g.get("speed","low"))},',
             f'        .active_state  = {act},',
             f'        .initial_state = {init},',
+            f'    }},',
+        ]
+
+    def _adc_entry(self, a, idx) -> list:
+        aid         = a.get('id', f'ADC_{idx}')
+        dev_id      = a.get('dev_id', str(idx))
+        instance    = a.get('instance', 'ADC1')
+        channel_num = a.get('channel', '0')
+        resolution  = a.get('resolution_hal', 'ADC_RESOLUTION_12B')
+        sample_time = a.get('sample_time', 'ADC_SAMPLETIME_64CYCLES_5')
+        irq_el      = a.find('irq')
+        irqn        = irq_el.get('name', 'ADC_IRQn')  if irq_el is not None else 'ADC_IRQn'
+        irq_pri     = irq_el.get('priority', '6')      if irq_el is not None else '6'
+        return [
+            f'    /* {aid} */',
+            f'    [{idx}] = {{',
+            f'        .dev_id       = {dev_id},',
+            f'        .instance     = {instance},',
+            f'        .channel      = ADC_CHANNEL_{channel_num},',
+            f'        .resolution   = {resolution},',
+            f'        .sample_time  = {sample_time},',
+            f'        .irqn         = {irqn},',
+            f'        .irq_priority = {irq_pri}U,',
             f'    }},',
         ]
 

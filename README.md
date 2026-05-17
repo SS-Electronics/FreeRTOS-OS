@@ -445,57 +445,50 @@ make clean
 
 ## Make Target Reference
 
-### Demo Builds (standalone OS — from `FreeRTOS-OS/`)
+All commands run from `FreeRTOS-OS/`.  `TARGET` selects the MCU variant and defaults to `stm32f411`.
 
-These targets run `make config-outputs` and `make clean` internally. No `app/` directory required.
+### Standalone OS (`make os`) — demo board, no sibling `app/` required
 
-| Command | Output | Description |
+Each `make os` invocation runs board gen, `config-outputs`, `clean`, and the full build in one step.
+
+| Command | Output ELF | Description |
 |---|---|---|
-| `make demo` | `build/demo.elf` + `.hex` | F411 standalone OS demo |
-| `make demo-h723` | `build/demo-h723.elf` + `.hex` | H723 standalone OS demo |
-| `make demo-gen` | board headers | Generate F411 demo board headers (used by CPPcheck) |
-| `make demo-gen-h723` | board headers | Generate H723 demo board headers |
-| `make flash TARGET_NAME=demo` | — | Flash F411 demo via OpenOCD |
-| `make flash TARGET_NAME=demo-h723` | — | Flash H723 demo via OpenOCD |
-| `make clean` | — | Delete `build/` |
+| `make os TARGET=stm32f411` | `build/stm32f411.elf` | Standalone OS on F411 devboard |
+| `make os TARGET=stm32h723` | `build/stm32h723.elf` | Standalone OS on H723 devboard |
+| `make os-flash TARGET=stm32f411` | — | Flash standalone OS via OpenOCD |
+| `make os-flash TARGET=stm32h723` | — | Flash standalone OS via OpenOCD |
 
-> **Cross-target switching (local only):** When switching between `make demo` / `make demo-h723` and the ECG app build locally, run `make clean` before the ECG `make all` — the demo targets clean themselves internally but the ECG app build does not. In CI each job starts from a clean checkout so this is not an issue.
+### Application Firmware (`make app`) — config from `app/`
 
-### ECG H723 App Build (device-full-stack — from `FreeRTOS-OS/`)
+`make app` runs board BSP gen, `config-outputs`, `clean`, and the full build automatically.
 
-> **`CONFIG_BOARD` is required.** The Makefile default is `stm32f411_devboard`. `autoconf.mk` does NOT override it. Omitting `CONFIG_BOARD=stm32h723_devboard` causes a build failure trying to open the F411 XML.
-
-```bash
-cd FreeRTOS-OS
-cp ../app/kconfig_ecg_h723.conf .config && make config-outputs
-make all  APP_DIR=../app TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard
-make flash            TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard
-```
-
-| Command | Output | Description |
+| Command | Output ELF | Description |
 |---|---|---|
-| `make all APP_DIR=../app TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard` | `build/ecg_h723.elf` | ECG inference firmware (220 KB text, 126 KB BSS+data) |
-| `make flash TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard` | — | Flash via OpenOCD (verify + reset) |
+| `make app TARGET=stm32h723` | `build/ecg_h723.elf` | ECG inference app on H723 |
+| `make app-flash TARGET=stm32h723` | — | Flash ECG app via OpenOCD |
 
 Connect: `stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0`
 
-To test all features on-board: invoke `/flash-and-test` in the Claude Code session (project-local skill at `.claude/commands/flash-and-test.md`).
+To test all features on-board: invoke `/flash-and-test` in the Claude Code session.
 
-### App Build (F411 — from project root `FreeRTOS-OS-App/`)
+### Board & IRQ Code Generation
 
-| Target | Output | Description |
-|---|---|---|
-| `make app` | `FreeRTOS-OS/build/app.elf` | Full firmware: OS + `app/` |
-| `make kernel` | `FreeRTOS-OS/build/kernel.elf` | Standalone OS, no application |
-| `make all` | same as `make app` | Default target |
-| `make clean` | — | Delete `FreeRTOS-OS/build/` and generated BSP files |
-
-### Flash
-
-| Target | Description |
+| Command | Description |
 |---|---|
-| `make flash-app` | Program `app.elf` into MCU flash via OpenOCD (verify + reset) |
-| `make flash-kernel` | Program `kernel.elf` via OpenOCD |
+| `make app-gen TARGET=stm32h723` | Regenerate board BSP files in `app/board/` from XML |
+| `make demo-gen` | Regenerate F411 demo board headers (also used by CPPcheck) |
+| `make demo-gen-h723` | Regenerate H723 demo board headers |
+| `make irq_gen APP_DIR=../app` | Regenerate IRQ table files in `app/board/` from XML |
+
+### Low-level targets (advanced)
+
+These are the primitives used internally by `os` / `app`. Prefer the high-level targets above.
+
+| Command | Description |
+|---|---|
+| `make all APP_DIR=../app TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard` | Low-level app compile |
+| `make flash TARGET_NAME=ecg_h723` | Low-level flash (requires `autoconf.mk` present) |
+| `make clean` | Delete `build/` |
 
 ### Code Generation
 
