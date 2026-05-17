@@ -22,17 +22,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License 
 along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>. */
 
-/* Bootloader placed section */
-#define __SECTION_BOOT          __attribute__((section(".boot")))
-#define __SECTION_BOOT_DATA     __attribute__((section(".boot_data")))
-
-/* All OS and kernel related functions need to be placed in this section */
-#define __SECTION_OS            __attribute__((section(".os")))
-#define __SECTION_OS_DATA       __attribute__((section(".os_data")))
-
-/* Application section  */
-#define __SECTION_APP            __attribute__((section(".app")))
-#define __SECTION_APP_DATA       __attribute__((section(".app_data")))
+/* Section placement macros — resolved to empty: all code goes into the flat
+ * .text / .data sections so --gc-sections can eliminate dead code. */
+#define __SECTION_BOOT
+#define __SECTION_BOOT_DATA
+#define __SECTION_OS
+#define __SECTION_OS_DATA
+#define __SECTION_APP
+#define __SECTION_APP_DATA
 
 #ifndef __USED
 #define __USED                   __attribute__((used))

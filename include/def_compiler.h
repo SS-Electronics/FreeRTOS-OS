@@ -13,17 +13,20 @@
 #include <def_attributes.h>
 
 /* ── Inline ────────────────────────────────────────────────────────────── */
-#ifndef INLINE
+#ifndef __INLINE
 #  define __INLINE            __attribute__((always_inline)) static inline
 #endif
 
 /* ── Packed struct ─────────────────────────────────────────────────────── */
-#ifndef PACKED
+/* CMSIS cmsis_gcc.h defines __PACKED as __attribute__((packed, aligned(1))).
+   Keep CMSIS's stronger definition when present to preserve unaligned-access
+   semantics in structs shared with CMSIS-typed registers. */
+#ifndef __PACKED
 #  define __PACKED            __attribute__((packed))
 #endif
 
 /* ── Weak symbol ───────────────────────────────────────────────────────── */
-#ifndef WEAK
+#ifndef __WEAK
 #  define __WEAK              __attribute__((weak))
 #endif
 

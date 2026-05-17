@@ -8,23 +8,7 @@ void SystemInit(void);
 /* Symbols from linker script */
 extern uint32_t _estack;  /* Stack pointer end */
 
-extern uint32_t _sdata_boot;            /* start of boot .data in RAM */
-extern uint32_t _edata_boot;            /* end of boot .data in RAM */
-extern uint32_t __boot_data_lma;        /* start of boot .data in FLASH */
-extern uint32_t __boot_data_lma_end;    /* end of boot .data in FLASH */
-
-extern uint32_t _sdata_os;              /* start of os .data in RAM */
-extern uint32_t _edata_os;              /* end of os .data in RAM */
-extern uint32_t __os_data_lma;          /* start of os .data in FLASH */
-extern uint32_t __os_data_lma_end;      /* end of os .data in FLASH */
-
-extern uint32_t _sdata_app;             /* start of app .data in RAM */
-extern uint32_t _edata_app;             /* end of app .data in RAM */
-extern uint32_t __app_data_lma;         /* start app os .data in FLASH */
-extern uint32_t __app_data_lma_end;     /* end of app .data in FLASH */
-
-
-extern uint32_t _sidata;  /* start of init values for .data (LMA in flash) */
+extern uint32_t _sidata;  /* LMA of .data in Flash */
 extern uint32_t _sdata;   /* start of .data in RAM */
 extern uint32_t _edata;   /* end of .data in RAM */
 extern uint32_t _sbss;    /* start of .bss in RAM */
@@ -101,31 +85,9 @@ __asm volatile (
 
     // SystemCoreClockUpdate();
 
-    /* copy boot sec data LMA to VMA */
-    for (dst = &_sdata_boot, src = &__boot_data_lma; dst < &_edata_boot; )
-    {
-        /* VMA = LMA */
-        *dst++ = *src++;
-    }
-    
-    /* copy OS sec data LMA to VMA */
-    for (dst = &_sdata_os, src = &__os_data_lma; dst < &_edata_os; )
-    {
-        /* VMA = LMA */
-        *dst++ = *src++;
-    }
-
-    /* copy app sec data LMA to VMA */
-    for (dst = &_sdata_app, src = &__app_data_lma; dst < &_edata_app; )
-    {
-        /* VMA = LMA */
-        *dst++ = *src++;
-    }
-
-    /* Copy .data section from flash (FLASH_OS or FLASH_APP depending on build) to RAM */
+    /* Copy .data section from Flash to RAM */
     for (dst = &_sdata, src = &_sidata; dst < &_edata; )
     {
-        /* VMA = LMA */
         *dst++ = *src++;
     }
 

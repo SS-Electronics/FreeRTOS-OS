@@ -1,140 +1,109 @@
 /*
-File:        stm32_f411_flash.ld
-Author:      Subhajit Roy  
-             subhajitroy005@gmail.com 
+File:        stm32_f411_FLASH.ld
+Author:      Subhajit Roy
+             subhajitroy005@gmail.com
 
-Moudle:       linker script
-Info:         Liker script need to be modified with boot section + os + Application              
-Dependency:   None
+Module:      linker script
+Info:        STM32F411VETx — Cortex-M4, 512 KB Flash, 128 KB RAM
+             Flat single-region layout: all code + rodata in FLASH,
+             .data in RAM (LMA in FLASH).
+             --gc-sections removes unreferenced functions/data.
+
+Dependency:  None
 
 This file is part of FreeRTOS-OS Project.
 
-FreeRTOS-OS is free software: you can redistribute it and/or 
-modify it under the terms of the GNU General Public License 
-as published by the Free Software Foundation, either version 
+FreeRTOS-OS is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, either version
 3 of the License, or (at your option) any later version.
 
 FreeRTOS-OS is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of 
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License 
-along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>. */
+You should have received a copy of the GNU General Public License
+along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
+*/
 
 /*****************************************************************************
 *  Target      : STM32F411VETx
 *
-*  Datasheet   : https://www.st.com/resource/en/reference_manual/rm0383-stm32f411xce-advanced-armbased-32bit-mcus-stmicroelectronics.pdf 
-*       
-*  Memory      : Flash 512 kb [ 32 kB boot ] [ 224 kb OS ] [ 352 kb app ]
-               : RAM   128 kb     
+*  Datasheet   : RM0383 — STM32F411xC/E Reference Manual
+*
+*  Memory      : Flash 512 KB @ 0x08000000
+*              : RAM   128 KB @ 0x20000000
+*
 *  Flash sectors
-Sector 0:  0x0800_0000 – 0x0800_3FFF  (16 KB)
-Sector 1:  0x0800_4000 – 0x0800_7FFF  (16 KB)
-Sector 2:  0x0800_8000 – 0x0800_BFFF  (16 KB)
-Sector 3:  0x0800_C000 – 0x0800_FFFF  (16 KB)
-Sector 4:  0x08010000 – 0x0801_FFFF  (64 KB)
-Sector 5:  0x08020000 – 0x0803_FFFF  (128 KB)
-Sector 6:  0x08040000 – 0x0807_FFFF  (256 KB)
+*  Sector 0:  0x08000000 – 0x08003FFF  (16 KB)
+*  Sector 1:  0x08004000 – 0x08007FFF  (16 KB)
+*  Sector 2:  0x08008000 – 0x0800BFFF  (16 KB)
+*  Sector 3:  0x0800C000 – 0x0800FFFF  (16 KB)
+*  Sector 4:  0x08010000 – 0x0801FFFF  (64 KB)
+*  Sector 5:  0x08020000 – 0x0803FFFF  (128 KB)
+*  Sector 6:  0x08040000 – 0x0807FFFF  (256 KB)
 ****************************************************************************/
 
 ENTRY(Reset_Handler)
 
 MINIMUM_MEMORY_MODEL = 1;
 
-
-
-/* tune these sizes to your needs */
-_Min_Heap_Size  = 0x200;   /* 512 bytes - adjust */
-_Min_Stack_Size = 0x400;   /* 1 KB    - adjust */
+_Min_Heap_Size  = 0x200;   /* 512 bytes */
+_Min_Stack_Size = 0x400;   /* 1 KB      */
 
 MEMORY
 {
   RAM           (xrw) : ORIGIN = 0x20000000, LENGTH = 128K
-
-  FLASH_BOOT    (rx)  : ORIGIN = 0x08000000, LENGTH = 32K    /* bootloader (sectors 0..1)  */
-  FLASH_OS      (rx)  : ORIGIN = 0x08008000, LENGTH = 224K   /* OS/kernel (sectors 2..5)   */
-  FLASH_APP     (rx)  : ORIGIN = 0x08040000, LENGTH = 256K   /* application (sectors 6..7) */
+  FLASH         (rx)  : ORIGIN = 0x08000000, LENGTH = 512K
 }
 
 /* Highest address of the user mode stack */
-_estack = ORIGIN(RAM) + LENGTH(RAM); /* end of "RAM" Ram type memory */
+_estack = ORIGIN(RAM) + LENGTH(RAM);
 
-/* -------------------------
-   Output sections mapping
-   ------------------------- */
 SECTIONS
 {
-  /* ------------------------------------------------------------------ */
-  /* BOOT area in FLASH_BOOT (vectors + boot code + boot data LMA)      */
-  /* ------------------------------------------------------------------ */
-
-  .isr_vector ORIGIN(FLASH_BOOT) :
+  /* Vector table — must stay at Flash origin; never GC'd */
+  .isr_vector ORIGIN(FLASH) :
   {
     . = ALIGN(4);
-    KEEP(*(.isr_vector))              /* typical startup vector for boot image */
+    KEEP(*(.isr_vector))
     KEEP(*(.isr_vector.*))
     . = ALIGN(4);
-  } > FLASH_BOOT
+  } > FLASH
 
-  /* Bootloader code: functions explicitly placed in .boot */
-  .boot :
-  {
-    . = ALIGN(4);
-    __boot_text_start = .;
-    KEEP(*(.boot))        /* code placed with __attribute__((section(".boot"))) */
-    __boot_text_end = .;
-    . = ALIGN(4);
-  } > FLASH_BOOT
-
-  /* ------------------------------------------------------------------ */
-  /* OS  area in FLASH_OS                                               */
-  /* ------------------------------------------------------------------ */
-
-  .os :
-  {
-    . = ALIGN(4);
-    __os_text_start = .;
-    KEEP(*(.os))          /* code placed with __attribute__((section(".os"))) */
-    __os_text_end = .;
-    . = ALIGN(4);
-  } > FLASH_OS
-
-  /* ------------------------------------------------------------------ */
-  /* Default code & rodata (untagged) - place into FLASH_OS by default   */
-  /* ------------------------------------------------------------------ */
-
+  /* Code and read-only data */
   .text :
   {
     . = ALIGN(4);
-    __text_start = .;
-    KEEP(*(.text))        /* all normal .text ends up here if not explicitly sectioned */
-    KEEP(*(.text*))
-    KEEP(*(.glue_7))
-    KEEP(*(.glue_7t))
-    KEEP(*(.eh_frame))
+    *(.text)
+    *(.text*)
+    *(.glue_7)
+    *(.glue_7t)
+    *(.eh_frame)
+    /* crtn.o supplies the _init / _fini epilogs as anonymous .init / .fini
+       fragments (no own symbol). Without KEEP, --gc-sections drops them and
+       _init falls through into the next code — early BusFault before main. */
     KEEP(*(.init))
     KEEP(*(.fini))
     . = ALIGN(4);
-    __text_end = .;
-  } > FLASH_OS
+  } > FLASH
 
   .rodata :
   {
     . = ALIGN(4);
-    KEEP(*(.rodata))
-    KEEP(*(.rodata*))
+    *(.rodata)
+    *(.rodata*)
     . = ALIGN(4);
-  } > FLASH_OS
+  } > FLASH
 
-  /* Exception tables (if any) */
+  /* Exception unwind tables */
   .ARM.extab (READONLY) :
   {
     . = ALIGN(4);
     KEEP(*(.ARM.extab* .gnu.linkonce.armextab.*))
     . = ALIGN(4);
-  } > FLASH_OS
+  } > FLASH
 
   .ARM (READONLY) :
   {
@@ -143,18 +112,19 @@ SECTIONS
     KEEP(*(.ARM.exidx*))
     __exidx_end = .;
     . = ALIGN(4);
-  } > FLASH_OS
+  } > FLASH
 
-.preinit_array (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
+  /* C++ init/fini arrays */
+  .preinit_array (READONLY) :
   {
     . = ALIGN(4);
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
     . = ALIGN(4);
-  } > FLASH_OS
+  } > FLASH
 
-  .init_array (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
+  .init_array (READONLY) :
   {
     . = ALIGN(4);
     PROVIDE_HIDDEN (__init_array_start = .);
@@ -162,9 +132,9 @@ SECTIONS
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
     . = ALIGN(4);
-  } > FLASH_OS
+  } > FLASH
 
-  .fini_array (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
+  .fini_array (READONLY) :
   {
     . = ALIGN(4);
     PROVIDE_HIDDEN (__fini_array_start = .);
@@ -172,102 +142,33 @@ SECTIONS
     KEEP (*(.fini_array*))
     PROVIDE_HIDDEN (__fini_array_end = .);
     . = ALIGN(4);
-  } > FLASH_OS
+  } > FLASH
 
-  /* ------------------------------------------------------------------ */
-  /* APP area in FLASH_APP                                               */
-  /* ------------------------------------------------------------------ */
-
-  .app :
+  /* Initialized data: LMA in Flash, VMA in RAM */
+  _sidata = LOADADDR(.data);
+  .data :
   {
     . = ALIGN(4);
-    __app_text_start = .;
-    KEEP(*(.app))         /* code placed with __attribute__((section(".app"))) */
-    __app_text_end = .;
+    _sdata = .;
+    *(.data)
+    *(.data*)
     . = ALIGN(4);
-  } > FLASH_APP
+    _edata = .;
+  } > RAM AT > FLASH
 
-
-
-  /* ------------------------------------------------------------------   */
-  /*                    BOOT RAM + LMA                                    */
-  /* Initialized data sections: runtime in RAM, load image in respective FLASH */
-  /* We create separate RAM sections that load from the matching FLASH LMA   */
-  /* ------------------------------------------------------------------   */
-
-  /* Bootloader RAM section */
-__boot_data_lma = LOADADDR(.data_boot);
-.data_boot :
-{
-  . = ALIGN(4);
-  _sdata_boot = .;
-  KEEP(*(SORT(.boot_data)))   /* all bootloader variables */
-  . = ALIGN(4);
-  _edata_boot = .;
-} > RAM AT > FLASH_BOOT
-
-  /* ------------------------------------------------------------------   */
-  /*                    OS RAM + LMA                                    */
-  /* Initialized data sections: runtime in RAM, load image in respective FLASH */
-  /* We create separate RAM sections that load from the matching FLASH LMA   */
-  /* ------------------------------------------------------------------   */
-
-  /* OS RAM section */
-__os_data_lma = LOADADDR(.data_os);
-.data_os :
-{
-  . = ALIGN(4);
-  _sdata_os = .;
-  KEEP(*(SORT(.os_data)))    /* all OS variables */
-  . = ALIGN(4);
-  _edata_os = .;
-} > RAM AT > FLASH_OS
-
-  /* ------------------------------------------------------------------   */
-  /*                    APP RAM + LMA                                    */
-  /* Initialized data sections: runtime in RAM, load image in respective FLASH */
-  /* We create separate RAM sections that load from the matching FLASH LMA   */
-  /* ------------------------------------------------------------------   */
-
-/* App RAM section */
-__app_data_lma = LOADADDR(.data_app);
-.data_app :
-{
-  . = ALIGN(4);
-  _sdata_app = .;
-  KEEP(*(SORT(.app_data)))   /* all App variables */
-  . = ALIGN(4);
-  _edata_app = .;
-} > RAM AT > FLASH_APP
-
-/* generic untagged data */
-_sidata = LOADADDR(.data_generic);
-.data_generic :
-{
-  . = ALIGN(4);
-  _sdata = .;
-  KEEP(*(.data))
-  KEEP(*(.data*))
-  . = ALIGN(4);
-  _edata = .;
-} > RAM AT > FLASH_OS
-
-
-  /* ------------------------------------------------------------------ */
   /* Uninitialized data (BSS) */
-  /* ------------------------------------------------------------------ */
   .bss (NOLOAD) :
   {
     . = ALIGN(4);
     __bss_start__ = .;
-    KEEP(*(.bss))
-    KEEP(*(.bss*))
-    KEEP(*(COMMON))
+    *(.bss)
+    *(.bss*)
+    *(COMMON)
     . = ALIGN(4);
     __bss_end__ = .;
   } > RAM
 
-  /* Heap and stack placement */
+  /* Heap and stack reservation */
   ._user_heap_stack :
   {
     . = ALIGN(8);
@@ -278,7 +179,20 @@ _sidata = LOADADDR(.data_generic);
     . = ALIGN(8);
   } > RAM
 
-  /* Discard libc/libm parts which we don't want linked in place */
+  /* Not-initialised section — placed AFTER heap/stack so it lies outside
+   * [__bss_start__, __bss_end__] and is never zeroed by the BSS clear loop.
+   * Contents survive NVIC soft resets; used for fault records and safe-state
+   * reason persistence. */
+  .noinit (NOLOAD) :
+  {
+    . = ALIGN(4);
+    __noinit_start = .;
+    KEEP(*(.noinit))
+    KEEP(*(.noinit.*))
+    . = ALIGN(4);
+    __noinit_end = .;
+  } > RAM
+
   /DISCARD/ :
   {
     libc.a ( * )
@@ -286,42 +200,11 @@ _sidata = LOADADDR(.data_generic);
     libgcc.a ( * )
   }
 
-  /* attributes */
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
 
-/* -------------------------
-   Export useful symbols
-   ------------------------- */
-
-/* Boot code/text area in FLASH_BOOT */
-PROVIDE(__boot_text_start       = __boot_text_start);
-PROVIDE(__boot_text_end         = __boot_text_end);
-PROVIDE(__boot_data_lma         = __boot_data_lma);
-
-/* OS area in FLASH_OS */
-PROVIDE(__os_text_start         = __os_text_start);
-PROVIDE(__os_text_end           = __os_text_end);
-PROVIDE(__os_data_lma           = __os_data_lma);
-
-/* APP area in FLASH_APP */
-PROVIDE(__app_text_start        = __app_text_start);
-PROVIDE(__app_text_end          = __app_text_end);
-PROVIDE(__app_data_lma          = __app_data_lma);
-
-/* Generic .text/.data symbols */
-PROVIDE(__text_start            = __text_start);
-PROVIDE(__text_end              = __text_end);
-
-PROVIDE(_sdata_boot             = _sdata_boot);
-PROVIDE(_edata_boot             = _edata_boot);
-PROVIDE(_sdata_os               = _sdata_os);
-PROVIDE(_edata_os               = _edata_os);
-PROVIDE(_sdata_app              = _sdata_app);
-PROVIDE(_edata_app              = _edata_app);
-
-PROVIDE(_sidata                 = _sidata);
-PROVIDE(_sdata                  = _sdata);
-PROVIDE(_edata                  = _edata);
-PROVIDE(_sbss                   = __bss_start__);
-PROVIDE(_ebss                   = __bss_end__);
+PROVIDE(_sidata  = _sidata);
+PROVIDE(_sdata   = _sdata);
+PROVIDE(_edata   = _edata);
+PROVIDE(_sbss    = __bss_start__);
+PROVIDE(_ebss    = __bss_end__);
