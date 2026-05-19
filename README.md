@@ -339,15 +339,39 @@ column.
 
 ```bash
 ./scripts/install_cppcheck.sh
-make dev-stm32f411-gen                     # required for include resolution
-bash scripts/run_cppcheck.sh --severity=warning
-bash scripts/run_cppcheck.sh --misra
-bash scripts/run_cppcheck.sh --misra --severity=style --html
+
+# F411 analysis
+make dev-stm32f411-gen                                                  # board headers
+bash scripts/run_cppcheck.sh --target=stm32f411 --severity=warning
+bash scripts/run_cppcheck.sh --target=stm32f411 --misra
+bash scripts/run_cppcheck.sh --target=stm32f411 --misra --severity=style --html
+
+# H723 analysis (re-runs with the H7 HAL on the include path)
+make dev-stm32h723-gen
+bash scripts/run_cppcheck.sh --target=stm32h723 --severity=warning
+bash scripts/run_cppcheck.sh --target=stm32h723 --misra
 ```
 
-GitHub Actions runs CPPcheck on every push (job: `cppcheck`).  Reports
-land in `reports/cppcheck/` (git-ignored).  See [`docs/CHECK.md`](docs/CHECK.md)
-for option flags and the MISRA deviation table.
+Reports land in `reports/cppcheck/<target>/` (git-ignored).  See
+[`docs/CHECK.md`](docs/CHECK.md) for option flags and the MISRA
+deviation table.
+
+### CI Pipeline
+
+GitHub Actions runs a 5-stage matrix pipeline for every supported
+target on every push and pull request:
+
+| Stage | Job | What it runs | Per-target |
+|---|---|---|---|
+| 1 | `1. generation`  | `make dev-<target>-gen` (verifies all 11 generator outputs) | yes |
+| 2 | `2. cppcheck`    | `run_cppcheck.sh --target=<target> --severity=warning` | yes |
+| 3 | `3. misra`       | `run_cppcheck.sh --target=<target> --misra` | yes |
+| 4 | `4. build`       | `make dev-<target>` + footprint summary + ELF upload | yes |
+| 5 | `5. doxygen`     | `doxygen Doxyfile` (project-wide) + HTML artifact upload | no  |
+
+Stages run sequentially (each `needs:` the previous); targets within
+a stage run in parallel.  All reports / ELFs / HTML are uploaded as
+artifacts.  See [`.github/workflows/static_analysis.yml`](.github/workflows/static_analysis.yml).
 
 ---
 

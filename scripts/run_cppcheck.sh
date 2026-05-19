@@ -40,6 +40,7 @@ SEVERITY="warning"
 ENABLE_HTML=0
 JOBS="$(nproc 2>/dev/null || echo 4)"
 VERBOSE=0
+TARGET="stm32f411"   # default: F411 (Cortex-M4F).  Override with --target=stm32h723.
 ADDON_JSON="${SCRIPT_DIR}/misra_addon.json"
 SUPPRESSIONS_FILE="${SCRIPT_DIR}/cppcheck_suppressions.txt"
 
@@ -60,6 +61,11 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
+  --target=<t>          MCU target: stm32f411 | stm32h723  [default: stm32f411]
+                        Switches INCLUDES (STM32F4/H7 HAL, Cortex-M4F/M7 portable)
+                        and DEFINES (STM32F411xE/STM32H723xx, ARM_MATH_CM4/CM7).
+                        Per-target board headers must be present at
+                        examples/<target>/board/  — usually via make dev-<t>-gen.
   --misra               Enable MISRA C:2012 checks
   --misra-rules=<file>  MISRA rule-text file (for human-readable descriptions)
   --output-dir=<dir>    Report directory  [default: reports/cppcheck]
@@ -82,6 +88,7 @@ EOF
 # ── Argument parsing ──────────────────────────────────────────────────────────
 for arg in "$@"; do
     case "$arg" in
+        --target=*)          TARGET="${arg#*=}" ;;
         --misra)             ENABLE_MISRA=1 ;;
         --misra-rules=*)     MISRA_RULES_FILE="${arg#*=}" ;;
         --output-dir=*)      OUTPUT_DIR="${arg#*=}" ;;
@@ -93,6 +100,13 @@ for arg in "$@"; do
         *) warn "Unknown argument: $arg"; usage; exit 2 ;;
     esac
 done
+
+# Validate --target
+case "$TARGET" in
+    stm32f411|stm32h723) ;;
+    *) error "Unknown --target='${TARGET}'. Valid: stm32f411, stm32h723"; exit 2 ;;
+esac
+info "Analysis target: ${TARGET}"
 
 # ── Pre-flight checks ─────────────────────────────────────────────────────────
 if ! command -v cppcheck &>/dev/null; then
@@ -188,7 +202,47 @@ if [[ "$VERBOSE" -eq 1 ]]; then
     echo "$FILE_LIST" | sed 's|^|  |'
 fi
 
-# ── Include paths ─────────────────────────────────────────────────────────────
+# ── Per-target include paths + defines ────────────────────────────────────────
+# Switched by --target= so cppcheck analyses the same #ifdef branches the
+# real build sees.
+case "$TARGET" in
+    stm32f411)
+        TARGET_INCLUDES=(
+            "-I${PROJECT_ROOT}/arch/devices/STM/STM32F4xx"
+            "-I${PROJECT_ROOT}/arch/devices/STM/stm32f4xx-hal-driver/Inc"
+            "-I${PROJECT_ROOT}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F"
+        )
+        TARGET_DEFINES=(
+            "-DSTM32F411xE"
+            "-DSTM32F4"
+            "-DARM_MATH_CM4"
+            "-DCORTEX_M4"
+            # __FPU_PRESENT/__FPU_USED are CMSIS-Core; M4F has single-precision FPU.
+            "-D__FPU_PRESENT=1"
+            "-D__FPU_USED=1"
+        )
+        ;;
+    stm32h723)
+        TARGET_INCLUDES=(
+            "-I${PROJECT_ROOT}/arch/devices/STM/STM32H7xx"
+            "-I${PROJECT_ROOT}/arch/devices/STM/stm32h7xx-hal-driver/Inc"
+            "-I${PROJECT_ROOT}/arch/arm/CMSIS_6/CMSIS/Core/Include"
+            "-I${PROJECT_ROOT}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1"
+        )
+        TARGET_DEFINES=(
+            "-DSTM32H723xx"
+            "-DSTM32H7"
+            "-DARM_MATH_CM7"
+            "-DCORTEX_M7"
+            # M7 has double-precision FPU (fpv5-d16).
+            "-D__FPU_PRESENT=1"
+            "-D__FPU_USED=1"
+            "-D__DCACHE_PRESENT=1"
+            "-D__ICACHE_PRESENT=1"
+        )
+        ;;
+esac
+
 INCLUDES=(
     "-I${PROJECT_ROOT}"
     "-I${PROJECT_ROOT}/include"
@@ -202,47 +256,49 @@ INCLUDES=(
     "-I${PROJECT_ROOT}/arch/devices"
     "-I${PROJECT_ROOT}/arch/devices/STM"
     "-I${PROJECT_ROOT}/arch/devices/device_conf"
-    "-I${PROJECT_ROOT}/arch/devices/STM/STM32F4xx"
-    "-I${PROJECT_ROOT}/arch/devices/STM/stm32f4xx-hal-driver/Inc"
+    "${TARGET_INCLUDES[@]}"
     "-I${PROJECT_ROOT}/kernel/FreeRTOS-Kernel/include"
     "-I${PROJECT_ROOT}/kernel/FreeRTOS-Plus-CLI"
-    "-I${PROJECT_ROOT}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM4F"
 )
 
 # ── Board headers: priority order ────────────────────────────────────────────
-# 1. Sibling app/board/                — real board (submodule / integrated build)
-# 2. examples/stm32f411/board/         — F411 devboard example
-#                                        (make dev-stm32f411-gen already ran)
-# 3. build/cppcheck-board              — last resort: auto-generate from the
-#                                        F411 example XML
-#
-# The selected directory is prepended to INCLUDES so <board/irq_hw_conf.h>
-# resolves to the right irq_hw_conf.h before the fallback in include/.
+# 1. Sibling app/board/                       — real board (integrated build)
+# 2. examples/<target>/board/                 — devboard example for selected
+#                                               target (make dev-<target>-gen
+#                                               already ran)
+# 3. build/cppcheck-board/<target>/           — last resort: auto-generate
+#                                               from the target's example XML
 APP_BOARD_DIR="${PROJECT_ROOT}/../app/board"
-F411_BOARD_DIR="${PROJECT_ROOT}/examples/stm32f411/board"
-CPPCHECK_BOARD_DIR="${PROJECT_ROOT}/build/cppcheck-board"
+EXAMPLE_BOARD_DIR="${PROJECT_ROOT}/examples/${TARGET}/board"
+CPPCHECK_BOARD_DIR="${PROJECT_ROOT}/build/cppcheck-board/${TARGET}"
+
+# Per-target devboard XML basename (matches examples/<target>/board/<XML>).
+case "$TARGET" in
+    stm32f411) BOARD_XML="stm32f411_devboard.xml" ;;
+    stm32h723) BOARD_XML="stm32h723_devboard.xml" ;;
+esac
 
 if [[ -d "$APP_BOARD_DIR" && -f "${APP_BOARD_DIR}/irq_hw_conf.h" ]]; then
     INCLUDES=("-I${APP_BOARD_DIR}" "${INCLUDES[@]}")
     info "Board headers (app): ${APP_BOARD_DIR}"
 
-elif [[ -f "${F411_BOARD_DIR}/irq_hw_conf.h" ]]; then
-    # dev-stm32f411-gen has already run — use its output directly
-    INCLUDES=("-I${F411_BOARD_DIR}" "${INCLUDES[@]}")
-    info "Board headers (example, F411): ${F411_BOARD_DIR}"
+elif [[ -f "${EXAMPLE_BOARD_DIR}/irq_hw_conf.h" ]]; then
+    # dev-<target>-gen has already run — use its output directly.
+    INCLUDES=("-I${EXAMPLE_BOARD_DIR}" "${INCLUDES[@]}")
+    info "Board headers (example, ${TARGET}): ${EXAMPLE_BOARD_DIR}"
 
 else
-    # Neither available — generate into build/cppcheck-board/ on the fly
+    # Neither available — regenerate into build/cppcheck-board/<target>/ on the fly.
     CPPCHECK_BOARD_CONF="${CPPCHECK_BOARD_DIR}/board/irq_hw_conf.h"
     if [[ ! -f "$CPPCHECK_BOARD_CONF" ]]; then
-        info "Generating F411 example board headers → ${CPPCHECK_BOARD_DIR}/board/ ..."
+        info "Generating ${TARGET} example board headers → ${CPPCHECK_BOARD_DIR}/board/ ..."
         python3 "${PROJECT_ROOT}/scripts/gen_irq_table.py" \
-            "${F411_BOARD_DIR}/irq_table.xml" \
+            "${EXAMPLE_BOARD_DIR}/irq_table.xml" \
             --outdir "${CPPCHECK_BOARD_DIR}/board" \
             2>/dev/null \
-            || { warn "F411 example board generation failed — IRQ constants may be unresolved"; }
+            || { warn "${TARGET} example board generation failed — IRQ constants may be unresolved"; }
         python3 "${PROJECT_ROOT}/scripts/gen_board_config.py" \
-            "${F411_BOARD_DIR}/stm32f411_devboard.xml" \
+            "${EXAMPLE_BOARD_DIR}/${BOARD_XML}" \
             --outdir "${CPPCHECK_BOARD_DIR}/board" \
             2>/dev/null || true
     fi
@@ -252,14 +308,11 @@ fi
 
 # ── Preprocessor defines ──────────────────────────────────────────────────────
 DEFINES=(
-    "-DSTM32F411xE"
+    "${TARGET_DEFINES[@]}"
     "-DUSE_HAL_DRIVER"
-    "-DARM_MATH_CM4"
-    "-D__FPU_PRESENT=1"
-    "-D__FPU_USED=1"
-    "-DCORTEX_M4"
     # GCC sets __ARM_ARCH_PROFILE automatically to 'M' (ASCII 77) for Cortex-M.
-    # cppcheck does not; without it cmsis_gcc.h hits #error "Unknown Arm architecture profile".
+    # cppcheck does not; without it cmsis_gcc.h hits
+    # #error "Unknown Arm architecture profile".
     "-D__ARM_ARCH_PROFILE=77"
     "-DCONFIG_DEFAULT_DEBUG_EN=1"
     "-DCONFIG_DRV_DEBUG_EN=1"

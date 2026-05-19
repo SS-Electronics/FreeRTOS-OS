@@ -1,19 +1,25 @@
 # static_analysis.yml
-# CPPcheck + MISRA C:2012 static analysis for FreeRTOS-OS.
 #
-# Triggered on:
-#   - Every push to main / dev branches
-#   - Every pull request targeting main / dev
+# Per-target 5-stage CI pipeline for FreeRTOS-OS.
 #
-# Jobs:
-#   cppcheck  — general static analysis (fails on error-severity findings)
-#   misra     — MISRA C:2012 rule compliance (reports violations as annotations)
-#   docs      — Doxygen build check
+# For every supported devboard target (stm32f411, stm32h723) the workflow
+# runs these stages in order:
 #
-# Artefacts:
-#   Reports are uploaded and retained for 30 days.
+#   1. generation   make dev-<target>-gen   →  board_config.*, irq_*_generated.*
+#   2. cppcheck     scripts/run_cppcheck.sh --target=<target>
+#   3. misra        scripts/run_cppcheck.sh --target=<target> --misra
+#   4. build        make dev-<target>       →  build/<target>.elf
+#   5. doxygen      doxygen Doxyfile        (project-wide, runs once after
+#                                            all target builds succeed)
+#
+# Each downstream stage gates on the previous via `needs:`.  Within a
+# stage both targets run in parallel (matrix), so the wall-clock budget
+# is roughly 5 × (longest target stage).
+#
+# Triggered on every push or PR touching code, generators, board XML,
+# Doxyfile, or this workflow.
 
-name: Static Analysis
+name: CI Pipeline
 
 on:
   push:
@@ -21,24 +27,91 @@ on:
     paths:
       - "**.c"
       - "**.h"
-      - "scripts/run_cppcheck.sh"
-      - "scripts/cppcheck_suppressions.txt"
+      - "**.xml"
+      - "**.ld"
+      - "scripts/**"
+      - "examples/**"
+      - "arch/**"
+      - "Makefile"
+      - "Doxyfile"
       - ".github/workflows/static_analysis.yml"
   pull_request:
     branches: [main, staging]
 
 concurrency:
-  group: static-analysis-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   REPORTS_DIR: reports/cppcheck
 
 jobs:
-  # ── Job 1: CPPcheck General Analysis ────────────────────────────────────────
-  cppcheck:
-    name: CPPcheck (error + warning)
+  # ── Stage 1: Generation ─────────────────────────────────────────────────────
+  # Re-creates board_config.{c,h}, board_device_ids.h, board_handles.h, and
+  # all seven irq_*_generated.* files for the target.  Cheap (pure Python),
+  # so downstream stages just rerun it rather than uploading an artefact.
+  generation:
+    name: "1. generation (${{ matrix.target }})"
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [stm32f411, stm32h723]
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install Python
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3
+
+      - name: Generate ${{ matrix.target }} board + IRQ outputs
+        run: |
+          make dev-${{ matrix.target }}-gen
+          echo "── Generated outputs in examples/${{ matrix.target }}/board/ ──"
+          ls -la examples/${{ matrix.target }}/board/
+
+      - name: Sanity-check expected generator outputs
+        run: |
+          required=(
+            board_config.c
+            board_config.h
+            board_device_ids.h
+            board_handles.h
+            irq_hw_conf.h
+            irq_hw_init_generated.c
+            irq_hw_init_generated.h
+            irq_periph_dispatch_generated.c
+            irq_periph_handlers_generated.h
+            irq_periph_vectors_generated.inc
+            irq_table_generated.c
+          )
+          missing=0
+          for f in "${required[@]}"; do
+            if [[ ! -f "examples/${{ matrix.target }}/board/$f" ]]; then
+              echo "::error::missing generated file: examples/${{ matrix.target }}/board/$f"
+              missing=1
+            fi
+          done
+          if [[ $missing -ne 0 ]]; then
+            exit 1
+          fi
+          echo "All 11 generated files present."
+
+  # ── Stage 2: CPPcheck (warning + above) ─────────────────────────────────────
+  cppcheck:
+    name: "2. cppcheck (${{ matrix.target }})"
+    runs-on: ubuntu-24.04
+    needs: generation
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [stm32f411, stm32h723]
 
     steps:
       - name: Checkout repository (with submodules)
@@ -53,66 +126,64 @@ jobs:
           sudo apt-get install -y cppcheck python3 python3-pygments
           cppcheck --version
 
-      - name: Generate F411 example board headers
-        run: |
-          make cppcheck-board-gen
-          echo "Generated files in examples/stm32f411/board/:"
-          ls examples/stm32f411/board/
+      - name: Generate ${{ matrix.target }} board headers
+        run: make dev-${{ matrix.target }}-gen
 
-      - name: Run CPPcheck (warnings and above)
+      - name: Run CPPcheck (target=${{ matrix.target }}, severity=warning)
         id: cppcheck_run
         run: |
           chmod +x scripts/run_cppcheck.sh
           ./scripts/run_cppcheck.sh \
+            --target=${{ matrix.target }} \
             --severity=warning \
-            --output-dir="${{ env.REPORTS_DIR }}" \
+            --output-dir="${{ env.REPORTS_DIR }}/${{ matrix.target }}" \
             --jobs=2
-        # Do not use continue-on-error — let the step fail naturally so
-        # outcome is 'failure' only when cppcheck genuinely exits non-zero.
-
-      - name: Upload CPPcheck reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cppcheck-reports-${{ github.run_number }}
-          path: |
-            ${{ env.REPORTS_DIR }}/cppcheck_report.txt
-            ${{ env.REPORTS_DIR }}/cppcheck_report.xml
-          retention-days: 30
 
       - name: Annotate step summary
         if: always()
         run: |
-          REPORT="${{ env.REPORTS_DIR }}/cppcheck_report.xml"
-          ERRORS=0
-          WARNINGS=0
+          REPORT="${{ env.REPORTS_DIR }}/${{ matrix.target }}/cppcheck_report.xml"
+          ERRORS=0; WARNINGS=0
           if [[ -f "$REPORT" ]]; then
-            # Count errors and warnings from the XML (authoritative source)
             ERRORS=$(grep -c 'severity="error"'   "$REPORT" 2>/dev/null || true)
             WARNINGS=$(grep -c 'severity="warning"' "$REPORT" 2>/dev/null || true)
-            ERRORS=${ERRORS:-0}
-            WARNINGS=${WARNINGS:-0}
+            ERRORS=${ERRORS:-0}; WARNINGS=${WARNINGS:-0}
           fi
           {
-            echo "## CPPcheck Results"
+            echo "## CPPcheck (${{ matrix.target }})"
             echo ""
             echo "| Severity | Count |"
             echo "|---|---|"
             echo "| Errors   | \`${ERRORS}\` |"
             echo "| Warnings | \`${WARNINGS}\` |"
-            echo ""
             if [[ "$ERRORS" -gt 0 ]]; then
-              echo "### Errors found"
+              echo ""
+              echo "### Errors"
               echo '```'
-              grep ': error:' "${{ env.REPORTS_DIR }}/cppcheck_report.txt" 2>/dev/null | head -30 || true
+              grep ': error:' "${{ env.REPORTS_DIR }}/${{ matrix.target }}/cppcheck_report.txt" 2>/dev/null | head -30 || true
               echo '```'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # ── Job 2: MISRA C:2012 Compliance ──────────────────────────────────────────
+      - name: Upload CPPcheck reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cppcheck-${{ matrix.target }}-${{ github.run_number }}
+          path: |
+            ${{ env.REPORTS_DIR }}/${{ matrix.target }}/cppcheck_report.txt
+            ${{ env.REPORTS_DIR }}/${{ matrix.target }}/cppcheck_report.xml
+          retention-days: 30
+
+  # ── Stage 3: MISRA C:2012 ───────────────────────────────────────────────────
   misra:
-    name: MISRA C:2012
+    name: "3. misra (${{ matrix.target }})"
     runs-on: ubuntu-24.04
+    needs: cppcheck
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [stm32f411, stm32h723]
 
     steps:
       - name: Checkout repository (with submodules)
@@ -121,106 +192,92 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install CPPcheck + MISRA dependencies
+      - name: Install CPPcheck + MISRA addon
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y cppcheck python3 python3-pygments
           # Verify MISRA addon is present
-          MISRA_CANDIDATES=(
-            /usr/lib/x86_64-linux-gnu/cppcheck/addons/misra.py
-            /usr/share/cppcheck/addons/misra.py
-          )
-          for f in "${MISRA_CANDIDATES[@]}"; do
+          for f in /usr/lib/x86_64-linux-gnu/cppcheck/addons/misra.py \
+                   /usr/share/cppcheck/addons/misra.py; do
             if [[ -f "$f" ]]; then echo "MISRA addon: $f"; break; fi
           done
 
-      - name: Generate F411 example board headers
-        run: |
-          make cppcheck-board-gen
-          echo "Generated files in examples/stm32f411/board/:"
-          ls examples/stm32f411/board/
+      - name: Generate ${{ matrix.target }} board headers
+        run: make dev-${{ matrix.target }}-gen
 
-      - name: Run CPPcheck + MISRA C:2012
+      - name: Run MISRA C:2012 (target=${{ matrix.target }})
         id: misra_run
         run: |
           chmod +x scripts/run_cppcheck.sh
           ./scripts/run_cppcheck.sh \
+            --target=${{ matrix.target }} \
             --misra \
             --severity=warning \
-            --output-dir="${{ env.REPORTS_DIR }}" \
+            --output-dir="${{ env.REPORTS_DIR }}/${{ matrix.target }}" \
             --jobs=2
-        continue-on-error: true  # violations are informational by default
+        continue-on-error: true   # advisory by default; hard-fail only on
+                                  # error-severity violations in the next step
 
       - name: Count MISRA violations
         id: misra_count
         if: always()
         run: |
-          TOTAL=0
-          ERRORS=0
-          CONFIG_NOISE=0
-          REPORT="${{ env.REPORTS_DIR }}/misra_report.txt"
+          TOTAL=0; ERRORS=0; CONFIG_NOISE=0
+          REPORT="${{ env.REPORTS_DIR }}/${{ matrix.target }}/misra_report.txt"
           if [[ -f "$REPORT" ]]; then
-            # Count genuine MISRA rule violations (errorId starts with "c2012-")
-            # Exclude "errorId":"config" entries — these are misra.py tool-internal
-            # errors for unresolvable compile-time constants, not actual rule violations.
             TOTAL=$(grep '"severity"' "$REPORT" 2>/dev/null \
                     | grep -v '"errorId": "config"' | wc -l || true)
             ERRORS=$(grep '"severity": "error"' "$REPORT" 2>/dev/null \
                      | grep -v '"errorId": "config"' | wc -l || true)
             CONFIG_NOISE=$(grep -c '"errorId": "config"' "$REPORT" 2>/dev/null || true)
-            TOTAL=${TOTAL:-0}
-            ERRORS=${ERRORS:-0}
-            CONFIG_NOISE=${CONFIG_NOISE:-0}
+            TOTAL=${TOTAL:-0}; ERRORS=${ERRORS:-0}; CONFIG_NOISE=${CONFIG_NOISE:-0}
           fi
-          echo "total=${TOTAL}"             >> "$GITHUB_OUTPUT"
-          echo "errors=${ERRORS}"           >> "$GITHUB_OUTPUT"
+          echo "total=${TOTAL}"               >> "$GITHUB_OUTPUT"
+          echo "errors=${ERRORS}"             >> "$GITHUB_OUTPUT"
           echo "config_noise=${CONFIG_NOISE}" >> "$GITHUB_OUTPUT"
-          echo "MISRA genuine violations: ${TOTAL}  (error-level: ${ERRORS})  (config-noise filtered: ${CONFIG_NOISE})"
+          echo "MISRA(${{ matrix.target }}): genuine=${TOTAL}  errors=${ERRORS}  config-noise=${CONFIG_NOISE}"
 
-      - name: Annotate job summary
+      - name: Annotate step summary
         if: always()
         run: |
-          TOTAL="${{ steps.misra_count.outputs.total }}"
-          ERRORS="${{ steps.misra_count.outputs.errors }}"
-          CONFIG_NOISE="${{ steps.misra_count.outputs.config_noise }}"
           {
-            echo "## MISRA C:2012 Analysis Results"
+            echo "## MISRA C:2012 (${{ matrix.target }})"
             echo ""
             echo "| Metric | Value |"
             echo "|---|---|"
-            echo "| Genuine violations  | \`${TOTAL}\` |"
-            echo "| Error-level         | \`${ERRORS}\` |"
-            echo "| Config noise (filtered) | \`${CONFIG_NOISE}\` |"
-            echo "| Branch              | \`${{ github.ref_name }}\` |"
-            echo "| Commit              | \`${{ github.sha }}\` |"
+            echo "| Genuine violations     | \`${{ steps.misra_count.outputs.total }}\` |"
+            echo "| Error-level            | \`${{ steps.misra_count.outputs.errors }}\` |"
+            echo "| Config-noise (filtered)| \`${{ steps.misra_count.outputs.config_noise }}\` |"
             echo ""
-            echo "> \`Config noise\` = \`misra.py\` internal errors for unresolvable compile-time constants — not MISRA rule violations."
-            echo "> Run \`./scripts/run_cppcheck.sh --misra\` locally to reproduce."
+            echo "> Reproduce locally:"
+            echo "> \`./scripts/run_cppcheck.sh --target=${{ matrix.target }} --misra\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload MISRA reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: misra-reports-${{ github.run_number }}
+          name: misra-${{ matrix.target }}-${{ github.run_number }}
           path: |
-            ${{ env.REPORTS_DIR }}/misra_report.txt
-            ${{ env.REPORTS_DIR }}/misra_cppcheck.xml
+            ${{ env.REPORTS_DIR }}/${{ matrix.target }}/misra_report.txt
+            ${{ env.REPORTS_DIR }}/${{ matrix.target }}/misra_cppcheck.xml
           retention-days: 30
 
       - name: Fail if MISRA error-level violations found
-        # Hard-fail only on 'error' severity — style/advisory violations
-        # are informational and tracked in the uploaded report.
         if: steps.misra_count.outputs.errors != '0'
         run: |
-          ERRORS="${{ steps.misra_count.outputs.errors }}"
-          echo "::error::${ERRORS} MISRA error-severity violation(s) found. See misra_report.txt artefact."
+          echo "::error::${{ steps.misra_count.outputs.errors }} MISRA error-severity violation(s) on ${{ matrix.target }}."
           exit 1
 
-  # ── Job 3: Firmware Build (H723 devboard example) ───────────────────────────
+  # ── Stage 4: Firmware Build ─────────────────────────────────────────────────
   build:
-    name: Firmware Build (STM32H723 devboard example)
+    name: "4. build (${{ matrix.target }})"
     runs-on: ubuntu-24.04
+    needs: misra
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [stm32f411, stm32h723]
 
     steps:
       - name: Checkout repository (with submodules)
@@ -235,25 +292,51 @@ jobs:
           sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi python3
           arm-none-eabi-gcc --version
 
-      - name: Build H723 devboard example
+      - name: Build ${{ matrix.target }} devboard example
         run: |
-          make dev-stm32h723 2>&1
-          arm-none-eabi-size build/stm32h723.elf
+          make dev-${{ matrix.target }} 2>&1
+          arm-none-eabi-size build/${{ matrix.target }}.elf
 
-      - name: Upload firmware ELF
+      - name: Annotate footprint summary
+        if: always()
+        run: |
+          ELF="build/${{ matrix.target }}.elf"
+          if [[ -f "$ELF" ]]; then
+            SIZE_LINE=$(arm-none-eabi-size "$ELF" | tail -1)
+            TEXT=$(echo "$SIZE_LINE" | awk '{print $1}')
+            DATA=$(echo "$SIZE_LINE" | awk '{print $2}')
+            BSS=$(echo  "$SIZE_LINE" | awk '{print $3}')
+            FLASH=$((TEXT + DATA))
+            RAM=$((DATA + BSS))
+            FLASH_KB=$(python3 -c "print(f'{${FLASH}/1024:.1f}')")
+            RAM_KB=$(python3 -c "print(f'{${RAM}/1024:.1f}')")
+            {
+              echo "## Footprint (${{ matrix.target }})"
+              echo ""
+              echo "| Metric | Bytes | KB |"
+              echo "|---|---|---|"
+              echo "| Flash (text + data) | \`${FLASH}\` | ${FLASH_KB} |"
+              echo "| RAM   (data + bss)  | \`${RAM}\`   | ${RAM_KB} |"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload firmware ELF + HEX + size map
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: firmware-dev-stm32h723-${{ github.run_number }}
+          name: firmware-${{ matrix.target }}-${{ github.run_number }}
           path: |
-            build/stm32h723.elf
-            build/stm32h723.elf.hex
+            build/${{ matrix.target }}.elf
+            build/${{ matrix.target }}.elf.hex
+            build/${{ matrix.target }}.elf.sym
           retention-days: 14
 
-  # ── Job 4: Doxygen Docs Check ────────────────────────────────────────────────
+  # ── Stage 5: Doxygen ────────────────────────────────────────────────────────
+  # Project-wide — runs once after both target builds succeed.
   docs:
-    name: Doxygen Build
+    name: "5. doxygen"
     runs-on: ubuntu-24.04
-    needs: [cppcheck]
+    needs: build
 
     steps:
       - name: Checkout repository (with submodules)
@@ -266,15 +349,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y doxygen graphviz
 
-      - name: Build Doxygen docs
+      - name: Build Doxygen HTML
         working-directory: ${{ github.workspace }}
         run: doxygen Doxyfile
-        continue-on-error: true
 
       - name: Upload Doxygen HTML
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: doxygen-html-${{ github.run_number }}
-          path: docs/
+          path: docs/doxygen/html/
           retention-days: 7

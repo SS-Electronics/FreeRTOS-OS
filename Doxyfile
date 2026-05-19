@@ -13,7 +13,7 @@ PROJECT_NAME           = "FreeRTOS-OS"
 PROJECT_NUMBER         = "v1.0"
 PROJECT_BRIEF          = "Linux-inspired OS layer on FreeRTOS for ARM Cortex-M4"
 PROJECT_LOGO           =
-OUTPUT_DIRECTORY       = docs
+OUTPUT_DIRECTORY       = docs/doxygen
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
 
@@ -147,7 +147,7 @@ PREDEFINED             = CONFIG_DEVICE_VARIANT=1          \
 # HTML output
 #-----------------------------------------------------------------------------
 GENERATE_HTML          = YES
-HTML_OUTPUT            = .
+HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
 
 HTML_COLORSTYLE        = LIGHT

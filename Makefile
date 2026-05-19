@@ -572,7 +572,7 @@ flash: $(BUILD)/$(TARGET_NAME).elf
 # Documentation
 DOXYGEN  ?= doxygen
 DOXYFILE ?= Doxyfile
-DOC_DIR  ?= docs/generated
+DOC_DIR  ?= docs/doxygen
 
 docs:
 	@echo "Generating documentation..."
