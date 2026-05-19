@@ -130,7 +130,14 @@ fi
 # ── Source file collection (project code only, no vendor) ─────────────────────
 header "Collecting source files"
 
-# Directories containing project-owned C code
+# Directories containing project-owned C code.
+# NOTE: lib/ is *deliberately* not included.  The submodules under lib/
+#       (CMSIS-DSP, tflite-micro) are pure vendor code analysed in their
+#       own upstream CI, and lib-fsm / lib-behavior-tree are separate
+#       repositories with their own CI runs.  Analysing them here only
+#       surfaces noise (e.g. logf(0) false-positives in arm_logsumexp_*.c
+#       and printf-format warnings in CMSIS-DSP examples) that aren't ours
+#       to fix.
 PROJECT_SRC_DIRS=(
     "${PROJECT_ROOT}/drivers"
     "${PROJECT_ROOT}/drv_app"
@@ -141,7 +148,8 @@ PROJECT_SRC_DIRS=(
     "${PROJECT_ROOT}/mm"
     "${PROJECT_ROOT}/irq"
     "${PROJECT_ROOT}/init"
-    "${PROJECT_ROOT}/lib"
+    "${PROJECT_ROOT}/log"
+    "${PROJECT_ROOT}/safety"
     "${PROJECT_ROOT}/boot"
     "${PROJECT_ROOT}/net"
     "${PROJECT_ROOT}/com_stack"
@@ -156,10 +164,6 @@ for dir in "${PROJECT_SRC_DIRS[@]}"; do
             TOTAL_FILES=$((TOTAL_FILES + 1))
         done < <(find "$dir" -name "*.c" \
             -not -path "*/build/*" \
-            -not -path "*/CMSIS-DSP/Ne10/*" \
-            -not -path "*/CMSIS-DSP/PythonWrapper/*" \
-            -not -path "*/CMSIS-DSP/Scripts/*" \
-            -not -iname "*neon*" \
             -print0 2>/dev/null)
     fi
 done
@@ -326,6 +330,13 @@ DEFINES=(
     "-DCONFIG_INC_SERVICE_UART_MGMT=1"
     "-DCONFIG_INC_SERVICE_IIC_MGMT=1"
     "-DCONFIG_INC_SERVICE_OS_SHELL_MGMT=1"
+    # FreeRTOSConfig.h reads these from Kconfig (autoconf.h).  cppcheck doesn't
+    # generate autoconf.h, so without these overrides FreeRTOS.h:187 fires
+    # "#error configMAX_PRIORITIES must be defined to be >= 1" before any of
+    # our source even gets parsed.  Values mirror examples/<target>/kconfig.conf.
+    "-DCONFIG_RTOS_MAX_PRIORITIES=56"
+    "-DCONFIG_RTOS_MINIMAL_STACK_SIZE=512"
+    "-DCONFIG_RTOS_TOTAL_HEAP_SIZE=65536"
     # CMSIS defines — resolve macros that cppcheck cannot derive through includes
     "-D__ALIGNED(x)=__attribute__((aligned(x)))"
     "-D__STATIC_INLINE=static inline"
