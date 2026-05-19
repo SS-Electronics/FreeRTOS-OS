@@ -23,13 +23,10 @@
 
 ---
 
-FreeRTOS-OS adds the things the bare FreeRTOS kernel deliberately leaves
-out — a Linux-style driver model, service threads, an interactive
+FreeRTOS-OS adds the things on top of FreeRTOS kernel API,
+a Linux-style driver model, service threads, an interactive
 shell, code generators (Kconfig + board XML → BSP + IRQ tables), and a
-medical-grade safety stack — **without replacing the FreeRTOS
-scheduler**.  It targets ARM Cortex-M MCUs, ships production-ready
-support for STM32F4 and STM32H7, and is structured so a new vendor or
-family slots in cleanly under `arch/devices/<VENDOR>/<FAMILY>/<PART>/`.
+medical-grade safety stack.
 
 > **Documentation:**  [Architecture deep-dive](docs/ARCHITECTURE.md) ·
 > [Per-vendor `/arch` contract](arch/README.md) ·
@@ -64,25 +61,6 @@ threads occupy before your application allocates anything.
 |---|---|---|---|---|---|---|---|---|---|
 | **stm32f411** | Cortex-M4F (`fpv4-sp-d16`, hard) | 100 MHz | 512 KB | 128 KB | **47.8 KB** *(9.3 %)* | **18.9 KB** *(14.8 %)* | 64.0 KB | `stm32f411` | ✅ Supported |
 | **stm32h723** | Cortex-M7  (`fpv5-d16`,  hard) | 64 MHz HSI | 1 MB | 128 KB DTCM | **48.4 KB** *(4.7 %)* | **19.1 KB** *(15.0 %)* | 78.1 KB | `stm32h723` | ✅ Running, validated |
-
-Reproduce: `make dev-stm32f411 && arm-none-eabi-size build/stm32f411.elf`
-
-<details>
-<summary>Section-by-section breakdown (latest build)</summary>
-
-| Section | F411 (bytes) | H723 (bytes) | Region |
-|---|---|---|---|
-| `.isr_vector`        |    408 |    672 | flash |
-| `.text` + `.rodata` + ARM/init | 48,388 | 48,688 | flash |
-| `.data` (init RAM)   |    180 |    184 | RAM (loaded from flash) |
-| `.bss` (zero RAM)    | 83,136 | 97,804 | RAM — *includes the FreeRTOS heap pool (`ucHeap[]`)* |
-| `._user_heap_stack`  |  1,540 |  1,540 | RAM (newlib heap + MSP) |
-| `.noinit`            |     80 |     80 | RAM (`.noinit` fault + safe-state records) |
-| **Total flash**      | **48,976 (47.8 KB)** | **49,544 (48.4 KB)** | |
-| **Total RAM**        | **84,936 (82.9 KB)** | **99,608 (97.3 KB)** | |
-| ↳ minus FreeRTOS heap | −65,536 | −80,000 | `CONFIG_RTOS_TOTAL_HEAP_SIZE` |
-| **OS static RAM**    | **19,400 (18.9 KB)** | **19,608 (19.1 KB)** | OS + service-thread structures only |
-</details>
 
 ---
 
