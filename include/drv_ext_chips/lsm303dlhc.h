@@ -1,7 +1,12 @@
 /**
- * @file    lsm303dlhc.h
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
- * @brief   LSM303DLHC 3-axis accelerometer + magnetometer driver
+ * @file        lsm303dlhc.h
+ * @brief       LSM303DLHC 3-axis accelerometer + magnetometer driver
+ * @ingroup     drv_ext_chips
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      External Chips
+ * @info        Drivers for off-MCU peripherals (sensors, GPIO expanders, EEPROM, DACs).
+ * @dependency  Driver layer (I2C / SPI)
  *
  * @details
  * The LSM303DLHC exposes two independent I2C slave addresses on the same bus:
@@ -24,7 +29,22 @@
  * ─────────────────
  *   MAG output order: X_H, X_L, Z_H, Z_L, Y_H, Y_L  (Z before Y — datasheet §8.1)
  *
+ * @copyright
  * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef FREERTOS_OS_INCLUDE_DRV_EXT_CHIPS_LSM303DLHC_H_

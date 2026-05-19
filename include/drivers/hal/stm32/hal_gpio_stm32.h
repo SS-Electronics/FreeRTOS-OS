@@ -1,9 +1,12 @@
 /**
- * @file    hal_gpio_stm32.h
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        hal_gpio_stm32.h
+ * @brief       STM32 HAL GPIO abstraction layer (ops table interface)
+ * @ingroup     drivers
  *
- * @module  drivers
- * @brief   STM32 HAL GPIO abstraction layer (ops table interface)
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Driver Layer
+ * @info        Vendor-agnostic driver vtables; concrete backends live under drivers/hal/<vendor>/.
+ * @dependency  HAL backend (selected by CONFIG_DEVICE_VARIANT)
  *
  * @details
  * This header defines the STM32-specific GPIO HAL interface used by the
@@ -25,9 +28,12 @@
  * drivers/drv_gpio.h
  *
  * @note
- * This file is part of FreeRTOS-OS Project.
  *
  * @license
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
  * FreeRTOS-OS is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version
@@ -38,8 +44,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 /*

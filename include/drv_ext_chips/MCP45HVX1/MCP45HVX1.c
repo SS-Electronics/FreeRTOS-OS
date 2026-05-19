@@ -1,9 +1,36 @@
-/*
+/**
+ * @file        MCP45HVX1.c
+ * @brief       MCP45HVX1.c
+ * @ingroup     drv_ext_chips
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      External Chips
+ * @info        Drivers for off-MCU peripherals (sensors, GPIO expanders, EEPROM, DACs).
+ * @dependency  Driver layer (I2C / SPI)
+ *
+ * @details
  * MCP45HVX1.c
  *
  *  Created on: Jan 29, 2024
- *      Author: subhajit-roy
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
+
 #include "MCP45HVX1.h"
 
 #if (INC_DRIVER_MCP45HVX1 == 1)

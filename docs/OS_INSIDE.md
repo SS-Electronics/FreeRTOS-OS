@@ -181,7 +181,7 @@ for {set i 0} {$i < 23} {incr i} {
 
 Run with:
 ```bash
-openocd -f arch/debug_cfg/stm32_f411xx_debug.cfg \
+openocd -f arch/debug/target/stm32_f411xx_debug.cfg \
         -c "init; halt" \
         -f dump_handle.tcl \
         -c "shutdown"

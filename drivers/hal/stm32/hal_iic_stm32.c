@@ -1,9 +1,12 @@
 /**
- * @file    hal_iic_stm32.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        hal_iic_stm32.c
+ * @brief       STM32 HAL I2C driver implementation with IRQ-based completion dispatch
+ * @ingroup     hal_stm32
  *
- * @module  drivers
- * @brief   STM32 HAL I2C driver implementation with IRQ-based completion dispatch
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      STM32 HAL
+ * @info        STM32-specific HAL backend implementing the generic driver vtables for STM32F4 / STM32H7.
+ * @dependency  stm32f4xx-hal-driver, stm32h7xx-hal-driver
  *
  * @details
  * This file provides the STM32-specific implementation of the generic I2C
@@ -34,9 +37,11 @@
  * @note
  * Compiled only when CONFIG_DEVICE_VARIANT == MCU_VAR_STM
  *
+ * @license
+ *
+ * @copyright
  * This file is part of FreeRTOS-OS Project.
  *
- * @license
  * FreeRTOS-OS is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version
@@ -44,7 +49,12 @@
  *
  * FreeRTOS-OS is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <board/board_config.h>

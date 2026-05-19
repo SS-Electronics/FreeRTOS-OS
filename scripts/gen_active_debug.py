@@ -11,7 +11,7 @@ Outputs (all in build/):
     build/debug_env.json     — JSON properties (device, svd, cpu_freq, …)
 
 Also creates:
-    arch/debug_cfg/active_target.svd  — symlink to the MCU-specific SVD file
+    arch/debug/target/active_target.svd  — symlink to the MCU-specific SVD file
                                         (used by VS Code svdFile setting)
 """
 
@@ -28,8 +28,8 @@ import argparse
 # svd:         path relative to FreeRTOS-OS/
 MCU_DEBUG_MAP = {
     "STM32F411xE": {
-        "openocd_cfg": "arch/debug_cfg/stm32_f411xx_debug.cfg",
-        "svd":         "arch/debug_cfg/STM32F411.svd",
+        "openocd_cfg": "arch/debug/target/stm32_f411xx_debug.cfg",
+        "svd":         "arch/debug/target/STM32F411.svd",
         "device":      "STM32F411VE",
         "cpu_freq":    100_000_000,
         "cpu_core":    "cortex-m4",
@@ -37,8 +37,8 @@ MCU_DEBUG_MAP = {
         "swo_freq":    2_000_000,
     },
     "STM32F401xE": {
-        "openocd_cfg": "arch/debug_cfg/stm32_f401xx_debug.cfg",
-        "svd":         "arch/debug_cfg/STM32F401.svd",
+        "openocd_cfg": "arch/debug/target/stm32_f401xx_debug.cfg",
+        "svd":         "arch/debug/target/STM32F401.svd",
         "device":      "STM32F401xE",
         "cpu_freq":    84_000_000,
         "cpu_core":    "cortex-m4",
@@ -51,7 +51,7 @@ AUTOCONF_H  = "config/autoconf.h"
 BUILD_DIR   = "build"
 OUTPUT_CFG  = os.path.join(BUILD_DIR, "active_debug.cfg")
 OUTPUT_ENV  = os.path.join(BUILD_DIR, "debug_env.json")
-SVD_LINK    = os.path.join("arch", "debug_cfg", "active_target.svd")
+SVD_LINK    = os.path.join("arch", "debug", "target", "active_target.svd")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ def read_target_mcu(autoconf_path: str):
 
 
 def make_active_svd_link(svd_rel: str):
-    """Create/update arch/debug_cfg/active_target.svd symlink."""
+    """Create/update arch/debug/target/active_target.svd symlink."""
     svd_abs = os.path.abspath(svd_rel)
     link    = os.path.abspath(SVD_LINK)
     if not os.path.exists(svd_abs):

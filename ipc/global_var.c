@@ -1,17 +1,30 @@
-/*
-# Copyright (C) 2024 Subhajit Roy
-# This file is part of RTOS OS project
-#
-# RTOS OS project is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# RTOS OS project is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-*/
+/**
+ * @file        global_var.c
+ * @brief       global var
+ * @ingroup     ipc
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      IPC
+ * @info        Inter-process communication: ring buffers (HW byte streams) and xQueue-based message queues.
+ * @dependency  FreeRTOS queue, ringbuffer.h
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
+ */
 
 #include <ipc/global_var.h>
 

@@ -1,7 +1,15 @@
-/*
- * kernel_task_mgr.h — Public API for the kernel task health monitor
+/**
+ * @file        kernel_task_mgr.h
+ * @brief       kernel_task_mgr.h — Public API for the kernel task health monitor
+ * @ingroup     public_api
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Public API
+ * @info        Public API surface — included by application code and out-of-tree drivers.
+ * @dependency  FreeRTOS, def_std.h
+ *
+ * @details
+ * kernel_task_mgr.h — Public API for the kernel task health monitor
  *
  * Exposes the snapshot types and accessor used by
  * services/kernel_service_task_manager.c.  Consumers (e.g. the shell)
@@ -12,6 +20,23 @@
  * single-core Cortex-M4 under FreeRTOS this may produce a slightly torn read
  * if a scan occurs concurrently; for a debug/diagnostic interface this is
  * acceptable.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef FREERTOS_OS_INCLUDE_OS_KERNEL_TASK_MGR_H_

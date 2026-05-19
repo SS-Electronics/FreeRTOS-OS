@@ -162,14 +162,14 @@ STM32_HAL_CONF_H :=
 
 ifeq ($(CONFIG_TARGET_MCU),"STM32F411xE")
 STM32_HAL_CONF_H   := $(if $(APP_DIR),$(APP_DIR)/board/stm32f4xx_hal_conf.h,config/stm32f4xx_hal_conf.h)
-OPENOCD_TARGET     += arch/debug_cfg/stm32_f411xx_debug.cfg
+OPENOCD_TARGET     += arch/debug/target/stm32_f411xx_debug.cfg
 OPENOCD_INTERFACE  += interface/stlink.cfg
 CC_TARGET_PROP     += -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 endif
 
 ifeq ($(CONFIG_TARGET_MCU),"STM32H723xx")
 STM32_HAL_CONF_H   := $(if $(APP_DIR),$(APP_DIR)/board/stm32h7xx_hal_conf.h,config/stm32h7xx_hal_conf.h)
-OPENOCD_TARGET     += arch/debug_cfg/stm32_h723xx_debug.cfg
+OPENOCD_TARGET     += arch/debug/target/stm32_h723xx_debug.cfg
 OPENOCD_INTERFACE  += interface/stlink.cfg
 CC_TARGET_PROP     += -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
 endif

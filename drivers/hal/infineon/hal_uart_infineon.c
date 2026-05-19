@@ -1,7 +1,15 @@
-/*
- * hal_uart_infineon.c — Infineon XMC series baremetal UART ops (stubs)
+/**
+ * @file        hal_uart_infineon.c
+ * @brief       hal_uart_infineon.c — Infineon XMC series baremetal UART ops (stubs)
+ * @ingroup     hal_infineon
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Infineon HAL
+ * @info        Infineon XMC HAL backend stubs implementing the generic driver vtables (work-in-progress).
+ * @dependency  Infineon XMCLib (placeholder)
+ *
+ * @details
+ * hal_uart_infineon.c — Infineon XMC series baremetal UART ops (stubs)
  *
  * All functions are stubs.  Replace the bodies with actual Infineon USIC-UART
  * register sequences when porting.  The USIC peripheral is memory-mapped;
@@ -9,6 +17,23 @@
  *
  * Infineon XMC reference:
  *   XMC4500 Reference Manual, Chapter 16 – Universal Serial Interface Channel
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <board/board_config.h>

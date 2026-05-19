@@ -1,7 +1,12 @@
 /**
- * @file   wdog.h
- * @author Subhajit Roy (subhajitroy005@gmail.com)
- * @brief  Hardware IWDG + multi-task software watchdog (IEC 62304 safety)
+ * @file        wdog.h
+ * @brief       Hardware IWDG + multi-task software watchdog (IEC 62304 safety)
+ * @ingroup     safety
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Safety
+ * @info        Medical-grade safety stack: IWDG, per-task software watchdog, safe-state shutdown.
+ * @dependency  STM32 HAL IWDG, .noinit RAM section
  *
  * @details
  * Two-layer watchdog:
@@ -26,6 +31,23 @@
  *   // In each critical task body (inside the main loop):
  *   wdog_task_kick(WDOG_SLOT_HEARTBEAT);
  * @endcode
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef FREERTOS_OS_INCLUDE_SAFETY_WDOG_H_

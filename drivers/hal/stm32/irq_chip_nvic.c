@@ -1,9 +1,12 @@
 /**
- * @file    irq_chip_nvic.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        irq_chip_nvic.c
+ * @brief       NVIC-backed IRQ controller implementation for Cortex-M (STM32)
+ * @ingroup     hal_stm32
  *
- * @module  irq_chip
- * @brief   NVIC-backed IRQ controller implementation for Cortex-M (STM32)
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      STM32 HAL
+ * @info        STM32-specific HAL backend implementing the generic driver vtables for STM32F4 / STM32H7.
+ * @dependency  stm32f4xx-hal-driver, stm32h7xx-hal-driver
  *
  * @details
  * This module implements the generic IRQ controller abstraction
@@ -31,21 +34,25 @@
  * drivers/hal/stm32/irq_chip_nvic.h
  *
  * @note
- * This file is part of FreeRTOS-OS Project.
  *
  * @license
- * FreeRTOS-OS is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU General Public License 
- * as published by the Free Software Foundation, either version 
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
  * 3 of the License, or (at your option) any later version.
  *
  * FreeRTOS-OS is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <board/board_config.h>

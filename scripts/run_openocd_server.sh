@@ -10,7 +10,7 @@
 #
 # Arguments:
 #   board_cfg  (optional) path to an OpenOCD .cfg file
-#              default: arch/debug_cfg/stm32_f411xx_debug.cfg
+#              default: arch/debug/target/stm32_f411xx_debug.cfg
 #
 # Ports exposed:
 #   3333  — GDB remote protocol
@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-BOARD_CFG="${1:-${PROJECT_ROOT}/arch/debug_cfg/stm32_f411xx_debug.cfg}"
+BOARD_CFG="${1:-${PROJECT_ROOT}/arch/debug/target/stm32_f411xx_debug.cfg}"
 GDB_PORT=3333
 TELNET_PORT=4444
 TCL_PORT=6666

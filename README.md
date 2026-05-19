@@ -1,523 +1,179 @@
 # FreeRTOS-OS
 
-A structured, Linux-inspired OS layer built on top of the FreeRTOS kernel for ARM Cortex-M embedded targets. Provides generic thread management, an intrusive linked-list, an IPC message-queue subsystem, a hardware abstraction layer driven by Kconfig, and a service-thread architecture — all sitting above FreeRTOS without replacing it.
+A Linux-inspired OS layer on top of the FreeRTOS kernel for ARM
+Cortex-M MCUs.  Adds a driver model, service threads, an interactive
+shell, code generators (Kconfig + board XML), and a medical-grade
+safety stack — all without replacing the FreeRTOS scheduler.
 
 | Target | Core | Clock | Flash | RAM | Status |
 |---|---|---|---|---|---|
 | STM32F411VET6 | Cortex-M4F | 100 MHz | 512 KB | 128 KB | Supported |
-| **STM32H723ZGTx** | **Cortex-M7** | **64 MHz (HSI)** | **1 MB** | **128 KB DTCM** | **Confirmed running** |
+| **STM32H723ZGTx** | **Cortex-M7** | **64 MHz HSI** | **1 MB** | **128 KB DTCM** | **Running, validated** |
+
+Architecture and rationale: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Architecture / vendor contract: [`arch/README.md`](arch/README.md).
 
 ---
 
-## Documentation
+## Use cases
 
-| Document | Description |
-|---|---|
-| [docs/OS_THREAD.md](docs/OS_THREAD.md) | Thread API, linked list, `os_thread_create()` usage |
-| [docs/QUEUE.md](docs/QUEUE.md) | IPC message queues, ring buffer, management service queues |
-| [docs/DRIVERS.md](docs/DRIVERS.md) | 3-layer driver architecture, HAL ops vtables, vendor backends |
-| [docs/BOARD.md](docs/BOARD.md) | Board XML schema, BSP code generator, adding boards/vendors |
-| [docs/DEV_MGMT.md](docs/DEV_MGMT.md) | UART / I2C / SPI / GPIO management service threads |
-| [docs/SHELL_CLI.md](docs/SHELL_CLI.md) | Interactive shell over UART, PuTTY setup, registering commands |
-| [docs/IRQ.md](docs/IRQ.md) | Linux-style IRQ dispatch, irq_desc chain, request_irq, irq_register |
-| [docs/DMA.md](docs/DMA.md) | Linux-style DMA engine, STM32F4 HAL backend, slave/memcpy/cyclic transfers |
-| [docs/DEBUG.md](docs/DEBUG.md) | VSCode debug setup, OpenOCD, GDB, ITM/SWO |
-| [docs/OS_INSIDE.md](docs/OS_INSIDE.md) | Internals deep-dive: ISR priority rules, post-mortems, debug recipes |
-| [docs/CHECK.md](docs/CHECK.md) | CPPcheck + MISRA C:2012 static analysis: setup, options, deviation table |
-| [docs/DSP.md](docs/DSP.md) | CMSIS-DSP integration: XML module selection, generator, PID controller API |
+FreeRTOS-OS supports two build modes; both share the same OS tree.
+
+| Use case | Command | When to use |
+|---|---|---|
+| **Standalone OS** (this repo only) | `make os TARGET=stm32f411` / `make os TARGET=stm32h723` | Smoke-test the OS on a devboard, validate a port, run CI without an app. |
+| **OS + Application** (sibling `app/`) | `make app TARGET=stm32h723` | Real product firmware.  `FreeRTOS-OS` is a git submodule inside your application repo. |
 
 ---
 
-## Architecture
+## Use case 1 — Standalone OS on a devboard
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                       User Application                          │
-│   app_main() · os_shell_mgmt_start() · gpio_mgmt_post()        │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-┌────────────────────────────▼─────────────────────────────────────┐
-│                      Service Layer                               │
-│     UART Mgmt · I2C Mgmt · SPI Mgmt · GPIO Mgmt                │
-│     OS Shell (FreeRTOS+CLI, ring-buffer I/O over UART_APP)      │
-│     (FreeRTOS tasks; self-register from board config at boot)   │
-└───────────┬──────────────────────────────┬───────────────────────┘
-            │                              │
-┌───────────▼──────────┐     ┌─────────────▼──────────────────────┐
-│    OS Kernel API     │     │          IPC Subsystem             │
-│  os_thread_create()  │     │   ipc_mqueue_register()            │
-│  os_thread_delete()  │     │   ipc_mqueue_send_item()           │
-│  os_suspend_thread() │     │   ipc_mqueue_receive_item()        │
-│  os_resume_thread()  │     │   Ring-buffer (HW byte streams)    │
-│  os_thread_delay()   │     │   xQueue (inter-task messages)     │
-└───────────┬──────────┘     └─────────────┬──────────────────────┘
-            │                              │
-┌───────────▼──────────────────────────────▼───────────────────────┐
-│                  Memory Management (mm)                          │
-│   Intrusive doubly-circular linked list (Linux list_head style)  │
-│   kmalloc() / kfree() — wrappers over pvPortMalloc              │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-┌────────────────────────────▼─────────────────────────────────────┐
-│                      FreeRTOS Kernel                             │
-│   Tasks · Queues · Mutexes · Semaphores · Timers · heap_4       │
-│   Portable layer: GCC/ARM_CM4F                                   │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-┌────────────────────────────▼─────────────────────────────────────┐
-│                 Board Configuration (BSP)                        │
-│   app/board/*.xml → gen_board_config.py / gen_irq_table.py →   │
-│   board_config.c · board_device_ids.h · irq_hw_init_generated.c │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-┌────────────────────────────▼─────────────────────────────────────┐
-│              Hardware Abstraction Layer (HAL)                    │
-│   STM32F4xx HAL  or  STM32H7xx HAL — driven by Kconfig          │
-│   CMSIS-Core · Startup (F4/H7) · Linker script (F4/H7)          │
-│   H7: SCB_EnableICache/DCache in startup · TIM6 timebase         │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-┌────────────────────────────▼─────────────────────────────────────┐
-│            ARM CMSIS-DSP (optional, per-module)                  │
-│   app/board/dsp_dev.xml → arm_dsp_gen.py →                      │
-│   dsp_config.h · dsp_config.mk                                   │
-│   PID · FFT · FIR/IIR · Statistics · Matrix · …                 │
-└──────────────────────────────────────────────────────────────────┘
-```
+Everything you need to flash a working OS + interactive shell onto a
+NUCLEO-H723ZG or an STM32F411VET6 dev-board.
 
----
-
-## Code Generation
-
-Three independent generators produce C source from configuration files. Run them from the **project root** (`FreeRTOS-OS-App/`).
-
-### 1 — Kconfig (`make menuconfig` + `make config-outputs`)
-
-Controls which peripherals are compiled in, heap size, tick rate, task limits, etc.
+### 1.1  Install prerequisites (once per machine)
 
 ```bash
-make menuconfig       # interactive TUI — saves FreeRTOS-OS/.config
-make config-outputs   # reads .config → writes the three files below
+make install-prerequisites
+# Installs: arm-none-eabi-gcc, OpenOCD, kconfig-frontends, debug tools
 ```
 
-**Outputs written to `$(APP_DIR)/board/` (demo build) or `FreeRTOS-OS/config/` (standalone):**
-
-| File | Contents |
-|---|---|
-| `autoconf.h` | `#define CONFIG_*` symbols for every enabled option |
-| `autoconf.mk` | `CONFIG_*=1/0/value` for Makefile conditionals |
-| `stm32f4xx_hal_conf.h` / `stm32h7xx_hal_conf.h` | STM32 HAL module enable/disable flags (family-specific) |
-
-Re-run both commands whenever you change a Kconfig option (target MCU, heap size, UART count, tick rate, enabled services, etc.).
-
----
-
-### 2 — Board BSP (`make board-gen`)
-
-Reads the board XML descriptor and generates the peripheral table, device-ID constants, and MCU config header.
+### 1.2  Allow non-root USB access to the ST-Link probe (Linux)
 
 ```bash
-make board-gen
-# Reads:   app/board/stm32f411_devboard.xml   (F4 target)
-#       or demo/board/stm32h723_devboard.xml  (H723 demo)
-# Writes:  <APP_DIR>/board/board_config.c
-#          <APP_DIR>/board/board_device_ids.h
-#          <APP_DIR>/board/board_handles.h
-#          <APP_DIR>/board/mcu_config.h
+sudo cp /usr/share/openocd/contrib/60-openocd.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+sudo usermod -aG dialout $USER          # also needed for /dev/ttyUSB0
+# Log out / back in after the usermod
 ```
 
-Re-run whenever you edit the board XML (adding a UART, changing GPIO pin assignments, renaming a device ID, etc.).
-
-To use a different board XML:
-```bash
-make board-gen CONFIG_BOARD=my_custom_board
-```
-
----
-
-### 3 — IRQ Table (`make irq_gen`)
-
-Reads the IRQ XML and generates the software-IRQ-to-NVIC binding table and all peripheral vector stubs.
+### 1.3  Build & flash
 
 ```bash
-make irq_gen
-# Reads:   app/board/irq_table.xml
-# Writes:  FreeRTOS-OS/irq/irq_table.c            — software IRQ name table
-#          app/board/irq_hw_init_generated.c        — NVIC priority / binding init
-#          app/board/irq_hw_init_generated.h        — irq_hw_init_all() declaration
-#          app/board/irq_periph_handlers_generated.h — ISR function declarations
-#          app/board/irq_periph_vectors_generated.inc — vector table entries
+# F411
+make os TARGET=stm32f411
+make os-flash TARGET=stm32f411
+
+# or H723
+make os TARGET=stm32h723
+make os-flash TARGET=stm32h723
 ```
 
-Re-run whenever you edit `app/board/irq_table.xml` (adding a peripheral interrupt, changing an IRQ priority, adding an EXTI line, etc.).
+Each `make os` invocation chains *board-gen → config-outputs → clean →
+compile* internally.  No manual `menuconfig` step is required for the
+shipped demo configurations.
 
-> **Priority rule:** All peripheral IRQ priorities in `irq_table.xml` must be `>= configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY` (default `5`). Priorities 1–4 are above the FreeRTOS BASEPRI mask and must not call any FreeRTOS API. See [docs/OS_INSIDE.md](docs/OS_INSIDE.md).
-
----
-
-### 4 — DSP Configuration (`arm_dsp_gen.py`)
-
-Reads the DSP module selection XML and generates a C header and Makefile fragment that control which CMSIS-DSP modules are compiled.
+### 1.4  Connect to the shell
 
 ```bash
-python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml
-# Reads:   app/board/dsp_dev.xml
-# Writes:  app/board/dsp_config.h     — CONFIG_ARM_DSP_* #defines for firmware
-#          app/board/dsp_config.mk    — CONFIG_ARM_DSP_* variables for lib/Makefile
+# H723 NUCLEO — STLink VCP carries shell + printk together
+stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0
+
+# F411 — shell is on USART2 via a USB-serial adapter, printk on USART1
+screen /dev/ttyUSB0 115200
 ```
 
-Edit `app/board/dsp_dev.xml` to enable or disable individual DSP function groups (`basic_math`, `controller`, `filtering`, `transform`, etc.), then re-run the generator and rebuild. Only enabled modules are compiled; disabled modules produce zero code and zero flash cost.
-
-See [docs/DSP.md](docs/DSP.md) for the full reference: XML schema, module dependency rules, flash budget, and PID controller usage.
-
----
-
-### When to Re-run Each Generator
-
-| Change made | Command(s) to re-run |
-|---|---|
-| Kconfig option (MCU, heap size, UART count…) | `make menuconfig` → `make config-outputs` |
-| Board XML (pin, UART, peripheral assignment) | `make board-gen` |
-| IRQ table XML (priority, new IRQ, new EXTI) | `make irq_gen` |
-| DSP XML (enable/disable a DSP module) | `python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml` |
-| Any of the above | `make menuconfig` → `make config-outputs` → `make board-gen` → `make irq_gen` → `arm_dsp_gen.py` |
-
-After any generator run, rebuild with `make app`.
-
----
-
-## Setting Up a New App Project
-
-Use FreeRTOS-OS as a git submodule inside your own application repository. The OS build system is self-contained inside `FreeRTOS-OS/`; your project only needs a thin root `Makefile` and an `app/` directory.
-
----
-
-### Repository Layout
+You should see, within ~1 s of reset:
 
 ```
-my-app/
-├── Makefile                               ← top-level entry point  (see example below)
-├── FreeRTOS-OS/                           ← this repo, added as a git submodule
+ [500] [heartbeat] tick 1
+
+  +--------------------------------------------+
+  |   ____              ___ _____ ___  ____    |
+  |  |  __| ___ ___ ___|  _|_   _/   \/ ___|  |
+  |  ...                                       |
+  | CPU Clock: 64  MHz                         |
+  | Kernel   : FreeRTOS V11.1.0+               |
+  +--------------------------------------------+
+  Type 'help' for available commands.
+ OS >
+```
+
+Type `help`, `ps`, `mem`, `log dump` to explore.
+
+---
+
+## Use case 2 — OS + Application (your own product)
+
+`FreeRTOS-OS` is consumed as a git submodule inside your application
+repository.  The OS build system is self-contained; your project only
+needs a thin root `Makefile`, an `app/` directory, and per-target
+configuration files.
+
+### 2.1  Repository layout
+
+```
+my-firmware/
+├── Makefile                  Top-level entry point (see 2.3 below)
+├── FreeRTOS-OS/              This repo, added as a submodule
 └── app/
-    ├── Makefile                           ← app build fragment     (see example below)
-    ├── app_main.c                         ← application entry point
+    ├── app_main.c            Your application entry point
+    ├── Makefile              Application build fragment (see 2.4)
+    ├── kconfig_<target>.conf Preset Kconfig for each MCU you support
     └── board/
-        ├── stm32f411_devboard.xml         ← board descriptor       (BSP generator input)
-        ├── irq_table.xml                  ← IRQ assignments        (IRQ generator input)
-        │
-        │   ── generated by make board-gen ──────────────────────────────────────────
-        ├── board_config.c
-        ├── board_device_ids.h
-        ├── board_handles.h
-        ├── mcu_config.h
-        │
-        │   ── generated by make irq_gen ────────────────────────────────────────────
-        ├── irq_hw_init_generated.c
-        ├── irq_hw_init_generated.h
-        ├── irq_periph_dispatch_generated.c
-        ├── irq_periph_handlers_generated.h
-        └── irq_periph_vectors_generated.inc
+        ├── <board>.xml       Hardware description (BSP generator input)
+        ├── irq_table.xml     NVIC priorities (IRQ generator input)
+        └── (generated)       board_config.c, irq_*_generated.*, …
 ```
 
-All generated files are output of `make board-gen` or `make irq_gen`. Do not hand-edit them; re-run the generator instead. Commit the XML sources; optionally gitignore the generated files.
-
----
-
-### Step 1 — Add FreeRTOS-OS as a Submodule
+### 2.2  Add FreeRTOS-OS as a submodule
 
 ```bash
-mkdir my-app && cd my-app
+mkdir my-firmware && cd my-firmware
 git init
-
-# Add the OS as a submodule
-git submodule add <freertos-os-repo-url> FreeRTOS-OS
+git submodule add <freertos-os-url> FreeRTOS-OS
 git submodule update --init --recursive
 ```
 
-When cloning an existing project that already has the submodule:
+Cloning an existing project with the submodule:
 
 ```bash
-git clone --recurse-submodules <my-app-repo-url>
-cd my-app
+git clone --recurse-submodules <my-firmware-url>
 ```
 
----
-
-### Step 2 — Root Makefile
-
-Create `Makefile` at the project root. This is the only build entry point — all `make` commands are run here.
+### 2.3  Top-level `Makefile`
 
 ```makefile
-# Makefile — top-level build entry point
-#
-# Usage:
-#   make menuconfig      Configure kernel (generates FreeRTOS-OS/.config)
-#   make config-outputs  Generate autoconf headers from .config
-#   make board-gen       Generate BSP from app/board/<board>.xml
-#   make irq_gen         Generate NVIC init + vector stubs from irq_table.xml
-#   make app             Build OS + app/ → FreeRTOS-OS/build/app.elf
-#   make kernel          Build OS only   → FreeRTOS-OS/build/kernel.elf
-#   make flash-app       Flash app.elf via OpenOCD
-#   make flash-kernel    Flash kernel.elf via OpenOCD
-#   make clean           Delete build artefacts
-
 OS_DIR  := FreeRTOS-OS
 APP_SRC := app
 
-.PHONY: all kernel app flash-kernel flash-app clean
-.PHONY: menuconfig config-outputs board-gen irq_gen
+.PHONY: all app kernel flash clean menuconfig
 
 all: app
 
-# ── Build ──────────────────────────────────────────────────────────────────────
-kernel:
-	$(MAKE) -C $(OS_DIR) all TARGET_NAME=kernel
-
 app:
-	$(MAKE) -C $(OS_DIR) all APP_DIR=../$(APP_SRC) TARGET_NAME=app
+	$(MAKE) -C $(OS_DIR) app TARGET=stm32h723
 
-# ── Flash ──────────────────────────────────────────────────────────────────────
-flash-kernel:
-	$(MAKE) -C $(OS_DIR) flash TARGET_NAME=kernel
+kernel:
+	$(MAKE) -C $(OS_DIR) os TARGET=stm32h723
 
-flash-app:
-	$(MAKE) -C $(OS_DIR) flash APP_DIR=../$(APP_SRC) TARGET_NAME=app
+flash:
+	$(MAKE) -C $(OS_DIR) app-flash TARGET=stm32h723
 
-# ── Code generation ────────────────────────────────────────────────────────────
 menuconfig:
 	$(MAKE) -C $(OS_DIR) menuconfig
 
-config-outputs:
-	$(MAKE) -C $(OS_DIR) config-outputs
-
-board-gen:
-	$(MAKE) -C $(OS_DIR) board-gen
-
-irq_gen:
-	python3 $(OS_DIR)/scripts/gen_irq_table.py $(APP_SRC)/board/irq_table.xml
-
-# ── Housekeeping ───────────────────────────────────────────────────────────────
 clean:
 	$(MAKE) -C $(OS_DIR) clean
 ```
 
-> **Never run `make` from inside `FreeRTOS-OS/` directly for the application build** — it lacks the `app/` objects. Always invoke from the project root.
-
----
-
-### Step 3 — App Build Fragment (`app/Makefile`)
-
-This file is included by the OS build system when `APP_DIR` is set. It declares which `.c` files to compile and which include paths to expose. All paths are relative to `APP_DIR`.
+### 2.4  Application build fragment `app/Makefile`
 
 ```makefile
-# app/Makefile — application build fragment
-#
 # Included by FreeRTOS-OS/Makefile when APP_DIR=../app is passed.
-# Add one .o entry per .c source file in your application.
+# One entry per .c source file in your application.
 
-# ── Application source files ───────────────────────────────────────────────────
 app-obj-y += app_main.o
 
-# ── Generated BSP / IRQ board files ───────────────────────────────────────────
+# Generated BSP / IRQ outputs
 app-obj-y += board/board_config.o
 app-obj-y += board/irq_hw_init_generated.o
 app-obj-y += board/irq_periph_dispatch_generated.o
 
-# ── Expose app headers to the rest of the build ────────────────────────────────
 APP_INCLUDES += -I$(APP_DIR)
 ```
 
-Add a new `app-obj-y` line for each `.c` file you add under `app/`. The OS Makefile links all `app-obj-y` objects together with the kernel objects.
-
----
-
-### Step 4 — First-Time Workflow
-
-Run these once when setting up the project, or whenever the corresponding input files change:
-
-```bash
-# ── 1. Install toolchain and tools (once per machine) ─────────────────────────
-make -C FreeRTOS-OS install-prerequisites
-# Installs: arm-none-eabi-gcc, OpenOCD, kconfig-frontends, debug tools
-
-# ── 2. Configure kernel ────────────────────────────────────────────────────────
-make menuconfig       # TUI: select target MCU, tick rate, heap size, services
-make config-outputs   # writes config/autoconf.h + config/autoconf.mk
-
-# ── 3. Generate BSP from board XML ────────────────────────────────────────────
-make board-gen        # reads app/board/<board>.xml → board_config.c, device IDs
-
-# ── 4. Generate IRQ table ─────────────────────────────────────────────────────
-make irq_gen          # reads app/board/irq_table.xml → NVIC init + vector stubs
-
-# ── 5. Build ──────────────────────────────────────────────────────────────────
-make app              # OS + app/  →  FreeRTOS-OS/build/app.elf
-make kernel           # OS only    →  FreeRTOS-OS/build/kernel.elf
-
-# ── 6. Flash ──────────────────────────────────────────────────────────────────
-make flash-app        # programs app.elf via OpenOCD, verifies, resets target
-
-# ── 7. Connect to the interactive shell ───────────────────────────────────────
-# H723 NUCLEO — STLink VCP (shell + printk share one port):
-stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0
-# F411 — separate shell UART on USB-serial adapter:
-# screen /dev/ttyUSB0 115200
-# Banner appears ~1 s after reset on H723, ~5 s on F411
-
-# ── 8. Clean ──────────────────────────────────────────────────────────────────
-make clean
-```
-
-> After first-time setup, day-to-day development only needs `make app` and `make flash-app`.
-
----
-
-## Quick Start — H723 Demo (NUCLEO-H723ZG)
-
-All commands run from inside `FreeRTOS-OS/`:
-
-```bash
-# ── Build ─────────────────────────────────────────────────────────────────────
-make all APP_DIR=demo TARGET_NAME=demo
-# → build/demo.elf  (237 KB text)
-
-# ── Flash ─────────────────────────────────────────────────────────────────────
-make flash TARGET_NAME=demo
-# → ** Verified OK ** → ** Resetting Target **
-
-# ── Connect — open terminal BEFORE reset so the banner is not missed ──────────
-stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0
-# After reset you should see (within 1 second):
-#
-#  [500] [heartbeat] tick 1
-#
-#   +--------------------------------------------+
-#   |   ____              ___ _____ ___  ____    |
-#   |  |  __| ___ ___ ___|  _|_   _/   \/ ___|  |
-#   ...
-#   | CPU Clock: 64  MHz
-#   | Kernel   : FreeRTOS V11.1.0+
-#   +--------------------------------------------+
-#   Type 'help' for available commands.
-#  OS >
-
-# ── Clean ─────────────────────────────────────────────────────────────────────
-make clean
-```
-
-## Quick Start — F411 App (existing repo)
-
-```bash
-# ── Clone ─────────────────────────────────────────────────────────────────────
-git clone --recurse-submodules <repo-url>
-cd FreeRTOS-OS-App
-
-# ── Install prerequisites (first time only) ───────────────────────────────────
-make -C FreeRTOS-OS install-prerequisites
-
-# ── Configure kernel ──────────────────────────────────────────────────────────
-make menuconfig       # choose MCU, tick rate, heap, enabled services
-make config-outputs   # generates autoconf.h + autoconf.mk + stm32f4xx_hal_conf.h
-
-# ── Generate board BSP ────────────────────────────────────────────────────────
-make board-gen        # reads app/board/stm32f411_devboard.xml → BSP sources
-
-# ── Generate IRQ table ────────────────────────────────────────────────────────
-make irq_gen          # reads app/board/irq_table.xml → NVIC init + vector stubs
-
-# ── Build ─────────────────────────────────────────────────────────────────────
-make app              # OS + app/ → FreeRTOS-OS/build/app.elf
-make kernel           # OS only   → FreeRTOS-OS/build/kernel.elf
-
-# ── Flash ─────────────────────────────────────────────────────────────────────
-make flash-app        # programs app.elf via OpenOCD, verifies, resets target
-
-# ── Connect to shell ──────────────────────────────────────────────────────────
-screen /dev/ttyUSB0 115200    # UART_APP (USART2, USB-to-serial)
-
-# ── Clean ─────────────────────────────────────────────────────────────────────
-make clean
-```
-
-> Steps 2–5 are one-time setup. Day-to-day development only needs `make app` and `make flash-app`.
-
----
-
-## Make Target Reference
-
-All commands run from `FreeRTOS-OS/`.  `TARGET` selects the MCU variant and defaults to `stm32f411`.
-
-### Standalone OS (`make os`) — demo board, no sibling `app/` required
-
-Each `make os` invocation runs board gen, `config-outputs`, `clean`, and the full build in one step.
-
-| Command | Output ELF | Description |
-|---|---|---|
-| `make os TARGET=stm32f411` | `build/stm32f411.elf` | Standalone OS on F411 devboard |
-| `make os TARGET=stm32h723` | `build/stm32h723.elf` | Standalone OS on H723 devboard |
-| `make os-flash TARGET=stm32f411` | — | Flash standalone OS via OpenOCD |
-| `make os-flash TARGET=stm32h723` | — | Flash standalone OS via OpenOCD |
-
-### Application Firmware (`make app`) — config from `app/`
-
-`make app` runs board BSP gen, `config-outputs`, `clean`, and the full build automatically.
-
-| Command | Output ELF | Description |
-|---|---|---|
-| `make app TARGET=stm32h723` | `build/ecg_h723.elf` | ECG inference app on H723 |
-| `make app-flash TARGET=stm32h723` | — | Flash ECG app via OpenOCD |
-
-Connect: `stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0`
-
-To test all features on-board: invoke `/flash-and-test` in the Claude Code session.
-
-### Board & IRQ Code Generation
-
-| Command | Description |
-|---|---|
-| `make app-gen TARGET=stm32h723` | Regenerate board BSP files in `app/board/` from XML |
-| `make demo-gen` | Regenerate F411 demo board headers (also used by CPPcheck) |
-| `make demo-gen-h723` | Regenerate H723 demo board headers |
-| `make irq_gen APP_DIR=../app` | Regenerate IRQ table files in `app/board/` from XML |
-
-### Low-level targets (advanced)
-
-These are the primitives used internally by `os` / `app`. Prefer the high-level targets above.
-
-| Command | Description |
-|---|---|
-| `make all APP_DIR=../app TARGET_NAME=ecg_h723 CONFIG_BOARD=stm32h723_devboard` | Low-level app compile |
-| `make flash TARGET_NAME=ecg_h723` | Low-level flash (requires `autoconf.mk` present) |
-| `make clean` | Delete `build/` |
-
-### Code Generation
-
-| Target | Reads | Writes |
-|---|---|---|
-| `make menuconfig` | `FreeRTOS-OS/Kconfig` | `FreeRTOS-OS/.config` |
-| `make config-outputs` | `FreeRTOS-OS/.config` | `$(APP_DIR)/board/autoconf.h`, `autoconf.mk`, `stm32{f4,h7}xx_hal_conf.h` |
-| `make board-gen` | `$(APP_DIR)/board/<board>.xml` | `board_config.c`, `board_device_ids.h`, `board_handles.h`, `mcu_config.h` |
-| `make irq_gen` | `$(APP_DIR)/board/irq_table.xml` | `irq/irq_table.c`, `irq_hw_init_generated.c/.h`, `irq_periph_handlers_generated.h`, `irq_periph_vectors_generated.inc` |
-| `python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml` | `app/board/dsp_dev.xml` | `app/board/dsp_config.h`, `app/board/dsp_config.mk` |
-
-### Prerequisites
-
-| Target | Installs |
-|---|---|
-| `make install-prerequisites` | All tools below in one shot |
-| `make install-toolchain` | `arm-none-eabi-gcc` + `arm-none-eabi-gdb` |
-| `make install-openocd` | OpenOCD flash/debug server |
-| `make install-kconfig` | `kconfig-frontends` (provides `kconfig-mconf` for menuconfig) |
-| `make install-debug-tools` | STM32F411 SVD file + Cortex-Debug VS Code extension |
-| `make install-doxygen` | Doxygen + Graphviz (optional, for `make docs`) |
-
-> All install targets are in `FreeRTOS-OS/Makefile` and must be run with `-C FreeRTOS-OS` or from inside that directory.
-
----
-
-## Writing an Application
-
-Implement `app_main()` in `app/app_main.c`. The OS calls it after the scheduler starts. Create tasks and return — do not block.
+### 2.5  Write `app_main.c`
 
 ```c
 #include <os/kernel.h>
@@ -543,261 +199,131 @@ int app_main(void)
 }
 ```
 
-`printk()` accepts `printf`-style arguments. `printk_init()` and `printk_enable()` are called automatically by `uart_mgmt_thread` at boot (~20 ms after scheduler start) — no manual call needed in `app_main()`.
+`printk()` is `printf`-style.  `printk_init()` and `printk_enable()`
+are called automatically by `uart_mgmt_thread` at boot — no manual
+init needed in `app_main`.
 
-The shell CLI and `printk` UART assignment depends on the board:
+### 2.6  Build & flash
 
-**STM32H723ZGTx (NUCLEO-H723ZG) — single shell UART:**
-```
-UART_DEBUG (dev_id=1, USART3, PD8/PD9) ── STLink VCP ── /dev/ttyACM0
-  └─ shell interactive I/O  +  printk() log output  (shared)
-```
-
-**STM32F411VET6 — separate UARTs:**
-```
-UART_DEBUG (dev_id=0, USART1, PA9/PA10)  ── ST-Link VCP  ── printk() log output
-UART_APP   (dev_id=1, USART2, PA2/PA3)   ── USB-Serial   ── interactive shell
+```bash
+make app           # builds OS + app/ → FreeRTOS-OS/build/<target>.elf
+make flash         # programs the ELF via OpenOCD
 ```
 
-See [docs/OS_THREAD.md](docs/OS_THREAD.md) for the thread API, [docs/SHELL_CLI.md](docs/SHELL_CLI.md) for shell usage and connection setup.
+After the first build, day-to-day development is just `make app` /
+`make flash`.
+
+### 2.7  Regenerate after changing inputs
+
+| Change | Command(s) |
+|---|---|
+| Kconfig (MCU, heap size, UART count, …) | `make menuconfig` → `make config-outputs` |
+| Board XML (pin / UART / peripheral assignment) | `make app-gen TARGET=<mcu>` |
+| IRQ table XML (priority, new IRQ, EXTI) | `make irq_gen APP_DIR=../app` |
+| DSP module XML (CMSIS-DSP modules) | `python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml` |
 
 ---
 
 ## Prerequisites
 
-### Automated install
-
-```bash
-# From FreeRTOS-OS/ directory:
-make install-prerequisites
-```
-
-### Manual install
-
-```bash
-sudo bash FreeRTOS-OS/scripts/install_arm_gcc.sh     # ARM GCC + GDB
-sudo bash FreeRTOS-OS/scripts/install_openocd.sh     # OpenOCD
-sudo bash FreeRTOS-OS/scripts/install_kconfig.sh     # kconfig-frontends
-bash FreeRTOS-OS/scripts/install_debug_tools.sh      # SVD + VS Code ext (no sudo)
-sudo bash FreeRTOS-OS/scripts/install_doxygen.sh     # Doxygen (optional)
-```
-
-### ST-Link udev rules (Linux)
-
-Required for non-root USB access to the ST-Link debugger:
-
-```bash
-sudo cp /usr/share/openocd/contrib/60-openocd.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules && sudo udevadm trigger
-# Reconnect ST-Link USB after this step.
-```
-
-### USB-to-Serial udev (Linux)
-
-Required if `/dev/ttyUSB0` gives Permission denied:
-
-```bash
-sudo usermod -aG dialout $USER
-# Log out and back in (or: newgrp dialout for the current shell only).
-```
-
-### VS Code debug setup
-
-1. Open `FreeRTOS-OS-App/` in VS Code.
-2. Run task **install-debug-tools** to download the SVD file.
-3. Connect ST-Link (SWDIO, SWDCLK, GND — NRST optional).
-4. Press **F5** → **Auto — Build, Flash & Debug**.
-
-See [docs/DEBUG.md](docs/DEBUG.md) for full GDB and peripheral register viewer setup.
-
----
-
-## ISR Priority Rules
-
-FreeRTOS on Cortex-M uses `BASEPRI` to implement critical sections. Any peripheral ISR that calls FreeRTOS API (including `FROM_ISR` variants) **must** have NVIC priority **≥ `configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY`** (= `5` on this project). Priorities 1–4 run above the BASEPRI mask and must not call any FreeRTOS API.
-
-| NVIC priority | FreeRTOS API allowed? | Used for |
+| Tool | Required? | Install |
 |---|---|---|
-| 1–4 | **No** — above BASEPRI mask | HAL timebase timer (TIM6 on H7 / TIM1 on F4) |
-| 5–14 | **Yes** — `FROM_ISR` variants only | UART, SPI, I2C, EXTI |
-| 15 | Lowest — kernel reserved | SysTick, PendSV |
+| `arm-none-eabi-gcc` + `gdb` | Yes | `make install-toolchain` |
+| OpenOCD | Yes (for flash + debug) | `make install-openocd` |
+| `kconfig-frontends` | Only when running `make menuconfig` | `make install-kconfig` |
+| SVD + Cortex-Debug VS Code extension | Only for IDE debugging | `make install-debug-tools` |
+| Doxygen + Graphviz | Only for `make docs` | `make install-doxygen` |
 
-Set priorities in `app/board/irq_table.xml`, then regenerate:
-```bash
-make irq_gen && make app
-```
-
-See [docs/OS_INSIDE.md](docs/OS_INSIDE.md) for the full post-mortem and prevention guidelines.
+All install scripts live under `scripts/install_*.sh` and are wrapped
+by `make install-*` targets.
 
 ---
 
-## Supported Devices
+## Make target reference
 
-Change with `make menuconfig` → *Target MCU part number*.
+All commands run from `FreeRTOS-OS/`.  `TARGET` selects the MCU variant
+(`stm32f411` or `stm32h723`).
 
-**Cortex-M7 (H7 family)**
+### Standalone OS
 
-| Config ID | Core | Clock | Flash | RAM | HAL Timebase |
-|---|---|---|---|---|---|
-| `STM32H723xx` ⭐ | Cortex-M7 | 64 MHz HSI (no PLL) | 1 MB | 128 KB DTCM | TIM6 (`TIM6_DAC_IRQn`) |
-
-**Cortex-M4 (F4 family)**
-
-| Config ID | Core | Clock | Flash | RAM | HAL Timebase |
-|---|---|---|---|---|---|
-| `STM32F411xE` | Cortex-M4F | 100 MHz | 512 KB | 128 KB | TIM1 (`TIM1_UP_TIM10_IRQn`) |
-| `STM32F405xx` | Cortex-M4F | 168 MHz | 1 MB | 192 KB | TIM1 |
-| `STM32F407xx` | Cortex-M4F | 168 MHz | 1 MB | 192 KB | TIM1 |
-| `STM32F446xx` | Cortex-M4F | 180 MHz | 512 KB | 128 KB | TIM1 |
-| `STM32F429xx` | Cortex-M4F | 180 MHz | 2 MB | 256 KB | TIM1 |
-
-> **H7 note:** On H7 the HAL timebase uses TIM6 (dispatched via `TIM6_DAC_IRQHandler`), not TIM1. `TIM1_UP_IRQHandler` is an empty stub in the generated dispatch table. See [docs/OS_INSIDE.md](docs/OS_INSIDE.md) for the post-mortem.
-
----
-
-## Medical-Grade Safety Layer (IEC 62304 / IEC 60601-1)
-
-The ECG device-full-stack variant ships a complete safety subsystem above the FreeRTOS kernel. It is fully optional and Kconfig-gated; standard demo and F411 builds are unaffected.
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                       Safety Subsystem                              │
-│                                                                     │
-│   log/slog.c         — structured severity logger (ring buffer,     │
-│                         severity levels, tick timestamp, IRQ-safe)  │
-│                                                                     │
-│   safety/wdog.c      — IWDG hw init + per-task sw watchdog bitmask │
-│   safety/safe_state.c — coordinated shutdown → direct UART →       │
-│                         AIRCR reset; .noinit record survives reset   │
-│   drivers/hal/stm32/stm32_exceptions.c — naked fault trampolines,  │
-│                         register dump, .noinit fault_record_t,      │
-│                         reset instead of infinite loop              │
-│                                                                     │
-│   init/main.c        — boot_phase_t FSM (10 phases), checks prior  │
-│                         fault + safe-state records before scheduler │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Key files
-
-| File | Purpose |
+| Command | Output |
 |---|---|
-| `include/log/slog.h` + `log/slog.c` | 32-entry ring buffer logger; `LOG_E/W/I/D()` macros; printk echo for ERROR+WARN |
-| `include/safety/wdog.h` + `safety/wdog.c` | IWDG init + SW task-bitmask watchdog service thread |
-| `include/safety/safe_state.h` + `safety/safe_state.c` | `safety_enter_safe_state(reason)` — noreturn coordinated shutdown |
-| `include/safety/fault_handler.h` | Boot-time API to query/clear `.noinit` fault records |
-| `include/def_err.h` | 15 error codes (`OS_ERR_NONE` … `OS_ERR_NOT_INIT`) for IEC 62304 traceability |
-| `include/def_attributes.h` | `__SECTION_NOINIT` macro — places data outside `.bss` zero-clear |
+| `make os TARGET=<t>` | `build/<t>.elf` |
+| `make os-flash TARGET=<t>` | Flashes the standalone build via OpenOCD |
 
-### Kconfig keys (ECG H723 app)
+### With-application
 
-| Key | Default | Meaning |
-|---|---|---|
-| `CONFIG_INC_SERVICE_WDOG` | `n` | Enable IWDG + sw-watchdog service thread |
-| `CONFIG_HAL_IWDG_MODULE_ENABLED` | `n` | Pull `stm32h7xx_hal_iwdg.c` into the build |
-| `PROC_SERVICE_WDOG_STACK_SIZE` | `512` | Watchdog service task stack words |
-| `PROC_SERVICE_WDOG_PRIORITY` | `4` | Watchdog service priority (above app tasks) |
-| `SLOG_PRINTK_MIN_LEVEL` | `1` | Minimum slog level echoed to printk (0=ERROR only, 1=+WARN, 2=+INFO) |
+| Command | Output |
+|---|---|
+| `make app TARGET=<t>` | `build/<app_name>.elf` (name from app's Kconfig preset) |
+| `make app-flash TARGET=<t>` | Flashes the app build via OpenOCD |
+| `make app-gen TARGET=<t>` | Regenerates board BSP from `app/board/*.xml` |
 
-### Watchdog design
+### Code generation
 
-```
-wdog_hw_init()   — called from main() BEFORE scheduler; IWDG cannot stop
-                   H7: IWDG1, LSI/64, ~4 s; F4: IWDG, same prescaler
-wdog_sw_init()   — called from app_main() to register per-task bitmask slots
-wdog_task_kick() — called inside every critical task each iteration
+| Command | Output |
+|---|---|
+| `make menuconfig` | Interactive Kconfig TUI |
+| `make config-outputs` | `autoconf.h`, `autoconf.mk`, `stm32{f4,h7}xx_hal_conf.h` |
+| `make irq_gen APP_DIR=…` | `irq_table.c`, `irq_*_generated.{c,h,inc}` |
+| `make demo-gen` / `demo-gen-h723` | Regenerate demo board headers (for CPPcheck and the standalone build) |
 
-Slots (ECG app):
-  WDOG_SLOT_HEARTBEAT (0) — heartbeat_task, every 500 ms
-  WDOG_SLOT_ECG_ACQ   (1) — ecg_acquire_task, per completed window + idle retry
-  WDOG_SLOT_ECG_INF   (2) — ecg_infer_task, every ulTaskNotifyTake (2 s timeout)
+### Utilities
 
-wdog_service_thread checks every 1000 ms:
-  • all slots set → kick IWDG + clear bitmask
-  • any slot missing → increment missed_checks counter
-  • missed_checks >= 3 → safety_enter_safe_state(SAFE_REASON_WATCHDOG) → AIRCR reset
-```
-
-### Boot state machine (`init/main.c`)
-
-```c
-BOOT_HAL_INIT      (0) — HAL_Init()
-BOOT_CLK_INIT      (1) — _stm32_clock_init()
-BOOT_PERIPH_CLK    (2) — peripheral RCC enables
-BOOT_IRQ_INIT      (3) — IRQ table init
-BOOT_IPC_INIT      (4) — IPC queues
-BOOT_SLOG_INIT     (5) — slog_init()        ← first LOG_ call after this
-BOOT_PREV_FAULT_CHK(6) — check .noinit fault + safe-state records
-BOOT_SERVICES_INIT (7) — OS services (wdog_service_start() first)
-BOOT_WDOG_HW_INIT  (8) — wdog_hw_init()    ← IWDG starts, cannot stop
-BOOT_APP_INIT      (9) — app_main()
-BOOT_SCHEDULER    (10) — vTaskStartScheduler()
-```
-
-Any phase failure calls `safety_enter_safe_state(SAFE_REASON_BOOT_FAIL)`.
-
-### `.noinit` RAM section
-
-Placed after `._user_heap_stack` in `stm32_h723_FLASH.ld` (DTCM), outside `[__bss_start__, __bss_end__]`. The startup zero-loop does not touch it, so `fault_record_t` (magic `0xDEADC0DE`) and the safe-state record (magic `0xC0DEBEEF`) survive NVIC soft reset and are inspected at `BOOT_PREV_FAULT_CHK`.
+| Command | Effect |
+|---|---|
+| `make docs` | Generates Doxygen HTML under `docs/doxygen/html/` |
+| `make clean` | Removes `build/` and generated board files |
+| `make print-target` | Shows the OpenOCD target file for the active MCU |
 
 ---
 
-## Static Analysis
-
-FreeRTOS-OS ships a complete CPPcheck + MISRA C:2012 analysis workflow.
+## Static analysis
 
 ```bash
-# Install CPPcheck (once per machine)
 ./scripts/install_cppcheck.sh
-
-# Generate demo board headers first (needed for include resolution)
-make demo-gen
-
-# Run CPPcheck (warnings and above — 0 errors expected)
+make demo-gen                              # required for include resolution
 bash scripts/run_cppcheck.sh --severity=warning
-
-# Run CPPcheck + MISRA C:2012 checks
 bash scripts/run_cppcheck.sh --misra
-
-# Generate HTML reports
 bash scripts/run_cppcheck.sh --misra --severity=style --html
 ```
 
-**Excluded from analysis:** `lib/CMSIS-DSP/Ne10/` (Cortex-A NEON), `lib/CMSIS-DSP/PythonWrapper/`, `lib/CMSIS-DSP/Scripts/`, and any file matching `*neon*` — these are vendor code targeting Cortex-A or Python and produce false positives on Cortex-M analysis. Suppressions for `unknownMacro` in CMSIS-DSP Source/ are in `scripts/cppcheck_suppressions.txt`.
-
-Reports are written to `reports/cppcheck/` (git-ignored). GitHub Actions runs CPPcheck automatically on every push and pull request (job: `cppcheck`).
-
-See **[docs/CHECK.md](docs/CHECK.md)** for the full reference: options, report formats, MISRA deviation table, and CI/CD integration.
+GitHub Actions runs CPPcheck on every push (job: `cppcheck`).  Reports
+land in `reports/cppcheck/` (git-ignored).  See [`docs/CHECK.md`](docs/CHECK.md)
+for option flags and the MISRA deviation table.
 
 ---
 
-## Known Bugs / Fixes
+## Documentation
 
-| Date | Component | Root Cause | Fix |
-|---|---|---|---|
-| 2026-05-16 | Build system | `CONFIG_BOARD` Make variable defaults to `stm32f411_devboard`; not written to `autoconf.mk`, so H723 ECG builds fail looking for the F411 XML. | Pass `CONFIG_BOARD=stm32h723_devboard` on every `make all` and `make flash` for the ECG app. |
-| 2026-05-16 | `app/board/irq_periph_handlers_generated.h` | Only 5 active ISR handlers declared; `irq_periph_vectors_generated.inc` references ~75 additional names (DMA, TIM1–TIM8, I2C, SPI, WWDG…) that were undeclared in the startup TU → linker error. | Added `__attribute__((weak, alias("Default_Handler")))` declarations for all 75 unused peripheral vectors. Active handlers remain plain `void Foo_IRQHandler(void);` declarations. |
-| 2026-05-16 | `drivers/hal/stm32/hal_iic_stm32.c` | File-level guard was `#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)` only — missing `&& defined(HAL_I2C_MODULE_ENABLED)`. With I2C disabled in kconfig, HAL I2C types/functions are absent → compile error. `hal_spi_stm32.c` already had the correct pattern. | Changed opening `#if` to include `&& defined(HAL_I2C_MODULE_ENABLED)`; updated closing `#endif` comment. |
-| 2026-05-16 | `demo/kconfig.conf` (F411 standalone) | Missing HAL_CORTEX/PWR/EXTI/FLASH/ADC module enables, all clock CONFIG_ constants, and all CONFIG_RTOS_* keys → many undeclared symbols during F411 demo build. | Rewrote `demo/kconfig.conf` with all required CONFIG_ keys. |
-| 2026-05-16 | `drivers/Makefile` | `drv_adc.o` and `hal_adc_stm32.o` compiled unconditionally; F411 demo kconfig has no ADC HAL → `ADC_HandleTypeDef` unknown type. | Gated both entries behind `ifeq ($(CONFIG_HAL_ADC_MODULE_ENABLED),1)`. |
-| 2026-05-16 | `drivers/hal/stm32/hal_rcc_stm32.c` | `DRV_RCC_PERIPH_TIM6`, `DRV_RCC_PERIPH_USART3`, and `GPIOF` referenced without `#if defined(STM32H7)` guards → undefined symbols on F411 build. | Added `#if defined(STM32H7)` guards in `periph_clk_en` switch and `gpio_clk_en`. |
-| 2026-05-16 | `services/kernel_service_core.c` | `iic_mgmt_start()` guarded only by `BOARD_IIC_COUNT > 0`, not by `CONFIG_INC_SERVICE_IIC_MGMT`. ECG kconfig disables IIC service but H723 board has I2C hardware → call compiled in without the service object → linker error. | Changed both include guard and call guard to require `(BOARD_IIC_COUNT > 0) && defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)`. |
-| 2026-05-16 | `scripts/run_cppcheck.sh` | CMSIS-DSP Ne10 (Cortex-A NEON), PythonWrapper, and Scripts/ files collected by `find` → 87 false-positive CPPcheck errors. `__ALIGNED` macro undefined → additional errors. | Added exclusion patterns for Ne10/PythonWrapper/Scripts/neon; added `-D__ALIGNED(x)=__attribute__((aligned(x)))` and related CMSIS defines. |
-| 2026-05-16 | `FreeRTOS-OS/Makefile` (`demo`, `demo-h723` targets) | Cross-target stale objects relinked when switching between demo and ECG app builds locally. | Added `$(MAKE) clean` before `$(MAKE) all` inside each demo target. |
-| 2026-05-17 | `arch/devices/STM/STM32{H7xx/STM32H723,F4xx/STM32F411}/stm32_*_FLASH.ld` | `*(.init)` and `*(.fini)` were not wrapped in `KEEP()`. With `-Wl,--gc-sections`, the linker discarded `crtn.o`'s anonymous `.init`/`.fini` continuation bytes (the epilog `pop {r3-r7}; pop {r3}; mov lr,r3; bx lr`), since those fragments have no own symbol — only crti.o's prolog (`push {r3-r7, lr}; nop`) survived. `__libc_init_array` called `_init` which then fell through into the next code (HAL prescaler tables interpreted as Thumb) → imprecise BusFault inside C runtime init, before `main()`. Symptom: zero output on VCP, board appears dead. | Wrapped `*(.init)` and `*(.fini)` in `KEEP()` in both H723 and F411 linker scripts. Verified: `_init` and `_fini` now end with the crtn.o epilog and return cleanly. |
-| 2026-05-17 | `include/def_compiler.h` | Header guards used wrong macro names: `#ifndef PACKED`/`INLINE`/`WEAK` while defining `__PACKED`/`__INLINE`/`__WEAK`. CMSIS `cmsis_gcc.h` defines those same `__PACKED`/`__INLINE`/`__WEAK` macros, so every TU that included both produced a `"__PACKED redefined"` warning. CMSIS's `__PACKED` also has `aligned(1)` — silently overriding it to a weaker definition could affect unaligned-access struct layout. | Corrected guards to `#ifndef __PACKED`/`__INLINE`/`__WEAK` so CMSIS's stronger definition is preserved when present. |
+| Document | Topic |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Full architecture reference — layer model, drivers, safety, boot FSM, invariants |
+| [`arch/README.md`](arch/README.md) | `/arch` contract — adding a new MCU / vendor |
+| [`docs/OS_THREAD.md`](docs/OS_THREAD.md) | Thread API, `os_thread_create()` usage |
+| [`docs/QUEUE.md`](docs/QUEUE.md) | IPC message queues + ring buffer |
+| [`docs/DRIVERS.md`](docs/DRIVERS.md) | Driver vtables and HAL backends |
+| [`docs/BOARD.md`](docs/BOARD.md) | Board XML schema, BSP generator |
+| [`docs/DEV_MGMT.md`](docs/DEV_MGMT.md) | Service-thread internals |
+| [`docs/SHELL_CLI.md`](docs/SHELL_CLI.md) | Shell, CLI, command registration |
+| [`docs/IRQ.md`](docs/IRQ.md) | Linux-style IRQ subsystem |
+| [`docs/DMA.md`](docs/DMA.md) | DMA engine + HAL backend |
+| [`docs/DEBUG.md`](docs/DEBUG.md) | VS Code debug, OpenOCD, GDB, SVD viewer |
+| [`docs/OS_INSIDE.md`](docs/OS_INSIDE.md) | Post-mortems and debug recipes |
+| [`docs/CHECK.md`](docs/CHECK.md) | CPPcheck + MISRA C:2012 |
+| [`docs/DSP.md`](docs/DSP.md) | CMSIS-DSP integration |
 
 ---
 
 ## License
 
-FreeRTOS-OS is distributed under the **GNU General Public License v3.0**.
-See `COPYING` or <https://www.gnu.org/licenses/gpl-3.0.html>.
+GPL v3.0 — see [`LICENSE`](LICENSE) or
+<https://www.gnu.org/licenses/gpl-3.0.html>.
 
-Submodule licenses: FreeRTOS-Kernel — MIT · STM32F4xx HAL — BSD 3-Clause · CMSIS-6 — Apache 2.0 · CMSIS-DSP — Apache 2.0 · CANopen stack — Apache 2.0 · ringbuffer — GPL v2.
+Submodule licenses: FreeRTOS-Kernel (MIT) · STM32 HAL (BSD 3-Clause) ·
+CMSIS-6 (Apache 2.0) · CMSIS-DSP (Apache 2.0) · CANopen stack
+(Apache 2.0) · ringbuffer (GPL v2).
 
 ---
 
-*Author: Subhajit Roy — subhajitroy005@gmail.com*
+*Author: Subhajit Roy — <subhajitroy005@gmail.com>*

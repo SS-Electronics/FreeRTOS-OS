@@ -1,9 +1,12 @@
 /**
- * @file    hal_dma_stm32.h
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        hal_dma_stm32.h
+ * @brief       STM32F4 DMA HAL backend for generic DMA engine
+ * @ingroup     drivers
  *
- * @module  drivers
- * @brief   STM32F4 DMA HAL backend for generic DMA engine
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Driver Layer
+ * @info        Vendor-agnostic driver vtables; concrete backends live under drivers/hal/<vendor>/.
+ * @dependency  HAL backend (selected by CONFIG_DEVICE_VARIANT)
  *
  * @details
  * This header provides the STM32-specific DMA backend implementation
@@ -35,9 +38,12 @@
  * device.h (STM32 HAL)
  *
  * @note
- * This file is part of FreeRTOS-OS Project.
  *
  * @license
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
  * FreeRTOS-OS is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version
@@ -48,8 +54,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 /*

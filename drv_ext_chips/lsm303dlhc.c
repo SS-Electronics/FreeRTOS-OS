@@ -1,7 +1,12 @@
 /**
- * @file    lsm303dlhc.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
- * @brief   LSM303DLHC accelerometer + magnetometer driver
+ * @file        lsm303dlhc.c
+ * @brief       LSM303DLHC accelerometer + magnetometer driver
+ * @ingroup     drv_ext_chips
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      External Chips
+ * @info        Drivers for off-MCU peripherals (sensors, GPIO expanders, EEPROM, DACs).
+ * @dependency  Driver layer (I2C / SPI)
  *
  * @details
  * All I2C transfers go through iic_app (iic_sync_transmit / iic_sync_receive).
@@ -12,7 +17,22 @@
  * Magnetometer: auto-increment is always active; read starts at OUT_X_H_M.
  * Hardware register order is X, Z, Y — reordered to X, Y, Z in the output struct.
  *
+ * @copyright
  * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <drv_ext_chips/lsm303dlhc.h>

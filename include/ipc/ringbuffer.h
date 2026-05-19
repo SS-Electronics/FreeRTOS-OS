@@ -1,7 +1,15 @@
-/*
- * ringbuffer.h — FreeRTOS-safe ring buffer (mirror-bit algorithm)
+/**
+ * @file        ringbuffer.h
+ * @brief       ringbuffer.h — FreeRTOS-safe ring buffer (mirror-bit algorithm)
+ * @ingroup     ipc
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      IPC
+ * @info        Inter-process communication: ring buffers (HW byte streams) and xQueue-based message queues.
+ * @dependency  FreeRTOS queue, ringbuffer.h
+ *
+ * @details
+ * ringbuffer.h — FreeRTOS-safe ring buffer (mirror-bit algorithm)
  *
  * Dynamic model:
  *   ringbuffer_create(size) — allocates descriptor + data buffer via kmaloc()
@@ -13,6 +21,23 @@
  * Thread safety:
  *   putchar / putchar_force — ISR-safe (taskENTER_CRITICAL_FROM_ISR)
  *   all other ops            — task-safe (taskENTER_CRITICAL)
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef INCLUDE_IPC_RINGBUFFER_H_

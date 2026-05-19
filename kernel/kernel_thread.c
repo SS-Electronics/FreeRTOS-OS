@@ -1,24 +1,41 @@
 /**
- * @file   	kernel_thread.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
- * @brief   All kernel thread operation api definition
+ * @file        kernel_thread.c
+ * @brief       All kernel thread operation api definition
+ * @ingroup     kernel_glue
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Kernel Glue
+ * @info        C-runtime / newlib shim: malloc/free wrappers, syscalls, FreeRTOS kernel adapters.
+ * @dependency  newlib-nano, FreeRTOS-Kernel
+ *
+ * @details
  * @details Thread create delete resume pause delay
- * @date    2025-09-26
  *
  * @note This file is part of FreeRTOS-OS Project.
  *
- * FreeRTOS-OS is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or (at your
  * option) any later version.
  *
- * FreeRTOS-OS is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with FreeRTOS-KERNEL. If not, see <https://www.gnu.org/licenses/>.
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <os/kernel.h>

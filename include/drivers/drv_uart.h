@@ -1,9 +1,12 @@
 /**
- * @file    drv_uart.h
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        drv_uart.h
+ * @brief       Generic UART driver interface, handle definition, and HAL abstraction
+ * @ingroup     drivers
  *
- * @module  drivers
- * @brief   Generic UART driver interface, handle definition, and HAL abstraction
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Driver Layer
+ * @info        Vendor-agnostic driver vtables; concrete backends live under drivers/hal/<vendor>/.
+ * @dependency  HAL backend (selected by CONFIG_DEVICE_VARIANT)
  *
  * @details
  * This header defines the generic UART driver interface used across the
@@ -26,21 +29,25 @@
  * def_std.h, def_err.h, board/mcu_config.h
  *
  * @note
- * This file is part of FreeRTOS-OS Project.
  *
  * @license
- * FreeRTOS-OS is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU General Public License 
- * as published by the Free Software Foundation, either version 
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
  * 3 of the License, or (at your option) any later version.
  *
  * FreeRTOS-OS is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef INCLUDE_DRIVERS_COM_DRV_UART_H_

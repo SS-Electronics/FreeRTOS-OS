@@ -1,7 +1,15 @@
-/*
- * irq_desc.h — Linux-style IRQ descriptor chain for FreeRTOS/bare-metal
+/**
+ * @file        irq_desc.h
+ * @brief       irq_desc.h — Linux-style IRQ descriptor chain for FreeRTOS/bare-metal
+ * @ingroup     irq
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      IRQ Subsystem
+ * @info        Linux-style irq_desc chain, software IRQ table, request_irq/free_irq, NVIC chip driver.
+ * @dependency  Generated irq_table.c, NVIC chip
+ *
+ * @details
+ * irq_desc.h — Linux-style IRQ descriptor chain for FreeRTOS/bare-metal
  *
  * Adapts the Linux IRQ descriptor model to a single-core bare-metal system:
  *   - SMP / percpu / cpumask features removed
@@ -24,6 +32,23 @@
  *
  * Registration (driver init, task context):
  *   request_irq(IRQ_ID_UART_RX(0), my_rx_handler, "uart0_rx", ctx);
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef INCLUDE_IRQ_IRQ_DESC_H_

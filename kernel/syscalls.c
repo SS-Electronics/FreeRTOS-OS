@@ -1,7 +1,15 @@
-/*
- * syscalls.c — Newlib syscall stubs + printk (bare-metal ARM)
+/**
+ * @file        syscalls.c
+ * @brief       syscalls.c — Newlib syscall stubs + printk (bare-metal ARM)
+ * @ingroup     kernel_glue
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Kernel Glue
+ * @info        C-runtime / newlib shim: malloc/free wrappers, syscalls, FreeRTOS kernel adapters.
+ * @dependency  newlib-nano, FreeRTOS-Kernel
+ *
+ * @details
+ * syscalls.c — Newlib syscall stubs + printk (bare-metal ARM)
  *
  * Two responsibilities:
  *
@@ -12,6 +20,23 @@
  * 2. printk — timestamped formatted string output routed through the UART TX
  *    ring buffer.  printk_init() must be called after uart_mgmt_thread registers
  *    the UART ring-buffer queues so the handle is valid.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <def_attributes.h>

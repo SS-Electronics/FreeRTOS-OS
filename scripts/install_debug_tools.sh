@@ -6,7 +6,7 @@
 #
 # What this script does:
 #   1. Checks that arm-none-eabi-gdb and openocd are installed.
-#   2. Downloads the STM32F411 SVD file into arch/debug_cfg/
+#   2. Downloads the STM32F411 SVD file into arch/debug/target/
 #      (needed for the peripheral register viewer in VSCode).
 #   3. Installs the Cortex-Debug VSCode extension.
 #
@@ -17,7 +17,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-SVD_DIR="${PROJECT_ROOT}/arch/debug_cfg"
+SVD_DIR="${PROJECT_ROOT}/arch/debug/target"
 SVD_FILE="${SVD_DIR}/STM32F411.svd"
 
 RED='\033[0;31m'

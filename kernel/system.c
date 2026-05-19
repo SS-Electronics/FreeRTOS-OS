@@ -1,7 +1,15 @@
-/*
- * system.c — CMSIS SystemInit entry point
+/**
+ * @file        system.c
+ * @brief       system.c — CMSIS SystemInit entry point
+ * @ingroup     kernel_glue
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Kernel Glue
+ * @info        C-runtime / newlib shim: malloc/free wrappers, syscalls, FreeRTOS kernel adapters.
+ * @dependency  newlib-nano, FreeRTOS-Kernel
+ *
+ * @details
+ * system.c — CMSIS SystemInit entry point
  *
  * SystemInit() is called by Reset_Handler before .data/.bss initialisation.
  * It must not access any RAM outside of .boot_data.
@@ -12,6 +20,23 @@
  *
  * SystemCoreClockUpdate() and the CMSIS prescaler tables remain in
  * hal_rcc_stm32.c because they read live RCC registers.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <board/board_config.h>

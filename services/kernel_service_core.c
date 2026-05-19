@@ -1,9 +1,12 @@
 /**
- * @file    kernel_service_core.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        kernel_service_core.c
+ * @brief       Central OS service task registration and initialization dispatcher
+ * @ingroup     services
  *
- * @module  kernel
- * @brief   Central OS service task registration and initialization dispatcher
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Services
+ * @info        FreeRTOS service threads that own peripherals (UART/I2C/SPI/GPIO/ADC) and accept commands.
+ * @dependency  Driver layer, ipc/mqueue, board config
  *
  * @details
  * This module acts as the centralized registration point for all FreeRTOS-OS
@@ -94,6 +97,12 @@
  *
  * ---------------------------------------------------------------------------
  * @license
+ *
+ * See the GNU General Public License for more details.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
  * FreeRTOS-OS is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version
@@ -101,11 +110,12 @@
  *
  * FreeRTOS-OS is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <os/kernel_services.h>

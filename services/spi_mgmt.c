@@ -1,9 +1,12 @@
 /**
- * @file    spi_mgmt.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        spi_mgmt.c
+ * @brief       SPI management service thread for serialized SPI access
+ * @ingroup     services
  *
- * @module  services
- * @brief   SPI management service thread for serialized SPI access
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Services
+ * @info        FreeRTOS service threads that own peripherals (UART/I2C/SPI/GPIO/ADC) and accept commands.
+ * @dependency  Driver layer, ipc/mqueue, board config
  *
  * @details
  * This module implements a dedicated SPI management service thread that
@@ -67,6 +70,12 @@
  * - ISR callbacks must remain lightweight (notify only)
  *
  * @license
+ *
+ * See the GNU General Public License for more details.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
  * FreeRTOS-OS is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version
@@ -74,11 +83,12 @@
  *
  * FreeRTOS-OS is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <def_attributes.h>

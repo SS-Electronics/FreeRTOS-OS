@@ -1,9 +1,12 @@
 /**
- * @file    os_shell_management.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        os_shell_management.c
+ * @brief       FreeRTOS+CLI interactive shell service for UART-based console
+ * @ingroup     services
  *
- * @module  services
- * @brief   FreeRTOS+CLI interactive shell service for UART-based console
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Services
+ * @info        FreeRTOS service threads that own peripherals (UART/I2C/SPI/GPIO/ADC) and accept commands.
+ * @dependency  Driver layer, ipc/mqueue, board config
  *
  * @details
  * This module implements an interactive command-line shell running on top
@@ -109,6 +112,12 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * License
  * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * See the GNU General Public License for more details.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
  * FreeRTOS-OS is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version
@@ -116,11 +125,12 @@
  *
  * FreeRTOS-OS is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <services/os_shell_management.h>

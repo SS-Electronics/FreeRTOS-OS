@@ -1,7 +1,15 @@
-/*
- * irq_notify.h — Generic vendor-agnostic IRQ notification framework
+/**
+ * @file        irq_notify.h
+ * @brief       irq_notify.h — Generic vendor-agnostic IRQ notification framework
+ * @ingroup     irq
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      IRQ Subsystem
+ * @info        Linux-style irq_desc chain, software IRQ table, request_irq/free_irq, NVIC chip driver.
+ * @dependency  Generated irq_table.c, NVIC chip
+ *
+ * @details
+ * irq_notify.h — Generic vendor-agnostic IRQ notification framework
  *
  * Design
  * ──────
@@ -22,6 +30,23 @@
  *   IRQ_ID_SPI_RX_DONE(n)    — SPI receive complete on bus n
  *   IRQ_ID_SPI_TXRX_DONE(n)  — SPI full-duplex transfer complete on bus n
  *   IRQ_ID_SPI_ERROR(n)      — SPI error on bus n
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef INCLUDE_IRQ_IRQ_NOTIFY_H_

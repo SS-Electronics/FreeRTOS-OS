@@ -1,7 +1,12 @@
 /**
- * @file   slog.c
- * @author Subhajit Roy (subhajitroy005@gmail.com)
- * @brief  Structured severity logger implementation
+ * @file        slog.c
+ * @brief       Structured severity logger implementation
+ * @ingroup     log
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Logging
+ * @info        32-entry ring-buffer structured logger with severity levels; safe pre-scheduler & from ISRs.
+ * @dependency  Compiler intrinsics, optional printk echo
  *
  * @details
  * Ring buffer of SLOG_MAX_ENTRIES entries.  Writes are protected by a
@@ -10,6 +15,23 @@
  *
  * Post-scheduler: ERROR and WARN entries are also forwarded to printk()
  * for immediate serial output, outside the disabled-interrupt window.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <log/slog.h>

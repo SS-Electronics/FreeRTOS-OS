@@ -1,9 +1,12 @@
 /**
- * @file    drv_rcc.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
+ * @file        drv_rcc.c
+ * @brief       Reset and Clock Control (RCC) driver with HAL abstraction
+ * @ingroup     drivers
  *
- * @module  drivers
- * @brief   Reset and Clock Control (RCC) driver with HAL abstraction
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Driver Layer
+ * @info        Vendor-agnostic driver vtables; concrete backends live under drivers/hal/<vendor>/.
+ * @dependency  HAL backend (selected by CONFIG_DEVICE_VARIANT)
  *
  * @details
  * This file implements a portable RCC (Reset and Clock Control) driver
@@ -29,22 +32,27 @@
  * stddef.h, drivers/drv_rcc.h, board/mcu_config.h, def_err.h
  *
  * @note
- * This file is part of FreeRTOS-OS Project.
  *
  * @license
- * FreeRTOS-OS is free software: you can redistribute it and/or 
- * modify it under the terms of the GNU General Public License 
- * as published by the Free Software Foundation, either version 
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
  * 3 of the License, or (at your option) any later version.
  *
  * FreeRTOS-OS is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with FreeRTOS-OS. If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
+
 #include <def_attributes.h>
 #include <def_compiler.h>
 #include <def_std.h>

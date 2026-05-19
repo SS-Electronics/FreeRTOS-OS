@@ -1,7 +1,15 @@
-/*
- * irq_notify.c — pub/sub adapter over the irq_desc chain
+/**
+ * @file        irq_notify.c
+ * @brief       irq_notify.c — pub/sub adapter over the irq_desc chain
+ * @ingroup     irq
  *
- * This file is part of FreeRTOS-OS Project.
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      IRQ Subsystem
+ * @info        Linux-style irq_desc chain, software IRQ table, request_irq/free_irq, NVIC chip driver.
+ * @dependency  Generated irq_table.c, NVIC chip
+ *
+ * @details
+ * irq_notify.c — pub/sub adapter over the irq_desc chain
  *
  * Provides the original irq_notify API (irq_register / irq_notify /
  * irq_notify_from_isr) as a thin adapter over irq_desc.c.
@@ -18,6 +26,23 @@
  *           → handle_irq_event()
  *              → _notify_trampoline()  (irq_handler_t)
  *                 → irq_notify_cb_t    (original subscriber)
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <irq/irq_notify.h>

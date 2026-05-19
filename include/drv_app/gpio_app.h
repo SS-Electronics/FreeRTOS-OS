@@ -1,4 +1,14 @@
-/*
+/**
+ * @file        gpio_app.h
+ * @brief       gpio_app.h — Application-level GPIO API
+ * @ingroup     drv_app
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Driver App
+ * @info        Application-facing helpers that wrap driver init for board-listed peripherals.
+ * @dependency  Driver layer, board BSP
+ *
+ * @details
  * gpio_app.h — Application-level GPIO API
  *
  * Combines direct driver access (for fast, zero-latency operations) with
@@ -8,7 +18,22 @@
  * you cannot afford to call the driver directly. Use gpio_read() for
  * immediate pin-state sampling (bypasses the management thread).
  *
+ * @copyright
  * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef FREERTOS_OS_INCLUDE_DRV_APP_GPIO_APP_H_

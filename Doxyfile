@@ -39,6 +39,8 @@ STRIP_FROM_PATH        = ./include ./
 #-----------------------------------------------------------------------------
 INPUT                  = README.md    \
                          ./docs       \
+                         ./arch/README.md \
+                         ./include/doxygen_groups.h \
                          ./include    \
                          ./kernel     \
                          ./mm         \

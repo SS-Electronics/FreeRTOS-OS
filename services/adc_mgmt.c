@@ -1,7 +1,12 @@
 /**
- * @file    adc_mgmt.c
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
- * @brief   ADC management service thread
+ * @file        adc_mgmt.c
+ * @brief       ADC management service thread
+ * @ingroup     services
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      Services
+ * @info        FreeRTOS service threads that own peripherals (UART/I2C/SPI/GPIO/ADC) and accept commands.
+ * @dependency  Driver layer, ipc/mqueue, board config
  *
  * @details
  * Centralised ADC management service running as a FreeRTOS thread.
@@ -44,6 +49,23 @@
  * For simplicity the actual rate is estimated at compile time as
  * ADC_ACTUAL_RATE_HZ (set to 250000 as a conservative default).
  * Adjust this constant to match actual ADC rate on the target.
+ *
+ * @copyright
+ * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <def_attributes.h>

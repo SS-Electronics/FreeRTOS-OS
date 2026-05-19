@@ -13,7 +13,7 @@
     //    build ─────────┘
     //
     //  "detect-target" reads CONFIG_TARGET_MCU from include/config/autoconf.h
-    //  and writes build/active_debug.cfg + arch/debug_cfg/active_target.svd.
+    //  and writes build/active_debug.cfg + arch/debug/target/active_target.svd.
     //  This is the equivalent of STM32CubeIDE's project-specific debug config
     //  but fully automatic — switch MCU via  make menuconfig, no IDE changes.
     // ─────────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@
         //  CORE: detect-target
         //  Reads CONFIG_TARGET_MCU from autoconf.h, writes:
         //    build/active_debug.cfg        (OpenOCD wrapper for the active MCU)
-        //    arch/debug_cfg/active_target.svd  (symlink to MCU SVD)
+        //    arch/debug/target/active_target.svd  (symlink to MCU SVD)
         //    build/debug_env.json          (machine-readable properties)
         // ══════════════════════════════════════════════════════════════════════
         {
@@ -231,7 +231,7 @@
 
         // ══════════════════════════════════════════════════════════════════════
         //  Install debug tools
-        //  Downloads SVD files for all supported MCUs into arch/debug_cfg/.
+        //  Downloads SVD files for all supported MCUs into arch/debug/target/.
         //  Run once after cloning.  Needs internet access.
         // ══════════════════════════════════════════════════════════════════════
         {

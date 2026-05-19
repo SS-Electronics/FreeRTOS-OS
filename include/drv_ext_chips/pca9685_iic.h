@@ -1,7 +1,12 @@
 /**
- * @file    pca9685_iic.h
- * @author  Subhajit Roy (subhajitroy005@gmail.com)
- * @brief   PCA9685 16-channel PWM controller driver
+ * @file        pca9685_iic.h
+ * @brief       PCA9685 16-channel PWM controller driver
+ * @ingroup     drv_ext_chips
+ *
+ * @author      Subhajit Roy <subhajitroy005@gmail.com>
+ * @module      External Chips
+ * @info        Drivers for off-MCU peripherals (sensors, GPIO expanders, EEPROM, DACs).
+ * @dependency  Driver layer (I2C / SPI)
  *
  * @details
  * Thin driver over the iic_app sync API.  Every function takes an explicit
@@ -20,7 +25,22 @@
  *   prescale = round(25_000_000 / (4096 * freq_hz)) - 1    [3 … 255]
  *   freq_hz  → 1526 Hz max (prescale 3), 24 Hz min (prescale 255)
  *
+ * @copyright
  * This file is part of FreeRTOS-OS Project.
+ *
+ * FreeRTOS-OS is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version
+ * 3 of the License, or (at your option) any later version.
+ *
+ * FreeRTOS-OS is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with FreeRTOS-OS. If not, see
+ * <https://www.gnu.org/licenses/>.
  */
 
 #ifndef FREERTOS_OS_INCLUDE_DRV_EXT_CHIPS_PCA9685_IIC_H_
