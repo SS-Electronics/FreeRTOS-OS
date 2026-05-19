@@ -1,7 +1,8 @@
 /*
- * demo/app_main.c — Demo application for standalone FreeRTOS-OS build.
+ * examples/stm32f411/app_main.c — Standalone FreeRTOS-OS example for the
+ * STM32F411 devboard.
  *
- * Board: STM32F411 Demo Devboard (STM32F411VET6)
+ * Board: STM32F411 Devboard (STM32F411VET6, Cortex-M4F)
  *
  * Tasks
  * ─────
@@ -12,13 +13,12 @@
  *
  * Build
  * ─────
- *   make demo                  full build (gen + config + compile)
- *   make demo-gen              generate board files only
- *   make all APP_DIR=demo TARGET_NAME=demo   (after demo-gen + config-outputs)
+ *   make dev-stm32f411              full build (gen + config + clean + compile)
+ *   make dev-stm32f411-gen          regenerate board files only
  *
  * Flash
  * ─────
- *   make flash TARGET_NAME=demo
+ *   make dev-stm32f411-flash
  */
 
 #include <os/kernel.h>

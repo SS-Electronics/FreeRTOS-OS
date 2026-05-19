@@ -59,7 +59,7 @@ FreeRTOS-OS/
 ├── boot/                 Reserved for ROM bootloader hooks
 ├── com_stack/            Optional comm stacks (ROS, CANopen, …)
 ├── config/               Kconfig outputs (.config, autoconf.h, autoconf.mk)
-├── demo/                 Self-contained "standalone OS" application shim
+├── examples/             Per-devboard self-contained examples (stm32f411/, stm32h723/)
 ├── docs/                 Hand-written documentation (this file lives here)
 ├── drv_app/              Application helpers wrapping driver init
 ├── drv_ext_chips/        Off-MCU peripheral drivers (sensors, EEPROM, …)
@@ -150,8 +150,8 @@ There are two top-level build modes; the same OS tree services both.
 
 ### 1. Standalone OS — `make os TARGET=<mcu>`
 
-  - `APP_DIR` defaults to `demo/`, which ships a minimal `app_main`
-    plus the per-target board XML / Kconfig preset.
+  - `APP_DIR` resolves to `examples/<target>/`, which ships a minimal
+    `app_main` plus per-target board XML / Kconfig preset.
   - Used by CI to prove the OS builds for every supported MCU
     without needing an out-of-tree application.
   - Output: `build/<target>.elf` (e.g. `build/stm32f411.elf`,
@@ -343,7 +343,7 @@ Any phase failure calls `safety_enter_safe_state(SAFE_REASON_BOOT_FAIL)`.
 
 The safety stack is Kconfig-gated (`CONFIG_INC_SERVICE_WDOG`,
 `CONFIG_HAL_IWDG_MODULE_ENABLED`) so it costs nothing in builds that
-don't need it (e.g. the F411 standalone demo).
+don't need it (e.g. the F411 standalone devboard example).
 
 ### Components
 
@@ -560,8 +560,8 @@ the full post-mortems.
 | 2026-05-16 | Build system | `CONFIG_BOARD` defaults to F411; H723 ECG builds picked wrong XML. | Pass `CONFIG_BOARD=stm32h723_devboard` on every `make all`. |
 | 2026-05-16 | `irq_periph_handlers_generated.h` | Only 5 active handlers declared; vector table references ~75 unused ISR names → linker error. | Emit weak alias declarations for unused vectors. |
 | 2026-05-16 | `hal_iic_stm32.c` | File-level guard missing `defined(HAL_I2C_MODULE_ENABLED)`. | Add the HAL-enable conjunction; mirror `hal_spi_stm32.c`. |
-| 2026-05-16 | `demo/kconfig.conf` | Missing HAL_CORTEX/PWR/EXTI/FLASH/ADC, clock CONFIGs, RTOS CONFIGs. | Rewrote with full required set. |
-| 2026-05-16 | `drivers/Makefile` | `drv_adc.o` / `hal_adc_stm32.o` compiled unconditionally; F411 demo has no ADC HAL. | Gate behind `CONFIG_HAL_ADC_MODULE_ENABLED`. |
+| 2026-05-16 | `examples/stm32f411/kconfig.conf` | Missing HAL_CORTEX/PWR/EXTI/FLASH/ADC, clock CONFIGs, RTOS CONFIGs. | Rewrote with full required set. |
+| 2026-05-16 | `drivers/Makefile` | `drv_adc.o` / `hal_adc_stm32.o` compiled unconditionally; F411 example has no ADC HAL. | Gate behind `CONFIG_HAL_ADC_MODULE_ENABLED`. |
 | 2026-05-16 | `hal_rcc_stm32.c` | H7-only symbols (`DRV_RCC_PERIPH_TIM6`, USART3, GPIOF) compiled on F4. | Wrap in `#if defined(STM32H7)`. |
 | 2026-05-16 | `services/kernel_service_core.c` | `iic_mgmt_start()` guarded only by `BOARD_IIC_COUNT > 0`, not by the service Kconfig. | Require both `BOARD_IIC_COUNT > 0` and `CONFIG_INC_SERVICE_IIC_MGMT == 1`. |
 

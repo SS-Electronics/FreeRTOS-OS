@@ -281,107 +281,141 @@ endif
 ##############################################################
 
 ##############################################################
-# Demo build — standalone FreeRTOS-OS without the sibling app/ repository.
+# Devboard examples — standalone FreeRTOS-OS without the sibling app/
+# repository.
 #
-# Source files (tracked in git):
-#   demo/board/irq_table.xml          IRQ table source for gen_irq_table.py
-#   demo/board/stm32f411_devboard.xml Board BSP source for gen_board_config.py
-#   demo/board/mcu_config.h           Hand-written MCU peripheral counts
-#   demo/kconfig.conf                 Kconfig preset (STM32F411xE + all peripherals)
-#   demo/app_main.c                   Minimal demo application
-#   demo/Makefile                     App fragment (app-obj-y list)
-#   demo/os_conf_include/             OS configuration headers
+# Each supported devboard lives under examples/<target>/ and is a fully
+# self-contained tree:
 #
-# Generated outputs (gitignored — recreated by demo-gen):
-#   demo/board/irq_hw_conf.h          Resolved by <board/irq_hw_conf.h>
-#   demo/board/irq_*_generated.*      IRQ dispatch, NVIC init, vector table
-#   demo/board/board_config.c/.h      Board BSP implementation + types
-#   demo/board/board_device_ids.h     Peripheral ID macros
-#   demo/board/board_handles.h        HAL handle externs
+#   examples/stm32f411/
+#     app_main.c, Makefile, kconfig.conf, os_conf_include/,
+#     board/stm32f411_devboard.xml, board/irq_table.xml,
+#     board/mcu_config.h    (tracked inputs)
+#   examples/stm32f411/board/
+#     board_config.{c,h}, board_device_ids.h, board_handles.h,
+#     irq_hw_conf.h, irq_hw_init_generated.{c,h},
+#     irq_periph_dispatch_generated.c,
+#     irq_periph_handlers_generated.h,
+#     irq_periph_vectors_generated.inc,
+#     irq_table_generated.c   (gitignored outputs)
 #
-# Usage:
-#   make demo                         Full flow: gen + config + build
-#   make demo-gen                     Regenerate board files only
-#   make all APP_DIR=demo TARGET_NAME=demo   (after demo-gen + config-outputs)
-#   make flash TARGET_NAME=demo       Flash to hardware
-#   make demo-clean                   Remove generated outputs + build/
+# Top-level targets (per devboard):
+#   make dev-stm32f411              Full flow: gen + config + clean + build
+#   make dev-stm32f411-gen          Regenerate board + IRQ files only
+#   make dev-stm32f411-clean        Remove generated outputs and build/
+#   make dev-stm32f411-flash        Flash build/stm32f411.elf via OpenOCD
+#
+#   make dev-stm32h723              (same set for the H723 devboard)
+#
+# Higher-level aliases that route to the above:
+#   make os TARGET=stm32f411  →  make dev-stm32f411
+#   make os TARGET=stm32h723  →  make dev-stm32h723
 
-DEMO_DIR := demo
-CPPCHECK_BOARD_DIR := build/cppcheck-board
+EXAMPLES_DIR        := examples
+F411_DIR            := $(EXAMPLES_DIR)/stm32f411
+H723_DIR            := $(EXAMPLES_DIR)/stm32h723
+CPPCHECK_BOARD_DIR  := build/cppcheck-board
 
-.PHONY: demo-gen
-demo-gen:
-	@echo "### [demo] Generating IRQ headers from $(DEMO_DIR)/board/irq_table.xml ..."
+# Per-board generated files — listed here so the corresponding -clean
+# target can remove them deterministically and CI can list them.
+define GENERATED_BOARD_FILES
+$(1)/board/irq_hw_conf.h                       \
+$(1)/board/irq_hw_init_generated.c             \
+$(1)/board/irq_hw_init_generated.h             \
+$(1)/board/irq_periph_dispatch_generated.c     \
+$(1)/board/irq_periph_handlers_generated.h     \
+$(1)/board/irq_periph_vectors_generated.inc    \
+$(1)/board/irq_table_generated.c               \
+$(1)/board/board_config.c                      \
+$(1)/board/board_config.h                      \
+$(1)/board/board_device_ids.h                  \
+$(1)/board/board_handles.h
+endef
+
+
+# ── STM32F411 devboard ─────────────────────────────────────────────────────
+
+.PHONY: dev-stm32f411-gen
+dev-stm32f411-gen:
+	@echo "### [dev-stm32f411] Generating IRQ headers from $(F411_DIR)/board/irq_table.xml ..."
 	@python3 scripts/gen_irq_table.py \
-		$(DEMO_DIR)/board/irq_table.xml \
-		--outdir $(DEMO_DIR)/board
-	@echo "### [demo] Generating board BSP from $(DEMO_DIR)/board/stm32f411_devboard.xml ..."
+		$(F411_DIR)/board/irq_table.xml \
+		--outdir $(F411_DIR)/board
+	@echo "### [dev-stm32f411] Generating board BSP from $(F411_DIR)/board/stm32f411_devboard.xml ..."
 	@python3 scripts/gen_board_config.py \
-		$(DEMO_DIR)/board/stm32f411_devboard.xml \
-		--outdir $(DEMO_DIR)/board
-	@echo "### [demo] Board generation done — outputs in $(DEMO_DIR)/board/"
+		$(F411_DIR)/board/stm32f411_devboard.xml \
+		--outdir $(F411_DIR)/board
+	@echo "### [dev-stm32f411] Board generation done — outputs in $(F411_DIR)/board/"
 
-.PHONY: demo
-demo: demo-gen
-	@echo "### [demo] Activating demo Kconfig from $(DEMO_DIR)/kconfig.conf ..."
-	@cp $(DEMO_DIR)/kconfig.conf .config
+.PHONY: dev-stm32f411
+dev-stm32f411: dev-stm32f411-gen
+	@echo "### [dev-stm32f411] Activating Kconfig from $(F411_DIR)/kconfig.conf ..."
+	@cp $(F411_DIR)/kconfig.conf .config
 	@$(MAKE) config-outputs
-	@echo "### [demo] Cleaning stale build artifacts ..."
+	@echo "### [dev-stm32f411] Cleaning stale build artifacts ..."
 	@$(MAKE) clean
-	@echo "### [demo] Building firmware → build/demo.elf ..."
-	@$(MAKE) all APP_DIR=$(DEMO_DIR) TARGET_NAME=demo
-	@echo "### [demo] Build complete: build/demo.elf"
+	@echo "### [dev-stm32f411] Building firmware → build/stm32f411.elf ..."
+	@$(MAKE) all APP_DIR=$(F411_DIR) TARGET_NAME=stm32f411 CONFIG_BOARD=stm32f411_devboard
+	@echo "### [dev-stm32f411] Build complete: build/stm32f411.elf"
 
-.PHONY: demo-clean
-demo-clean:
-	@echo "### [demo] Removing generated board files ..."
-	@rm -f $(DEMO_DIR)/board/irq_hw_conf.h \
-	       $(DEMO_DIR)/board/irq_hw_init_generated.c \
-	       $(DEMO_DIR)/board/irq_hw_init_generated.h \
-	       $(DEMO_DIR)/board/irq_periph_dispatch_generated.c \
-	       $(DEMO_DIR)/board/irq_periph_handlers_generated.h \
-	       $(DEMO_DIR)/board/irq_periph_vectors_generated.inc \
-	       $(DEMO_DIR)/board/irq_table_generated.c \
-	       $(DEMO_DIR)/board/board_config.c \
-	       $(DEMO_DIR)/board/board_config.h \
-	       $(DEMO_DIR)/board/board_device_ids.h \
-	       $(DEMO_DIR)/board/board_handles.h
+.PHONY: dev-stm32f411-flash
+dev-stm32f411-flash:
+	@$(MAKE) flash TARGET_NAME=stm32f411
+
+.PHONY: dev-stm32f411-clean
+dev-stm32f411-clean:
+	@echo "### [dev-stm32f411] Removing generated board files ..."
+	@rm -f $(call GENERATED_BOARD_FILES,$(F411_DIR))
 	@$(MAKE) clean
-	@echo "### [demo] Clean complete"
+	@echo "### [dev-stm32f411] Clean complete"
 
-# ── STM32H723 demo targets ─────────────────────────────────────────────────
-# Mirror of demo / demo-gen above but using H723 board XML, IRQ table, and
-# Kconfig preset.  Outputs land in the same demo/board/ directory.
 
-.PHONY: demo-gen-h723
-demo-gen-h723:
-	@echo "### [demo-h723] Generating IRQ headers from $(DEMO_DIR)/board/irq_table_h723.xml ..."
+# ── STM32H723 devboard (NUCLEO-H723ZG) ─────────────────────────────────────
+
+.PHONY: dev-stm32h723-gen
+dev-stm32h723-gen:
+	@echo "### [dev-stm32h723] Generating IRQ headers from $(H723_DIR)/board/irq_table.xml ..."
 	@python3 scripts/gen_irq_table.py \
-		$(DEMO_DIR)/board/irq_table_h723.xml \
-		--outdir $(DEMO_DIR)/board
-	@echo "### [demo-h723] Generating board BSP from $(DEMO_DIR)/board/stm32h723_devboard.xml ..."
+		$(H723_DIR)/board/irq_table.xml \
+		--outdir $(H723_DIR)/board
+	@echo "### [dev-stm32h723] Generating board BSP from $(H723_DIR)/board/stm32h723_devboard.xml ..."
 	@python3 scripts/gen_board_config.py \
-		$(DEMO_DIR)/board/stm32h723_devboard.xml \
-		--outdir $(DEMO_DIR)/board
-	@echo "### [demo-h723] Board generation done — outputs in $(DEMO_DIR)/board/"
+		$(H723_DIR)/board/stm32h723_devboard.xml \
+		--outdir $(H723_DIR)/board
+	@echo "### [dev-stm32h723] Board generation done — outputs in $(H723_DIR)/board/"
 
-.PHONY: demo-h723
-demo-h723: demo-gen-h723
-	@echo "### [demo-h723] Activating H723 Kconfig from $(DEMO_DIR)/kconfig_h723.conf ..."
-	@cp $(DEMO_DIR)/kconfig_h723.conf .config
+.PHONY: dev-stm32h723
+dev-stm32h723: dev-stm32h723-gen
+	@echo "### [dev-stm32h723] Activating Kconfig from $(H723_DIR)/kconfig.conf ..."
+	@cp $(H723_DIR)/kconfig.conf .config
 	@$(MAKE) config-outputs
-	@echo "### [demo-h723] Cleaning stale build artifacts ..."
+	@echo "### [dev-stm32h723] Cleaning stale build artifacts ..."
 	@$(MAKE) clean
-	@echo "### [demo-h723] Building firmware → build/demo-h723.elf ..."
-	@$(MAKE) all APP_DIR=$(DEMO_DIR) TARGET_NAME=demo-h723
-	@echo "### [demo-h723] Build complete: build/demo-h723.elf"
+	@echo "### [dev-stm32h723] Building firmware → build/stm32h723.elf ..."
+	@$(MAKE) all APP_DIR=$(H723_DIR) TARGET_NAME=stm32h723 CONFIG_BOARD=stm32h723_devboard
+	@echo "### [dev-stm32h723] Build complete: build/stm32h723.elf"
 
-# cppcheck-board-gen reuses demo-gen so analysis and builds share the same
-# generated headers in demo/board/.  run_cppcheck.sh also checks this dir.
+.PHONY: dev-stm32h723-flash
+dev-stm32h723-flash:
+	@$(MAKE) flash TARGET_NAME=stm32h723
+
+.PHONY: dev-stm32h723-clean
+dev-stm32h723-clean:
+	@echo "### [dev-stm32h723] Removing generated board files ..."
+	@rm -f $(call GENERATED_BOARD_FILES,$(H723_DIR))
+	@$(MAKE) clean
+	@echo "### [dev-stm32h723] Clean complete"
+
+
+# ── Static-analysis helper ─────────────────────────────────────────────────
+# cppcheck-board-gen ensures the F411 example board headers are present
+# (the static-analysis run includes examples/stm32f411/board/ in its
+# include path).  Run before `make cppcheck` or `bash scripts/run_cppcheck.sh`.
 .PHONY: cppcheck-board-gen
-cppcheck-board-gen: demo-gen
-	@echo "### [cppcheck] Demo board headers ready in $(DEMO_DIR)/board/"
+cppcheck-board-gen: dev-stm32f411-gen
+	@echo "### [cppcheck] F411 example board headers ready in $(F411_DIR)/board/"
 
+.PHONY: clean-cppcheck-board
 clean-cppcheck-board:
 	@rm -rf $(CPPCHECK_BOARD_DIR)
 	@echo "### $(CPPCHECK_BOARD_DIR) removed"
@@ -613,17 +647,17 @@ install-prerequisites: install-toolchain install-openocd install-kconfig install
 
 
 ##############################################################
-# Simplified build interface
-# ──────────────────────────────────────────────────────────
+# Simplified build interface — aliases over the dev-* targets above
+# ──────────────────────────────────────────────────────────────────
 # TARGET selects the MCU variant.  Valid values:
-#   stm32f411   STM32F411xE  (Cortex-M4)  devboard
-#   stm32h723   STM32H723ZGTx (Cortex-M7) devboard
+#   stm32f411   STM32F411xE   (Cortex-M4)  devboard
+#   stm32h723   STM32H723ZGTx (Cortex-M7)  devboard
 #
-# Standalone OS  (demo board — no sibling app/ required):
-#   make os  TARGET=stm32f411
-#   make os  TARGET=stm32h723
+# Standalone OS  (devboard example — no sibling app/ required):
+#   make os  TARGET=stm32f411   →  make dev-stm32f411
+#   make os  TARGET=stm32h723   →  make dev-stm32h723
 #
-# Application firmware (config from app/ directory):
+# Application firmware (config from sibling app/ directory):
 #   make app TARGET=stm32h723
 #
 # Flash after a successful build:
@@ -633,36 +667,29 @@ install-prerequisites: install-toolchain install-openocd install-kconfig install
 TARGET ?= stm32f411
 
 ifeq ($(TARGET),stm32f411)
-  _OS_KCONF     := $(DEMO_DIR)/kconfig.conf
-  _OS_GEN       := demo-gen
-  _CONFIG_BOARD := stm32f411_devboard
-  _APP_KCONF    := ../app/kconfig_f411.conf
-  _APP_ELF      := app-stm32f411
+  _OS_DEV_TARGET := dev-stm32f411
+  _CONFIG_BOARD  := stm32f411_devboard
+  _APP_KCONF     := ../app/kconfig_f411.conf
+  _APP_ELF       := app-stm32f411
 else ifeq ($(TARGET),stm32h723)
-  _OS_KCONF     := $(DEMO_DIR)/kconfig_h723.conf
-  _OS_GEN       := demo-gen-h723
-  _CONFIG_BOARD := stm32h723_devboard
-  _APP_KCONF    := ../app/kconfig_ecg_h723.conf
-  _APP_ELF      := ecg_h723
+  _OS_DEV_TARGET := dev-stm32h723
+  _CONFIG_BOARD  := stm32h723_devboard
+  _APP_KCONF     := ../app/kconfig_ecg_h723.conf
+  _APP_ELF       := ecg_h723
 else
   $(error TARGET='$(TARGET)' is not valid. Valid targets: stm32f411  stm32h723)
 endif
 
 .PHONY: os os-flash app app-gen app-flash
 
-# os — standalone FreeRTOS-OS using the demo board for the selected TARGET
-os: $(_OS_GEN)
-	@echo "### [os/$(TARGET)] Kconfig: $(_OS_KCONF)"
-	@cp $(_OS_KCONF) .config
-	@$(MAKE) config-outputs
-	@$(MAKE) clean
-	@$(MAKE) all APP_DIR=$(DEMO_DIR) TARGET_NAME=$(TARGET) CONFIG_BOARD=$(_CONFIG_BOARD)
-	@echo "### [os/$(TARGET)] Done: build/$(TARGET).elf"
+# os — alias for the per-devboard dev-* target.
+os:
+	@$(MAKE) $(_OS_DEV_TARGET)
 
 os-flash:
 	@$(MAKE) flash TARGET_NAME=$(TARGET)
 
-# app-gen — regenerate board BSP files from the app/ board XML
+# app-gen — regenerate board BSP files from the sibling app/ board XML.
 app-gen:
 	@echo "### [app/$(TARGET)] Regenerating board BSP from ../app/board/$(_CONFIG_BOARD).xml ..."
 	@python3 scripts/gen_board_config.py \
@@ -670,7 +697,7 @@ app-gen:
 		--outdir ../app/board
 	@echo "### [app/$(TARGET)] Board BSP done"
 
-# app — FreeRTOS-OS + application, config sourced from app/
+# app — FreeRTOS-OS + application, config sourced from sibling app/
 app: app-gen
 	@if [ ! -f "$(_APP_KCONF)" ]; then \
 		echo "### Error: $(_APP_KCONF) not found."; \
@@ -691,7 +718,8 @@ app-flash:
 
 ##############################################################
 .PHONY: print-interface print-target flash docs clean-docs \
-        demo demo-gen demo-clean demo-h723 demo-gen-h723 \
+        dev-stm32f411 dev-stm32f411-gen dev-stm32f411-clean dev-stm32f411-flash \
+        dev-stm32h723 dev-stm32h723-gen dev-stm32h723-clean dev-stm32h723-flash \
         cppcheck-board-gen clean-cppcheck-board
 
 print-interface:

@@ -53,11 +53,11 @@ jobs:
           sudo apt-get install -y cppcheck python3 python3-pygments
           cppcheck --version
 
-      - name: Generate demo board headers
+      - name: Generate F411 example board headers
         run: |
           make cppcheck-board-gen
-          echo "Generated files in demo/board/:"
-          ls demo/board/
+          echo "Generated files in examples/stm32f411/board/:"
+          ls examples/stm32f411/board/
 
       - name: Run CPPcheck (warnings and above)
         id: cppcheck_run
@@ -134,11 +134,11 @@ jobs:
             if [[ -f "$f" ]]; then echo "MISRA addon: $f"; break; fi
           done
 
-      - name: Generate demo board headers
+      - name: Generate F411 example board headers
         run: |
           make cppcheck-board-gen
-          echo "Generated files in demo/board/:"
-          ls demo/board/
+          echo "Generated files in examples/stm32f411/board/:"
+          ls examples/stm32f411/board/
 
       - name: Run CPPcheck + MISRA C:2012
         id: misra_run
@@ -217,9 +217,9 @@ jobs:
           echo "::error::${ERRORS} MISRA error-severity violation(s) found. See misra_report.txt artefact."
           exit 1
 
-  # ── Job 3: Firmware Build (H723 demo) ───────────────────────────────────────
+  # ── Job 3: Firmware Build (H723 devboard example) ───────────────────────────
   build:
-    name: Firmware Build (STM32H723 demo)
+    name: Firmware Build (STM32H723 devboard example)
     runs-on: ubuntu-24.04
 
     steps:
@@ -235,23 +235,18 @@ jobs:
           sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi python3
           arm-none-eabi-gcc --version
 
-      - name: Generate demo config outputs
+      - name: Build H723 devboard example
         run: |
-          cp demo/kconfig_h723.conf .config
-          make config-outputs APP_DIR=demo
-
-      - name: Build H723 demo firmware
-        run: |
-          make all APP_DIR=demo TARGET_NAME=demo CONFIG_BOARD=stm32h723_devboard 2>&1
-          arm-none-eabi-size build/demo.elf
+          make dev-stm32h723 2>&1
+          arm-none-eabi-size build/stm32h723.elf
 
       - name: Upload firmware ELF
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-demo-h723-${{ github.run_number }}
+          name: firmware-dev-stm32h723-${{ github.run_number }}
           path: |
-            build/demo.elf
-            build/demo.hex
+            build/stm32h723.elf
+            build/stm32h723.elf.hex
           retention-days: 14
 
   # ── Job 4: Doxygen Docs Check ────────────────────────────────────────────────

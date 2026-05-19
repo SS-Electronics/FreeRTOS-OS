@@ -210,37 +210,39 @@ INCLUDES=(
 )
 
 # ── Board headers: priority order ────────────────────────────────────────────
-# 1. Sibling app/board/   — real board (submodule / integrated build)
-# 2. demo/board/          — demo build headers (make demo-gen already ran)
-# 3. build/cppcheck-board — last resort: auto-generate from demo XML
+# 1. Sibling app/board/                — real board (submodule / integrated build)
+# 2. examples/stm32f411/board/         — F411 devboard example
+#                                        (make dev-stm32f411-gen already ran)
+# 3. build/cppcheck-board              — last resort: auto-generate from the
+#                                        F411 example XML
 #
 # The selected directory is prepended to INCLUDES so <board/irq_hw_conf.h>
 # resolves to the right irq_hw_conf.h before the fallback in include/.
 APP_BOARD_DIR="${PROJECT_ROOT}/../app/board"
-DEMO_BOARD_DIR="${PROJECT_ROOT}/demo/board"
+F411_BOARD_DIR="${PROJECT_ROOT}/examples/stm32f411/board"
 CPPCHECK_BOARD_DIR="${PROJECT_ROOT}/build/cppcheck-board"
 
 if [[ -d "$APP_BOARD_DIR" && -f "${APP_BOARD_DIR}/irq_hw_conf.h" ]]; then
     INCLUDES=("-I${APP_BOARD_DIR}" "${INCLUDES[@]}")
     info "Board headers (app): ${APP_BOARD_DIR}"
 
-elif [[ -f "${DEMO_BOARD_DIR}/irq_hw_conf.h" ]]; then
-    # demo-gen has already run — use its output directly
-    INCLUDES=("-I${DEMO_BOARD_DIR}" "${INCLUDES[@]}")
-    info "Board headers (demo): ${DEMO_BOARD_DIR}"
+elif [[ -f "${F411_BOARD_DIR}/irq_hw_conf.h" ]]; then
+    # dev-stm32f411-gen has already run — use its output directly
+    INCLUDES=("-I${F411_BOARD_DIR}" "${INCLUDES[@]}")
+    info "Board headers (example, F411): ${F411_BOARD_DIR}"
 
 else
     # Neither available — generate into build/cppcheck-board/ on the fly
     CPPCHECK_BOARD_CONF="${CPPCHECK_BOARD_DIR}/board/irq_hw_conf.h"
     if [[ ! -f "$CPPCHECK_BOARD_CONF" ]]; then
-        info "Generating demo board headers → ${CPPCHECK_BOARD_DIR}/board/ ..."
+        info "Generating F411 example board headers → ${CPPCHECK_BOARD_DIR}/board/ ..."
         python3 "${PROJECT_ROOT}/scripts/gen_irq_table.py" \
-            "${PROJECT_ROOT}/demo/board/irq_table.xml" \
+            "${F411_BOARD_DIR}/irq_table.xml" \
             --outdir "${CPPCHECK_BOARD_DIR}/board" \
             2>/dev/null \
-            || { warn "Demo board generation failed — IRQ constants may be unresolved"; }
+            || { warn "F411 example board generation failed — IRQ constants may be unresolved"; }
         python3 "${PROJECT_ROOT}/scripts/gen_board_config.py" \
-            "${PROJECT_ROOT}/demo/board/stm32f411_devboard.xml" \
+            "${F411_BOARD_DIR}/stm32f411_devboard.xml" \
             --outdir "${CPPCHECK_BOARD_DIR}/board" \
             2>/dev/null || true
     fi
