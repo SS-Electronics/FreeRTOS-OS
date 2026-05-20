@@ -1,4 +1,4 @@
-# `examples/` — Self-contained Devboard Examples
+# `examples/` — Self-contained Devboard Examples {#examples--self-contained-devboard-examples}
 
 Each subdirectory is a complete, **standalone**, buildable application for
 one development board.  No sibling `app/` repository is required.
@@ -37,7 +37,7 @@ clobbering generated state.
 
 ---
 
-## Build & flash
+## Build & flash {#build--flash}
 
 | Devboard | Build | Flash |
 |---|---|---|
@@ -59,7 +59,7 @@ Higher-level wrappers `make os TARGET=stm32f411` and
 
 ---
 
-## Adding a new devboard example
+## Adding a new devboard example {#adding-a-new-devboard-example}
 
   1. `cp -r examples/stm32f411 examples/<new-target>`.
   2. Replace `board/stm32f411_devboard.xml` with the new board XML.

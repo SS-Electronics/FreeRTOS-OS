@@ -1,13 +1,13 @@
-# Static Analysis — CPPcheck & MISRA C:2012
+# Static Analysis — CPPcheck & MISRA C:2012 {#static-analysis--cppcheck--misra-c2012}
 
 This page documents the static analysis workflow for FreeRTOS-OS.  
 All scripts live in [`scripts/`](../scripts/).
 
 > **Doxygen users:** this page is part of the Doxygen-generated documentation. All report paths below are relative to `FreeRTOS-OS/`.
 
----
+<hr/>
 
-## Overview
+## Overview {#overview}
 
 | Tool | Role |
 |---|---|
@@ -24,7 +24,7 @@ The workflow uses three scripts:
 
 ---
 
-## Quick Start
+## Quick Start {#quick-start}
 
 ```bash
 # 1 — Install (once per machine)
@@ -45,7 +45,7 @@ The workflow uses three scripts:
 
 ---
 
-## Options Reference
+## Options Reference {#options-reference}
 
 | Option | Default | Description |
 |---|---|---|
@@ -59,7 +59,7 @@ The workflow uses three scripts:
 
 ---
 
-## Reports
+## Reports {#reports}
 
 All reports are written to `reports/cppcheck/` (git-ignored).
 
@@ -72,14 +72,14 @@ All reports are written to `reports/cppcheck/` (git-ignored).
 | `html/index.html` | HTML | Browser review (`--html` required) |
 | `misra_html/index.html` | HTML | MISRA browser report (`--html --misra` required) |
 
-### Opening reports in VS Code
+### Opening reports in VS Code {#opening-reports-in-vs-code}
 
 Install the **C/C++ Advanced Lint** or **CppCheck** extension and point it to  
 `reports/cppcheck/cppcheck_report.xml`.
 
 ---
 
-## MISRA C:2012 Rule-Text File
+## MISRA C:2012 Rule-Text File {#misra-c2012-rule-text-file}
 
 The MISRA C:2012 document is commercially licensed and not included in this repository.  
 Without it, violations are shown as rule IDs (e.g., `misra-c2012-8.1`).  
@@ -91,7 +91,7 @@ If you own a copy, export the rules as plain text (one rule per line) and pass t
 
 ---
 
-## Scope: What is Analysed
+## Scope: What is Analysed {#scope-what-is-analysed}
 
 CPPcheck analyses **project-owned source files only**. Third-party code is excluded.
 
@@ -106,7 +106,7 @@ CPPcheck analyses **project-owned source files only**. Third-party code is exclu
 
 ---
 
-## Preprocessor Configuration
+## Preprocessor Configuration {#preprocessor-configuration}
 
 The analysis uses the same defines that the compiler receives:
 
@@ -124,7 +124,7 @@ The analysis uses the same defines that the compiler receives:
 
 ---
 
-## Documented MISRA Deviations
+## Documented MISRA Deviations {#documented-misra-deviations}
 
 The following MISRA C:2012 rules are suppressed project-wide with documented rationale. Any new deviation must be added here and to [`scripts/cppcheck_suppressions.txt`](../scripts/cppcheck_suppressions.txt).
 
@@ -138,7 +138,7 @@ The following MISRA C:2012 rules are suppressed project-wide with documented rat
 | **Rule 5.4** | Macro identifiers shall be distinct | STM32 HAL header guard naming collisions — not under project control. |
 | **Rule 8.9** | Object at block scope if used in one function | Static ISR dispatch tables must be file-scope for symbol visibility across translation units. |
 
-### Suppressing a false positive inline
+### Suppressing a false positive inline {#suppressing-a-false-positive-inline}
 
 For a single-line suppression in source code:
 
@@ -159,7 +159,7 @@ Always add a comment explaining why the suppression is valid.
 
 ---
 
-## CI/CD Integration
+## CI/CD Integration {#cicd-integration}
 
 The GitHub Actions workflow [`.github/workflows/static_analysis.yml`](../.github/workflows/static_analysis.yml) runs on every push and pull request:
 
@@ -174,7 +174,7 @@ See [CI/CD pipeline](.github/workflows/static_analysis.yml) for the full workflo
 
 ---
 
-## Adding or Modifying Suppressions
+## Adding or Modifying Suppressions {#adding-or-modifying-suppressions}
 
 1. Identify the false-positive rule ID from the report (e.g., `misra-c2012-11.4`).
 2. Add an entry to [`scripts/cppcheck_suppressions.txt`](../scripts/cppcheck_suppressions.txt):
@@ -186,7 +186,7 @@ See [CI/CD pipeline](.github/workflows/static_analysis.yml) for the full workflo
 
 ---
 
-## Integrating with Doxygen
+## Integrating with Doxygen {#integrating-with-doxygen}
 
 `docs/CHECK.md` (this file) is part of the Doxygen documentation. The `Doxyfile` includes `./docs` in its `INPUT` path, so the page is generated automatically with:
 

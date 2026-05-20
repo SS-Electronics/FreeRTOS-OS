@@ -1,4 +1,4 @@
-# FreeRTOS-OS — Architecture Reference
+# FreeRTOS-OS — Architecture Reference {#freertos-os--architecture-reference}
 
 This document is the deep-dive companion to the top-level
 [`README.md`](../README.md).  README is the *user* guide (what to type,
@@ -8,7 +8,7 @@ and every non-obvious design choice is justified.
 
 ---
 
-## Contents
+## Contents {#contents}
 
 1. [Scope & Goals](#scope--goals)
 2. [Repository Layout](#repository-layout)
@@ -32,7 +32,7 @@ and every non-obvious design choice is justified.
 
 ---
 
-## Scope & Goals
+## Scope & Goals {#scope--goals}
 
 FreeRTOS-OS is a thin OS layer above the FreeRTOS kernel that provides
 the things FreeRTOS itself deliberately omits:
@@ -51,7 +51,7 @@ It does **not** replace the FreeRTOS kernel or schedule tasks itself.
 
 ---
 
-## Repository Layout
+## Repository Layout {#repository-layout}
 
 ```
 FreeRTOS-OS/
@@ -84,7 +84,7 @@ FreeRTOS-OS/
 
 ---
 
-## Layer Model
+## Layer Model {#layer-model}
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -144,11 +144,11 @@ FreeRTOS-OS/
 
 ---
 
-## Build Modes — Standalone vs. With-App
+## Build Modes — Standalone vs. With-App {#build-modes--standalone-vs-with-app}
 
 There are two top-level build modes; the same OS tree services both.
 
-### 1. Standalone OS — `make os TARGET=<mcu>`
+### 1. Standalone OS — `make os TARGET=<mcu>` {#1-standalone-os--make-os-targetmcu}
 
   - `APP_DIR` resolves to `examples/<target>/`, which ships a minimal
     `app_main` plus per-target board XML / Kconfig preset.
@@ -159,7 +159,7 @@ There are two top-level build modes; the same OS tree services both.
   - Each `make os` invocation chains: board-gen → config-outputs →
     clean → compile.
 
-### 2. With-App — `make app TARGET=<mcu>` (or `make all APP_DIR=...`)
+### 2. With-App — `make app TARGET=<mcu>` (or `make all APP_DIR=...`) {#2-with-app--make-app-targetmcu-or-make-all-app_dir}
 
   - `APP_DIR` points at a sibling repository's `app/` directory.
   - The application supplies its own `app_main`, board XML, IRQ table,
@@ -178,7 +178,7 @@ The dual-mode contract lives in the top-level `Makefile`:
 
 ---
 
-## Code Generation Pipeline
+## Code Generation Pipeline {#code-generation-pipeline}
 
 Three independent generators turn human-edited inputs into C source:
 
@@ -198,7 +198,7 @@ byte-identical outputs.  CI verifies this so generator drift is caught.
 
 ---
 
-## Driver Layer
+## Driver Layer {#driver-layer}
 
 The driver layer (`drivers/drv_*.c` + `include/drivers/drv_*.h`) defines
 vendor-agnostic data types and a vtable per peripheral class.  Concrete
@@ -227,7 +227,7 @@ include vendor headers.**  All vendor code lives under `drivers/hal/<vendor>/`.
 
 ---
 
-## Service Threads
+## Service Threads {#service-threads}
 
 Every owned peripheral has a dedicated FreeRTOS task that:
 
@@ -253,7 +253,7 @@ Standard priorities (from `config/conf_os.h`):
 
 ---
 
-## IRQ Subsystem
+## IRQ Subsystem {#irq-subsystem}
 
 `irq/` implements a Linux-style two-layer IRQ model:
 
@@ -266,7 +266,7 @@ Standard priorities (from `config/conf_os.h`):
   - **Generated NVIC initialisation** — `irq_hw_init_generated.c`
     programs each enabled IRQ's NVIC priority then enables it.
 
-### Critical: `configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY = 5`
+### Critical: `configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY = 5` {#critical-configlibrary_max_syscall_irq_priority--5}
 
 Every peripheral IRQ priority must be **≥ 5** (numerically).  IRQs at
 priority 1–4 run above the FreeRTOS BASEPRI mask and must not call any
@@ -282,7 +282,7 @@ Set priorities in `<app>/board/irq_table.xml`, regenerate, rebuild.
 
 ---
 
-## IPC
+## IPC {#ipc}
 
 `ipc/` provides two complementary primitives:
 
@@ -298,7 +298,7 @@ via `ipc_mqueue_lookup()`.
 
 ---
 
-## Memory Management
+## Memory Management {#memory-management}
 
 `mm/` adds:
 
@@ -316,7 +316,7 @@ FreeRTOS itself uses `heap_4.c` (`configTOTAL_HEAP_SIZE` from
 
 ---
 
-## Boot Sequence (Boot FSM)
+## Boot Sequence (Boot FSM) {#boot-sequence-boot-fsm}
 
 `init/main.c` runs an explicit 11-phase state machine so every step has
 an identity suitable for IEC 62304 software-unit design:
@@ -339,13 +339,13 @@ Any phase failure calls `safety_enter_safe_state(SAFE_REASON_BOOT_FAIL)`.
 
 ---
 
-## Medical-Grade Safety Layer
+## Medical-Grade Safety Layer {#medical-grade-safety-layer}
 
 The safety stack is Kconfig-gated (`CONFIG_INC_SERVICE_WDOG`,
 `CONFIG_HAL_IWDG_MODULE_ENABLED`) so it costs nothing in builds that
 don't need it (e.g. the F411 standalone devboard example).
 
-### Components
+### Components {#components}
 
 | File | Role |
 |---|---|
@@ -356,7 +356,7 @@ don't need it (e.g. the F411 standalone devboard example).
 | `include/safety/fault_handler.h` | Boot-time API to query / clear the persistent fault record. |
 | `include/def_err.h` | 15 error codes (`OS_ERR_NONE` … `OS_ERR_NOT_INIT`) used for IEC 62304 traceability. |
 
-### `.noinit` RAM section
+### `.noinit` RAM section {#noinit-ram-section}
 
 Both the fault record and the safe-state record live in a `.noinit`
 section placed **after** `._user_heap_stack` in the linker script
@@ -364,7 +364,7 @@ section placed **after** `._user_heap_stack` in the linker script
 only, so `.noinit` survives an NVIC soft reset.  `BOOT_PREV_FAULT_CHK`
 checks both magic words at boot.
 
-### Watchdog design
+### Watchdog design {#watchdog-design}
 
 ```
 wdog_hw_init()    Called from main() BEFORE the scheduler.  Once IWDG
@@ -388,7 +388,7 @@ wdog_service_thread (priority 4, period 1000 ms):
     missed >= 3      →  safety_enter_safe_state(SAFE_REASON_WATCHDOG)
 ```
 
-### IWDG timing caveat (H7)
+### IWDG timing caveat (H7) {#iwdg-timing-caveat-h7}
 
 H723 LSI actual frequency ≈ 38 kHz (vs 32 kHz nominal) → actual IWDG
 timeout ≈ **3.37 s** (vs 4 s spec).  `WDOG_CHECK_PERIOD_MS = 1000 ms` is
@@ -396,7 +396,7 @@ the max safe kick gap.  Do **not** call `vTaskDelay(5000)` at boot
 without explicitly refreshing the IWDG inside the delay — that would
 trigger a hardware reset loop.
 
-### App-task notification timeout rule
+### App-task notification timeout rule {#app-task-notification-timeout-rule}
 
 `ecg_infer_task` (and any task driven by `ulTaskNotifyTake`) must use a
 timeout **< `WDOG_CHECK_PERIOD_MS`** — use 900 ms.  `portMAX_DELAY` or
@@ -404,7 +404,7 @@ timeout **< `WDOG_CHECK_PERIOD_MS`** — use 900 ms.  `portMAX_DELAY` or
 
 ---
 
-## Logging
+## Logging {#logging}
 
 `slog` is a 32-entry circular ring buffer.  Each entry carries:
 
@@ -424,7 +424,7 @@ default `1` (ERROR + WARN).
 
 ---
 
-## Shell
+## Shell {#shell}
 
 `shell/shell_task_mgmt.c` wires up FreeRTOS-Plus-CLI on UART_APP.  The
 service task:
@@ -439,7 +439,7 @@ with `FreeRTOS_CLIRegisterCommand`.
 
 ---
 
-## Architecture Support — `/arch`
+## Architecture Support — `/arch` {#architecture-support--arch}
 
 See [`arch/README.md`](../arch/README.md) for the canonical contract.
 Summary:
@@ -456,7 +456,7 @@ Currently shipped vendors: **STM** (production).  Placeholders for
 
 ---
 
-## Adding a New MCU
+## Adding a New MCU {#adding-a-new-mcu}
 
 Within an already-supported vendor — e.g. adding STM32F407 to the STM
 family:
@@ -482,7 +482,7 @@ The rest of the OS is unchanged.
 
 ---
 
-## Adding a New Vendor
+## Adding a New Vendor {#adding-a-new-vendor}
 
 See `arch/README.md` → *Adding a New Vendor — Worked Example*
 (LPC55S69).  Summary of touched files:
@@ -500,46 +500,46 @@ See `arch/README.md` → *Adding a New Vendor — Worked Example*
 
 ---
 
-## Critical Invariants
+## Critical Invariants {#critical-invariants}
 
 These are non-obvious and have bitten the project before; treat them as
 architectural constants.
 
-### 1. Linker scripts must `KEEP(.init)` and `KEEP(.fini)`
+### 1. Linker scripts must `KEEP(.init)` and `KEEP(.fini)` {#1-linker-scripts-must-keepinit-and-keepfini}
 
 See `arch/README.md` → *Critical: KEEP(.init) / KEEP(.fini)*.  Discarding
 `crtn.o`'s anonymous epilog causes `__libc_init_array` to fall through
 into adjacent rodata and BusFault before `main()`.
 
-### 2. ISR priority ≥ `configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY` (5)
+### 2. ISR priority ≥ `configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY` (5) {#2-isr-priority--configlibrary_max_syscall_irq_priority-5}
 
 Any peripheral ISR that calls a FreeRTOS API must have NVIC priority
 ≥ 5.  Priorities 1–4 are above the BASEPRI mask and are FreeRTOS-unsafe.
 
-### 3. HAL timebase IRQ uses TIM6 on H7, TIM1 on F4
+### 3. HAL timebase IRQ uses TIM6 on H7, TIM1 on F4 {#3-hal-timebase-irq-uses-tim6-on-h7-tim1-on-f4}
 
 `HAL_InitTick` on H7 uses `TIM6_DAC_IRQHandler` (`TIM6_DAC_IRQn = 54`),
 not `TIM1_UP_IRQHandler`.  Generated dispatch table must route TIM6 to
 `HAL_TIM_IRQHandler`, leave `TIM1_UP_IRQHandler` as an empty stub.
 
-### 4. `__PACKED` / `__INLINE` / `__WEAK` guard names
+### 4. `__PACKED` / `__INLINE` / `__WEAK` guard names {#4-__packed--__inline--__weak-guard-names}
 
 `include/def_compiler.h` guards must use the `__`-prefixed names that
 CMSIS uses (`#ifndef __PACKED`, not `#ifndef PACKED`).  Otherwise every
 CMSIS include produces a `"__PACKED redefined"` warning and silently
 overrides CMSIS's stronger `aligned(1)` definition.
 
-### 5. `CONFIG_BOARD` is a Make variable, not a Kconfig symbol
+### 5. `CONFIG_BOARD` is a Make variable, not a Kconfig symbol {#5-config_board-is-a-make-variable-not-a-kconfig-symbol}
 
 `CONFIG_BOARD` MUST be passed on the `make` command line.  Putting it
 in `.config` causes the wrong board XML to be picked up by `make all`.
 
-### 6. `wdog_service_thread` priority 4
+### 6. `wdog_service_thread` priority 4 {#6-wdog_service_thread-priority-4}
 
 Above the app tasks (priority 1–2) so it can preempt a stuck app task
 and detect the stall.
 
-### 7. `slog` thread-safety uses `__disable_irq()` not a mutex
+### 7. `slog` thread-safety uses `__disable_irq()` not a mutex {#7-slog-thread-safety-uses-__disable_irq-not-a-mutex}
 
 `slog` must work pre-scheduler (during boot), from ISRs, and from
 fault handlers.  A FreeRTOS mutex would fail in all three contexts.
@@ -548,7 +548,7 @@ boundary.
 
 ---
 
-## Known Bug Catalogue
+## Known Bug Catalogue {#known-bug-catalogue}
 
 Recent debugging episodes worth preserving — `docs/OS_INSIDE.md` has
 the full post-mortems.

@@ -1,10 +1,10 @@
-# Board Configuration — FreeRTOS-OS
+# Board Configuration — FreeRTOS-OS {#board-configuration--freertos-os}
 
 This document explains how hardware board configuration flows from a user-authored XML file all the way through code generation, compilation, driver registration, and application callback use.
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Concept](#concept)
 - [Directory Layout](#directory-layout)
@@ -20,7 +20,7 @@ This document explains how hardware board configuration flows from a user-author
   - [Generator Architecture](#generator-architecture)
   - [VendorCodegen Class Hierarchy](#vendorcodegen-class-hierarchy)
   - [STM32Codegen Attribute Mappings](#stm32codegen-attribute-mappings)
-  - [InfineonCodegen Notes](#infineonecodegen-notes)
+  - [InfineonCodegen Notes](#infineoncodegen-notes)
   - [MicrochipCodegen Notes](#microchipcodegen-notes)
 - [Generated Files](#generated-files)
   - [board_device_ids.h](#board_device_idsh)
@@ -34,7 +34,7 @@ This document explains how hardware board configuration flows from a user-author
 
 ---
 
-## Concept
+## Concept {#concept}
 
 The board configuration system is analogous to a Linux Device Tree, but resolved entirely at compile time as constant C structs.
 
@@ -44,7 +44,7 @@ Instead of scattering pin assignments and peripheral parameters across multiple 
 
 ---
 
-## Directory Layout
+## Directory Layout {#directory-layout}
 
 ```
 FreeRTOS-OS-App/
@@ -71,7 +71,7 @@ FreeRTOS-OS-App/
 
 ---
 
-## End-to-End Flow
+## End-to-End Flow {#end-to-end-flow}
 
 ```
 app/board/<board>.xml          (user authors / edits)
@@ -126,11 +126,11 @@ COUNT 2                       config()        UART_PORTS enum
 
 ---
 
-## XML Board Description
+## XML Board Description {#xml-board-description}
 
 Board XML files live in `app/board/<board_name>.xml`. The filename (without `.xml`) is the board name used by `CONFIG_BOARD`.
 
-### Root Element
+### Root Element {#root-element}
 
 ```xml
 <board name="my_board"
@@ -152,7 +152,7 @@ Board XML files live in `app/board/<board_name>.xml`. The filename (without `.xm
 
 ---
 
-### UART / USART
+### UART / USART {#uart--usart}
 
 ```xml
 <uart id="UART_DEBUG"
@@ -217,7 +217,7 @@ Child `<irq>`:
 
 ---
 
-### I2C
+### I2C {#i2c}
 
 ```xml
 <i2c id="I2C_SENSOR_BUS"
@@ -246,7 +246,7 @@ Child `<irq_ev>` and `<irq_er>` are the event and error interrupt vectors.
 
 ---
 
-### SPI
+### SPI {#spi}
 
 ```xml
 <spi id="SPI_FLASH_BUS"
@@ -284,7 +284,7 @@ Add an optional `<nss_pin>` child element with the same pin attributes for hardw
 
 ---
 
-### GPIO
+### GPIO {#gpio}
 
 ```xml
 <gpio id="LED_BOARD"
@@ -311,7 +311,7 @@ Add an optional `<nss_pin>` child element with the same pin attributes for hardw
 
 ---
 
-### Pin Attribute Reference
+### Pin Attribute Reference {#pin-attribute-reference}
 
 All `<tx>`, `<rx>`, `<scl>`, `<sda>`, `<sck>`, `<miso>`, `<mosi>`, `<nss_pin>` elements share these attributes:
 
@@ -325,9 +325,9 @@ All `<tx>`, `<rx>`, `<scl>`, `<sda>`, `<sck>`, `<miso>`, `<mosi>`, `<nss_pin>` e
 
 ---
 
-## Code Generator
+## Code Generator {#code-generator}
 
-### Generator Architecture
+### Generator Architecture {#generator-architecture}
 
 `scripts/gen_board_config.py` is a single-file Python 3 script. Its structure:
 
@@ -371,7 +371,7 @@ python3 scripts/gen_board_config.py app/board/stm32f411_devboard.xml \
     --incdir app/board
 ```
 
-### VendorCodegen Class Hierarchy
+### VendorCodegen Class Hierarchy {#vendorcodegen-class-hierarchy}
 
 `VendorCodegen` is an abstract base that defines the translation interface. Vendor is selected automatically from the XML `vendor` attribute:
 
@@ -406,7 +406,7 @@ class VendorCodegen:
     def device_includes(self) -> list: ...
 ```
 
-### STM32Codegen Attribute Mappings
+### STM32Codegen Attribute Mappings {#stm32codegen-attribute-mappings}
 
 | XML value | Generated C constant |
 |-----------|----------------------|
@@ -430,14 +430,14 @@ static void _usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
 
 `board_gpio_clk_enable(GPIO_TypeDef *port)` is generated as a chain of `if / else if` comparisons covering every port used by any GPIO pin across all peripheral types.
 
-### InfineonCodegen Notes
+### InfineonCodegen Notes {#infineoncodegen-notes}
 
 - GPIO port → `XMC_GPIO_PORT_x`
 - GPIO pins use bare integer strings
 - Clock enable bodies emit `TODO` comments (XMC clock module varies per family)
 - Interrupt mode emits a `TODO: ERU config needed` comment
 
-### MicrochipCodegen Notes
+### MicrochipCodegen Notes {#microchipcodegen-notes}
 
 - Peripheral instances become `SERCOM0` … `SERCOMn` style stubs
 - All HAL constant translations emit `TODO` comments
@@ -445,11 +445,11 @@ static void _usart1_clk_en(void) { __HAL_RCC_USART1_CLK_ENABLE(); }
 
 ---
 
-## Generated Files
+## Generated Files {#generated-files}
 
 All four generated files are placed in `app/board/` and are regenerated on every `make board-gen`. **Do not edit them** — edit the XML instead.
 
-### board_device_ids.h
+### board_device_ids.h {#board_device_idsh}
 
 `app/board/board_device_ids.h`
 
@@ -479,7 +479,7 @@ All four generated files are placed in `app/board/` and are regenerated on every
 
 `BOARD_*_COUNT` constants drive static array sizes in the driver layer. `app/board/mcu_config.h` re-exports them as `NO_OF_UART`, `NO_OF_IIC`, `NO_OF_SPI`, `NO_OF_GPIO` for driver source compatibility, and also defines `CONFIG_DEVICE_VARIANT`, per-UART enable macros (`UART_1_EN` … `UART_6_EN`), and port enumerations.
 
-### board_handles.h
+### board_handles.h {#board_handlesh}
 
 `app/board/board_handles.h`
 
@@ -507,7 +507,7 @@ The actual definitions (`UART_HandleTypeDef huart1;` etc.) live in `board_config
 
 > **Standalone kernel build (no APP_DIR):** `FreeRTOS-OS/include/board/board_handles.h` is a stub containing only the include guard. This lets the OS compile without an application attached.
 
-### board_config.c
+### board_config.c {#board_configc}
 
 `app/board/board_config.c`
 
@@ -564,7 +564,7 @@ static const board_uart_desc_t _uart_table[BOARD_UART_COUNT] = {
 };
 ```
 
-### mcu_config.h
+### mcu_config.h {#mcu_configh}
 
 `app/board/mcu_config.h`
 
@@ -597,11 +597,11 @@ This file is the canonical source for vendor variant and peripheral capability i
 
 ---
 
-## Makefile Integration
+## Makefile Integration {#makefile-integration}
 
 Board files live in the application tree. The build system wires them in automatically when `APP_DIR` is provided.
 
-### Key variables in `FreeRTOS-OS/Makefile`
+### Key variables in `FreeRTOS-OS/Makefile` {#key-variables-in-freertos-osmakefile}
 
 ```makefile
 CONFIG_BOARD    ?= stm32f411_devboard
@@ -617,7 +617,7 @@ INCLUDES           += -I$(APP_DIR)    # added first, before arch and OS includes
 endif
 ```
 
-### board-gen recipe
+### board-gen recipe {#board-gen-recipe}
 
 ```makefile
 $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H): $(BOARD_XML)
@@ -626,13 +626,13 @@ $(BOARD_BSP_C) $(BOARD_BSP_H) $(BOARD_HANDLES_H) $(BOARD_MCU_CONFIG_H): $(BOARD_
         --incdir $(APP_DIR)/board
 ```
 
-### `app/Makefile` fragment
+### `app/Makefile` fragment {#appmakefile-fragment}
 
 ```makefile
 app-obj-y += board/board_config.o   # compiled as an app source
 ```
 
-### Make targets
+### Make targets {#make-targets}
 
 | Target | Command | Effect |
 |--------|---------|--------|
@@ -643,9 +643,9 @@ app-obj-y += board/board_config.o   # compiled as an app source
 
 > `make board-gen` without `APP_DIR` prints an error and exits. The top-level `Makefile` passes `APP_DIR=../app` automatically for all `app` and `board-gen` targets.
 
----
+<hr/>
 
-## Driver Registration Flow
+## Driver Registration Flow {#driver-registration-flow}
 
 When the OS starts, the management service threads initialise in order (governed by startup delay offsets). Each thread reads the board config and registers its peripherals into the generic driver layer automatically — no user code required:
 
@@ -689,11 +689,11 @@ The ordering constraint for GPIO is critical: the RCC clock must be enabled befo
 
 ---
 
-## Application Callback Registration
+## Application Callback Registration {#application-callback-registration}
 
 The generated `board_config.c` holds a mutable callback table for each peripheral class. Applications register functions that are called directly from driver ISR/DMA completion context:
 
-### UART callbacks
+### UART callbacks {#uart-callbacks}
 
 ```c
 #include <board/board_device_ids.h>
@@ -715,20 +715,20 @@ void app_setup_callbacks(void)
 }
 ```
 
-### I2C callbacks
+### I2C callbacks {#i2c-callbacks}
 
 ```c
 board_iic_register_done_cb (I2C_SENSOR_BUS, my_iic_done);
 board_iic_register_error_cb(I2C_SENSOR_BUS, my_iic_error);
 ```
 
-### SPI callbacks
+### SPI callbacks {#spi-callbacks}
 
 ```c
 board_spi_register_done_cb(SPI_FLASH_BUS, my_spi_done);
 ```
 
-### GPIO interrupt callbacks
+### GPIO interrupt callbacks {#gpio-interrupt-callbacks}
 
 ```c
 static void btn_irq(uint8_t dev_id) { /* debounce and signal task */ }
@@ -736,7 +736,7 @@ static void btn_irq(uint8_t dev_id) { /* debounce and signal task */ }
 board_gpio_register_irq_cb(BTN_USER, btn_irq);
 ```
 
-### Callback dispatch chain (UART RX example)
+### Callback dispatch chain (UART RX example) {#callback-dispatch-chain-uart-rx-example}
 
 ```
 USART1_IRQHandler() [hal_it_stm32.c]
@@ -751,7 +751,7 @@ USART1_IRQHandler() [hal_it_stm32.c]
 
 ---
 
-## Adding a New Board
+## Adding a New Board {#adding-a-new-board}
 
 1. **Create the XML file** — copy `app/board/stm32f411_devboard.xml` to `app/board/<my_board>.xml` and edit to match your hardware.
 
@@ -786,7 +786,7 @@ No other source files need to change. The management threads self-register all p
 
 ---
 
-## Adding a New Vendor Backend
+## Adding a New Vendor Backend {#adding-a-new-vendor-backend}
 
 1. **Subclass `VendorCodegen`** in `scripts/gen_board_config.py`:
 

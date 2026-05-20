@@ -1,10 +1,10 @@
-# IPC & Message Queues — FreeRTOS-OS
+# IPC & Message Queues — FreeRTOS-OS {#ipc--message-queues--freertos-os}
 
 All inter-task communication is registered through a central queue registry (`ipc/mqueue.c`). The registry itself is an intrusive doubly-circular list of `type_message_queue_descriptor` nodes, so register/unregister are O(1).
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Queue Types](#queue-types)
 - [API](#api)
@@ -17,7 +17,7 @@ All inter-task communication is registered through a central queue registry (`ip
 
 ---
 
-## Queue Types
+## Queue Types {#queue-types}
 
 | Type constant | Backend | Typical use |
 |---|---|---|
@@ -26,7 +26,7 @@ All inter-task communication is registered through a central queue registry (`ip
 
 ---
 
-## API
+## API {#api}
 
 Include: `#include <ipc/mqueue.h>`
 
@@ -41,9 +41,9 @@ Include: `#include <ipc/mqueue.h>`
 
 ---
 
-## Usage Examples
+## Usage Examples {#usage-examples}
 
-### Inter-task typed queue
+### Inter-task typed queue {#inter-task-typed-queue}
 
 ```c
 #include <ipc/mqueue.h>
@@ -66,7 +66,7 @@ ipc_mqueue_receive_item(qid, &received);
 ipc_mqueue_unregister(qid);
 ```
 
-### UART byte-stream ring buffer
+### UART byte-stream ring buffer {#uart-byte-stream-ring-buffer}
 
 ```c
 /* Register a 512-byte ring buffer for UART 1 */
@@ -75,7 +75,7 @@ int32_t uart_qid = ipc_mqueue_register(IPC_MQUEUE_TYPE_UART_HW, UART_1, 1, 512);
 
 The UART ISR writes bytes into this ring buffer via the board callback; the `uart_mgmt` service thread drains it.
 
-### Iterate all registered queues
+### Iterate all registered queues {#iterate-all-registered-queues}
 
 ```c
 type_message_queue_descriptor *pos;
@@ -88,7 +88,7 @@ list_for_each_entry(pos, ipc_get_mqueue_head(), list) {
 
 ---
 
-## Management Service Queues
+## Management Service Queues {#management-service-queues}
 
 Each peripheral management thread exposes its own FreeRTOS queue for command dispatch. These are higher-level than raw `ipc_mqueue` and are the recommended API for application code:
 
@@ -103,7 +103,7 @@ See [DEV_MGMT.md](DEV_MGMT.md) for full management service thread documentation.
 
 ---
 
-## Ring Buffer
+## Ring Buffer {#ring-buffer}
 
 `ipc/ringbuffer.cpp` provides a byte-stream circular buffer used by UART ISRs:
 

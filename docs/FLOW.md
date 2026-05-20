@@ -1,4 +1,4 @@
-# Boot Flow — Reset_Handler to vTaskStartScheduler
+# Boot Flow — Reset_Handler to vTaskStartScheduler {#boot-flow--reset_handler-to-vtaskstartscheduler}
 
 This document traces the complete execution path from the first instruction
 executed after power-on/reset all the way to `vTaskStartScheduler()` in
@@ -7,7 +7,7 @@ source files in this repository.
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [High-Level Flow](#high-level-flow)
 - [Phase 0 — Hardware Reset](#phase-0--hardware-reset)
@@ -17,14 +17,17 @@ source files in this repository.
   - [1.3 .data Section Copy (Flash → RAM)](#13-data-section-copy-flash--ram)
   - [1.4 .bss Zero-Fill](#14-bss-zero-fill)
   - [1.5 C++ Static Constructors](#15-c-static-constructors)
-- [Phase 2 — main()](#phase-2--main)
-  - [2.1 HAL_Init](#21-hal_init)
-  - [2.2 drv_rcc_clock_init — PLL Bring-Up](#22-drv_rcc_clock_init--pll-bring-up)
-  - [2.3 drv_cpu_interrupt_prio_set — NVIC Configuration](#23-drv_cpu_interrupt_prio_set--nvic-configuration)
-  - [2.4 ipc_queues_init — IPC Ring Buffers](#24-ipc_queues_init--ipc-ring-buffers)
-  - [2.5 uart_mgmt_start — Management Thread Creation](#25-uart_mgmt_start--management-thread-creation)
-  - [2.6 printk_init](#26-printk_init)
-  - [2.7 app_main — Application Task Creation](#27-app_main--application-task-creation)
+- [Phase 2 — main() (Boot FSM)](#phase-2--main)
+  - [2.1 BOOT_HAL_INIT — HAL_Init](#21-hal_init)
+  - [2.2 BOOT_CLK_INIT — drv_rcc_clock_init (PLL bring-up)](#22-drv_rcc_clock_init--pll-bring-up)
+  - [2.3 BOOT_PERIPH_CLK — board_clk_enable](#23-boot_periph_clk--board_clk_enable)
+  - [2.4 BOOT_IRQ_INIT — drv_cpu_interrupt_prio_set + irq_hw_init_all](#23-drv_cpu_interrupt_prio_set--nvic-configuration)
+  - [2.5 BOOT_IPC_INIT — ipc_mqueue_init](#24-ipc_queues_init--ipc-ring-buffers)
+  - [2.6 BOOT_SLOG_INIT — slog_init](#26-boot_slog_init--slog_init)
+  - [2.7 BOOT_PREV_FAULT_CHK — fault / safe-state replay](#27-boot_prev_fault_chk--fault--safe-state-replay)
+  - [2.8 BOOT_SERVICES_INIT — os_kernel_thread_register](#28-boot_services_init--os_kernel_thread_register)
+  - [2.9 BOOT_WDOG_HW_INIT — wdog_hw_init (irreversible)](#29-boot_wdog_hw_init--wdog_hw_init)
+  - [2.10 BOOT_APP_INIT — app_main](#27-app_main--application-task-creation)
 - [Phase 3 — vTaskStartScheduler](#phase-3--vtaskstartscheduler)
 - [Phase 4 — Post-Scheduler: Management Thread Startup](#phase-4--post-scheduler-management-thread-startup)
 - [Memory Map and Section Placement](#memory-map-and-section-placement)
@@ -33,58 +36,65 @@ source files in this repository.
 
 ---
 
-## High-Level Flow
+## High-Level Flow {#high-level-flow}
 
-```
-                    ┌─────────────────────────────────────────────────────┐
-                    │            POWER-ON / RESET                         │
-                    │   Cortex-M4 fetches initial SP from 0x08000000      │
-                    │   Cortex-M4 fetches Reset_Handler from 0x08000004   │
-                    └───────────────────┬─────────────────────────────────┘
-                                        │
-          ┌─────────────────────────────▼──────────────────────────────────┐
-          │  PHASE 1 — Reset_Handler()                                     │
-          │  arch/devices/STM/STM32F4xx/STM32F411/startup_stm32f411vetx.c │
-          │                                                                 │
-          │  1. Re-load SP from g_pfnVectors[0]                            │
-          │  2. SystemInit()        → FPU enable, optional VTOR            │
-          │  3. Copy .boot_data, .os_data, .app_data, .data  Flash → RAM   │
-          │  4. Zero-fill .bss                                              │
-          │  5. __libc_init_array() → C++ static constructors              │
-          │  6. → main()                                                    │
-          └─────────────────────────────┬──────────────────────────────────┘
-                                        │
-          ┌─────────────────────────────▼──────────────────────────────────┐
-          │  PHASE 2 — main()                                              │
-          │  init/main.c                                                   │
-          │                                                                 │
-          │  1. HAL_Init()                → TIM1 tick, NVIC groups         │
-          │  2. drv_rcc_clock_init()      → HSI → PLL → 100 MHz SYSCLK    │
-          │  3. drv_cpu_interrupt_prio_set() → SVCall priority             │
-          │  4. ipc_queues_init()         → ring buffers for UART TX/RX    │
-          │  5. uart_mgmt_start()         → create queue + FreeRTOS task   │
-          │  6. printk_init()             → bind printk to UART TX queue   │
-          │  7. app_main()                → create application tasks        │
-          └─────────────────────────────┬──────────────────────────────────┘
-                                        │
-          ┌─────────────────────────────▼──────────────────────────────────┐
-          │  PHASE 3 — vTaskStartScheduler()                               │
-          │  Does not return. Scheduler takes over.                        │
-          └─────────────────────────────┬──────────────────────────────────┘
-                                        │
-          ┌─────────────────────────────▼──────────────────────────────────┐
-          │  PHASE 4 — Tasks running                                       │
-          │                                                                 │
-          │  t=3000 ms  gpio_mgmt  wakes → registers GPIO pins             │
-          │  t=4000 ms  uart_mgmt  wakes → HAL_UART_Init + start_rx_it    │
-          │  t=5500 ms  spi_mgmt   wakes → HAL_SPI_Init                    │
-          │  t=6500 ms  iic_mgmt   wakes → HAL_I2C_Init                    │
-          └────────────────────────────────────────────────────────────────┘
-```
+The boot sequence is implemented as an explicit state machine in
+[`init/main.c`](../init/main.c) so every phase has a named identity
+traceable to IEC 62304 software unit design.  The current phase is
+stored in a volatile `_boot_phase` (readable from any debugger) and
+each transition is logged with `LOG_I("BOOT", ...)`.
+
+\dot
+digraph boot_overview {
+    rankdir=TB;
+    splines=ortho;
+    node [shape=box, fontname="Helvetica", fontsize=10, style="rounded,filled"];
+
+    HW    [label="POWER-ON / RESET\nSP ← *(0x0800_0000)\nPC ← *(0x0800_0004)", fillcolor="#FFCDD2"];
+
+    subgraph cluster_p1 {
+        label="PHASE 1 — Reset_Handler\nstartup_stm32{f411,h723}.c";
+        style="rounded,filled"; fillcolor="#FFF3E0";
+        SI    [label="SystemInit()\n(FPU, VTOR, cache)"];
+        COPY  [label=".boot_data / .os_data / .app_data / .data\nFlash → SRAM"];
+        BSS   [label=".bss zero-fill"];
+        CTOR  [label="__libc_init_array()\n(C++ static ctors)"];
+    }
+
+    subgraph cluster_p2 {
+        label="PHASE 2 — main()  (init/main.c)";
+        style="rounded,filled"; fillcolor="#E3F2FD";
+        FSM   [label="boot_phase_t FSM\n0 HAL_INIT     → HAL_Init()\n1 CLK_INIT     → drv_rcc_clock_init()\n2 PERIPH_CLK   → board_clk_enable()\n3 IRQ_INIT     → drv_cpu_interrupt_prio_set + irq_hw_init_all\n4 IPC_INIT     → ipc_mqueue_init()\n5 SLOG_INIT    → slog_init()\n6 PREV_FAULT   → fault_handler + safe_state replay\n7 SERVICES     → os_kernel_thread_register()\n8 WDOG_HW      → wdog_hw_init()  (irreversible)\n9 APP_INIT     → app_main()  (weak)\n10 SCHEDULER  → vTaskStartScheduler()"];
+    }
+
+    subgraph cluster_p3 {
+        label="PHASE 3 — Scheduler running";
+        style="rounded,filled"; fillcolor="#E8F5E9";
+        S1 [label="WDOG (prio 4)\nfeeds IWDG every 1 s"];
+        S2 [label="*_mgmt tasks (prio 1)\nstaggered startup delay (10 ms .. 10 s)\nrun board self-registration\nthen serve queue requests"];
+        S3 [label="OS_SHELL (prio 1)\nblocks on UART RX"];
+        S4 [label="application tasks\ncreated by app_main()"];
+    }
+
+    SAFE  [label="safety_enter_safe_state()\n.noinit record\nHW reset → SAFE banner", shape=octagon, fillcolor="#EF9A9A"];
+
+    HW -> SI -> COPY -> BSS -> CTOR -> FSM;
+    FSM -> S1; FSM -> S2; FSM -> S3; FSM -> S4;
+    FSM -> SAFE [label="phase failure", color="#D32F2F", fontcolor="#D32F2F"];
+}
+\enddot
+
+The same picture, expanded with the underlying function-call chain
+and the application path, is reproduced in
+[**DIAGRAMS.md § Boot Function-Call Chain**](DIAGRAMS.md#boot-function-call-chain).
+
+The accompanying boot-FSM diagram (one node per phase, edges to safe
+state on each error path) is at
+[**DIAGRAMS.md § Boot Phase State Machine**](DIAGRAMS.md#boot-phase-state-machine).
 
 ---
 
-## Phase 0 — Hardware Reset
+## Phase 0 — Hardware Reset {#phase-0--hardware-reset}
 
 When the STM32F411 is released from reset (power-on, NRST pulse, or software
 `NVIC_SystemReset()`), the Cortex-M4 hardware executes a fixed bootstrap
@@ -106,7 +116,7 @@ linker symbol at the top of SRAM).
 
 ---
 
-## Phase 1 — Reset_Handler (before main)
+## Phase 1 — Reset_Handler (before main) {#phase-1--reset_handler-before-main}
 
 **File:** [arch/devices/STM/STM32F4xx/STM32F411/startup_stm32f411vetx.c:233](../arch/devices/STM/STM32F4xx/STM32F411/startup_stm32f411vetx.c#L233)
 
@@ -114,7 +124,7 @@ linker symbol at the top of SRAM).
 The `__SECTION_BOOT` attribute places it in the `.boot_text` section so it lands
 in low Flash addresses, adjacent to the vector table it belongs to.
 
-### 1.1 Stack Pointer Initialisation
+### 1.1 Stack Pointer Initialisation {#11-stack-pointer-initialisation}
 
 ```c
 __asm volatile (
@@ -134,7 +144,7 @@ connection.
 > offset and VTOR was not yet updated, SP would be wrong. Re-loading from the
 > actual symbol avoids this.
 
-### 1.2 SystemInit — FPU and VTOR
+### 1.2 SystemInit — FPU and VTOR {#12-systeminit--fpu-and-vtor}
 
 ```c
 SystemInit();
@@ -179,7 +189,7 @@ void SystemInit(void)
   be corrected by `_stm32_clock_init()` later)
 - Interrupts disabled
 
-### 1.3 .data Section Copy (Flash → RAM)
+### 1.3 .data Section Copy (Flash → RAM) {#13-data-section-copy-flash--ram}
 
 C global and static variables with non-zero initialisers live in Flash at link
 time (LMA = Load Memory Address) and must be copied to RAM before `main()`.
@@ -213,7 +223,7 @@ for (dst = &_sdata, src = &_sidata; dst < &_edata; )
 
 After this loop all C global variables have their compile-time initial values.
 
-### 1.4 .bss Zero-Fill
+### 1.4 .bss Zero-Fill {#14-bss-zero-fill}
 
 Zero-initialised globals (declared without an explicit initialiser) occupy the
 `.bss` section. The linker allocates RAM space for them but stores nothing in
@@ -227,7 +237,7 @@ for (dst = &_sbss; dst < &_ebss; )
 After this loop all uninitialised C globals are guaranteed to be `0`, as
 required by the C standard.
 
-### 1.5 C++ Static Constructors
+### 1.5 C++ Static Constructors {#15-c-static-constructors}
 
 ```c
 __libc_init_array();
@@ -247,7 +257,7 @@ a no-op. For C++ projects it runs global object constructors in link order.
 
 ---
 
-## Phase 2 — main()
+## Phase 2 — main() {#phase-2--main}
 
 **File:** [init/main.c:62](../init/main.c#L62)
 
@@ -260,7 +270,7 @@ At entry to `main()`:
 - FreeRTOS scheduler: not yet started
 - No FreeRTOS task exists
 
-### 2.1 HAL_Init
+### 2.1 HAL_Init {#21-hal_init}
 
 ```c
 HAL_Init();
@@ -294,7 +304,7 @@ interrupt at 1 kHz (1 ms period). From this point:
 - NVIC priority grouping = Group 4
 - HAL tick source active
 
-### 2.2 drv_rcc_clock_init — PLL Bring-Up
+### 2.2 drv_rcc_clock_init — PLL Bring-Up {#22-drv_rcc_clock_init--pll-bring-up}
 
 ```c
 drv_rcc_clock_init();
@@ -347,146 +357,181 @@ USB/SDIO   = VCO_out / PLLQ = 200 / 4 = 50 MHz
 - PCLK2 = 100 MHz (APB2 — USART1/6, SPI1/4/5, TIM1/9/10/11)
 - Flash latency = 3 wait-states
 
-### 2.3 drv_cpu_interrupt_prio_set — NVIC Configuration
+### 2.3 BOOT_PERIPH_CLK — board_clk_enable {#23-boot_periph_clk--board_clk_enable}
+
+```c
+board_clk_enable();
+```
+
+**File:** generated per-board (`examples/<target>/board/board_config.c`,
+emitted by `scripts/gen_board_config.py`).
+
+Enables every peripheral RCC clock named in the board XML — `GPIOA`,
+`USART1`, `I2C1`, `SPI1`, … — in one place, *before* any management
+thread tries to touch them.  Doing this in `main()` rather than inside
+each `*_MspInit()` is a deliberate ordering choice: GPIO clocks must be
+enabled before any UART/SPI/I²C `HAL_*_Init()` runs, because those
+HALs call `HAL_GPIO_Init()` internally for their MSP pins.
+
+### 2.4 BOOT_IRQ_INIT — drv_cpu_interrupt_prio_set + irq_hw_init_all {#23-drv_cpu_interrupt_prio_set--nvic-configuration}
 
 ```c
 drv_cpu_interrupt_prio_set();
+irq_hw_init_all();
 ```
 
-**File:** [drivers/drv_cpu.c:20](../drivers/drv_cpu.c#L20)
+**Files:** [`drivers/drv_cpu.c`](../drivers/drv_cpu.c) +
+generated `examples/<target>/board/irq_hw_init_generated.c`.
 
-Sets the SVCall exception priority required by FreeRTOS:
+`drv_cpu_interrupt_prio_set()` raises the SVCall priority to the
+top (0) so FreeRTOS context-switches are never preempted, and sets
+the NVIC priority grouping (`NVIC_SetPriorityGrouping(3)`) so every
+priority bit is preemption (no sub-priority).
+
+`irq_hw_init_all()` is the generated entry point that registers every
+peripheral IRQ described in `board/irq_table.xml`: NVIC priority,
+sub-priority, and flow handler.  After this returns the NVIC tables
+are fully populated for every peripheral the board declares.
+
+> All peripheral interrupts that call FreeRTOS-from-ISR API (e.g.
+> `xQueueSendFromISR`, `vTaskNotifyGiveFromISR`) must use a numerical
+> priority **≥ `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY`** (= 5 on
+> this project).  See [`IRQ.md`](IRQ.md) for the dispatch chain and
+> the priority-grouping rationale.
+
+### 2.5 BOOT_IPC_INIT — ipc_mqueue_init {#24-ipc_queues_init--ipc-ring-buffers}
 
 ```c
-void drv_cpu_interrupt_prio_set(void)
-{
-    NVIC_SetPriority(SVCall_IRQn, 0U);
+ipc_mqueue_init();
+```
+
+**File:** [`ipc/mqueue.c`](../ipc/mqueue.c)
+
+Resets the mqueue registry sentinel list.  Each driver / service that
+needs a ring buffer registers it on demand via
+`ipc_mqueue_register(type, id, elem_size, depth)`; for example the
+UART driver registers one TX and one RX ring buffer per UART channel
+(channel count comes from the generated `BOARD_UART_COUNT` macro).
+
+These ring buffers are the **only** communication channel between a
+peripheral ISR and the corresponding management thread / application:
+
+```
+peripheral ISR → ringbuffer_putchar(rx_rb, byte)
+                                ↑
+application read ← uart_app_read_byte() ← ringbuffer_getchar(rx_rb)
+```
+
+The `kmalloc()` calls inside `ipc_mqueue_register()` allocate from the
+FreeRTOS heap (`heap_4.c` — `pvPortMalloc`).  This is valid before the
+scheduler starts because `heap_4.c` does not require the scheduler to
+be running for allocation.
+
+### 2.6 BOOT_SLOG_INIT — slog_init {#26-boot_slog_init--slog_init}
+
+```c
+slog_init();
+LOG_I("BOOT", "FreeRTOS-OS medical-grade boot");
+```
+
+**File:** [`log/slog.c`](../log/slog.c) (declared in `<log/slog.h>`).
+
+Initialises the **structured logger** ring buffer.  `slog` is the
+pre-scheduler logging facility — it stores log records in a static
+ring buffer protected by `__disable_irq()`/`__enable_irq()` (no mutex,
+because it must work before FreeRTOS is up).  Every later
+`LOG_I`/`LOG_W`/`LOG_E` is recorded here; the `shell` command
+`log dump` walks the buffer post-mortem.
+
+> The order matters: nothing before this call may emit a `LOG_x()` —
+> use raw `printf`/`printk` only for the few lines above `slog_init()`.
+
+### 2.7 BOOT_PREV_FAULT_CHK — fault / safe-state replay {#27-boot_prev_fault_chk--fault--safe-state-replay}
+
+```c
+if (safety_was_safe_state_reset())   { /* log + clear */ }
+if (fault_handler_was_fault_reset()) { /* log + clear */ }
+```
+
+**Files:** [`safety/safe_state.c`](../safety/safe_state.c),
+[`drivers/hal/stm32/stm32_exceptions.c`](../drivers/hal/stm32/stm32_exceptions.c)
+(strong fault-handler implementations live with the vendor exception
+glue; the API surface is in
+[`include/safety/fault_handler.h`](../include/safety/fault_handler.h)).
+
+Both subsystems store their record in the `.noinit` RAM section so it
+survives a soft reset.  At every boot this code reads the previous
+session's exit reason (if any) — `SAFE_REASON_*` for orderly safe-state
+shutdowns, or a HardFault dump (PC, LR, CFSR, HFSR, fault type, tick)
+for unexpected crashes — emits a `LOG_W("BOOT", ...)` line, then
+clears the record so the *next* boot does not re-warn.  This is
+the basis for IEC 62304 post-mortem traceability.
+
+### 2.8 BOOT_SERVICES_INIT — os_kernel_thread_register {#28-boot_services_init--os_kernel_thread_register}
+
+```c
+os_kernel_thread_register();
+```
+
+**File:** [`services/kernel_service_core.c`](../services/kernel_service_core.c)
+
+This is the *single* entry point that creates every OS service thread.
+Each call below allocates a FreeRTOS queue (when needed), then calls
+`os_thread_create()` (→ `xTaskCreate()`) to register the service task
+in the **Ready** list.  The scheduler is not yet running, so nothing
+executes — `vTaskStartScheduler()` below will start them in priority
+order.
+
+\dot
+digraph svc_reg {
+    rankdir=LR;
+    node [shape=box, fontname="Helvetica", fontsize=10, style="rounded,filled", fillcolor="#A5D6A7"];
+    KR  [label="os_kernel_thread_register()", fillcolor="#FFE082"];
+    KR -> "wdog_service_start"        [label="prio 4"];
+    KR -> "gpio_mgmt_start"           [label="prio 1"];
+    KR -> "uart_mgmt_start"           [label="prio 1, if BOARD_UART_COUNT>0"];
+    KR -> "iic_mgmt_start"            [label="prio 1, if BOARD_IIC_COUNT>0"];
+    KR -> "spi_mgmt_start"            [label="prio 1, if BOARD_SPI_COUNT>0"];
+    KR -> "task_mgr_start"            [label="prio 1"];
+    KR -> "os_shell_mgmt_start"       [label="prio 1"];
 }
-```
+\enddot
 
-FreeRTOS uses `SVC` (software interrupt) to trigger the first context switch and
-for privileged-mode system calls. Setting it to priority 0 (highest) ensures it
-is never preempted by any peripheral interrupt.
+Compile-time gates (`CONFIG_INC_SERVICE_*` and `BOARD_*_COUNT`) let a
+board with no I²C / SPI peripherals link out the corresponding manager
+entirely.
 
-> All peripheral interrupts that call FreeRTOS API (e.g. `xQueueSendFromISR`)
-> must be configured at priorities `≥ configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY`.
-> The HAL MSP callbacks (`HAL_UART_MspInit` etc.) set individual NVIC entries
-> when peripherals are registered by the management threads later.
-
-### 2.4 ipc_queues_init — IPC Ring Buffers
+### 2.9 BOOT_WDOG_HW_INIT — wdog_hw_init (irreversible) {#29-boot_wdog_hw_init--wdog_hw_init}
 
 ```c
-ipc_queues_init();
+#if defined(CONFIG_INC_SERVICE_WDOG) && (CONFIG_INC_SERVICE_WDOG == 1)
+    wdog_hw_init();
+#endif
 ```
 
-**File:** [init/main.c:34](../init/main.c#L34) (static function)
+**File:** [`safety/wdog.c`](../safety/wdog.c)
 
-```c
-static void ipc_queues_init(void)
-{
-    ipc_mqueue_init();              // reset the mqueue list sentinel
+Starts the **Independent Watchdog (IWDG)**.  Once started, the IWDG
+cannot be stopped except by a reset — this is by design (MCU vendors
+implement it as a write-once enable register).  From this moment the
+`wdog_service_thread` *must* refresh the IWDG within its timeout
+(~2 s on STM32 LSI) or the MCU will reset.  The grace period
+`WDOG_STARTUP_DELAY_MS` gives lower-priority services time to start
+before the watchdog begins counting check-ins.
 
-    for (uint8_t i = 0; i < NO_OF_UART; i++) {
-        global_uart_tx_mqueue_list[i] = ipc_mqueue_register(
-            IPC_MQUEUE_TYPE_UART_HW, i, sizeof(uint8_t), PIPE_UART_1_DRV_TX_SIZE);
-
-        global_uart_rx_mqueue_list[i] = ipc_mqueue_register(
-            IPC_MQUEUE_TYPE_UART_HW, i, sizeof(uint8_t), PIPE_UART_1_DRV_RX_SIZE);
-    }
-}
-```
-
-**What this creates:**
-
-For every UART channel (`NO_OF_UART` comes from `app/board/mcu_config.h`,
-generated from the board XML):
-
-1. A **TX ring buffer** (`IPC_MQUEUE_TYPE_UART_HW`) — a `struct ringbuffer`
-   backed by a heap-allocated `uint8_t[]` of `PIPE_UART_1_DRV_TX_SIZE` bytes.
-   ID stored in `global_uart_tx_mqueue_list[i]`.
-
-2. An **RX ring buffer** — same structure, `PIPE_UART_1_DRV_RX_SIZE` bytes.
-   ID stored in `global_uart_rx_mqueue_list[i]`.
-
-**File:** [ipc/mqueue.c:58](../ipc/mqueue.c#L58)
-
-The `kmaloc()` calls inside `ipc_mqueue_register()` allocate from the FreeRTOS
-heap (`heap_4.c` — `pvPortMalloc`). This is valid before the scheduler starts
-because `heap_4.c` does not require the scheduler to be running for allocation.
-
-These ring buffers are the **only** communication channel between the UART ISR
-and the management thread / application:
-
-```
-UART ISR → ringbuffer_putchar(rx_rb, byte)
-                           ↑
-app reads ← uart_mgmt_read_byte() ← ringbuffer_getchar(rx_rb)
-```
-
-### 2.5 uart_mgmt_start — Management Thread Creation
-
-```c
-uart_mgmt_start();
-```
-
-**File:** [services/uart_mgmt.c](../services/uart_mgmt.c) (inside `#if INC_SERVICE_UART_MGMT == 1`)
-
-`uart_mgmt_start()` does two things and returns immediately:
-
-```c
-int32_t uart_mgmt_start(void)
-{
-    _mgmt_queue = xQueueCreate(UART_MGMT_QUEUE_DEPTH, sizeof(uart_mgmt_msg_t));
-    if (_mgmt_queue == NULL)
-        return OS_ERR_MEM_OF;
-
-    int32_t tid = os_thread_create(uart_mgmt_thread, "uart_mgmt",
-                                   PROC_SERVICE_SERIAL_MGMT_STACK_SIZE,
-                                   PROC_SERVICE_SERIAL_MGMT_PRIORITY, NULL);
-    return (tid >= 0) ? OS_ERR_NONE : OS_ERR_OP;
-}
-```
-
-1. **`xQueueCreate`** — allocates the management message queue on the FreeRTOS
-   heap. Messages of type `uart_mgmt_msg_t` can be queued `UART_MGMT_QUEUE_DEPTH`
-   deep. The queue is empty and ready at this point.
-
-2. **`os_thread_create`** — calls `xTaskCreate()`, which allocates the task stack
-   and TCB on the FreeRTOS heap and adds `uart_mgmt_thread` to the ready list.
-   The task does **not** run yet — `vTaskStartScheduler()` has not been called.
-
-> `uart_mgmt_thread` begins with `os_thread_delay(TIME_OFFSET_SERIAL_MANAGEMENT)`
-> (4000 ms). Even after the scheduler starts the task sleeps and performs no
-> hardware access until that timer expires. This is intentional — hardware init
-> inside a task avoids the IRQ-disabled pre-scheduler window.
-
-### 2.6 printk_init
-
-```c
-printk_init();
-```
-
-**File:** `kernel/kernel_syscall.c`
-
-Binds the `printk()` function to the TX ring buffer of `COMM_PRINTK_HW_ID`
-(the designated debug UART). After this call, `printk("msg")` places bytes into
-the ring buffer. When `uart_mgmt` wakes at 4000 ms and HAL initialises the UART,
-those bytes will be transmitted.
-
-> `printk_init()` must be called **after** `ipc_queues_init()` because it looks
-> up the TX queue ID from `global_uart_tx_mqueue_list[]`.
-
-### 2.7 app_main — Application Task Creation
+### 2.10 BOOT_APP_INIT — app_main — Application Task Creation {#27-app_main--application-task-creation}
 
 ```c
 app_main();
 ```
 
-**File:** [app/app_main.c:94](../app/app_main.c#L94)
+**File:** [`examples/stm32f411/app_main.c`](../examples/stm32f411/app_main.c)
+(the H723 example provides an analogous strong definition at
+[`examples/stm32h723/app_main.c`](../examples/stm32h723/app_main.c)).
 
-`app_main` is declared `__attribute__((weak))` in `main.c` so that projects
-without an application can link without an error. The strong definition in
-`app/app_main.c` overrides it.
+`app_main` is declared `__attribute__((weak))` in `init/main.c` so that
+projects without an application can link without an error. The strong
+definition in `examples/<target>/app_main.c` overrides it.
 
 `app_main()` creates the three demonstration tasks and returns immediately to
 `main()`:
@@ -523,7 +568,7 @@ and adds the task to the scheduler's ready list. None of these tasks run until
 
 ---
 
-## Phase 3 — vTaskStartScheduler
+## Phase 3 — vTaskStartScheduler {#phase-3--vtaskstartscheduler}
 
 ```c
 vTaskStartScheduler();
@@ -550,7 +595,7 @@ operation). Control passes to the highest-priority ready task, which is
 
 ---
 
-## Phase 4 — Post-Scheduler: Management Thread Startup
+## Phase 4 — Post-Scheduler: Management Thread Startup {#phase-4--post-scheduler-management-thread-startup}
 
 After the scheduler starts, all tasks compete for CPU time. The management
 threads begin with `os_thread_delay()` calls, which put them in the
@@ -598,9 +643,9 @@ t = 6500 ms    iic_mgmt_thread wakes → HAL_I2C_Init for all I2C buses
 > `xxx_mgmt_start()` is called before `vTaskStartScheduler()` — the actual
 > hardware init happens inside the task, after the delay expires.
 
----
+<hr/>
 
-## Memory Map and Section Placement
+## Memory Map and Section Placement {#memory-map-and-section-placement}
 
 The boot sequence depends on the linker script placing sections correctly.
 
@@ -633,7 +678,7 @@ The boot sequence depends on the linker script placing sections correctly.
 
 ---
 
-## Interrupt State Through Boot
+## Interrupt State Through Boot {#interrupt-state-through-boot}
 
 ```
 Power-on             PRIMASK = 1  (interrupts disabled by Cortex-M4 reset)
@@ -668,7 +713,7 @@ point regardless of peripheral configuration.
 
 ---
 
-## Call Stack Summary
+## Call Stack Summary {#call-stack-summary}
 
 ```
 [hardware reset]

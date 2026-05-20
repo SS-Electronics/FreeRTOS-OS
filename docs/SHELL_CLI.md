@@ -1,4 +1,4 @@
-# OS Shell CLI — FreeRTOS-OS
+# OS Shell CLI — FreeRTOS-OS {#os-shell-cli--freertos-os}
 
 An interactive command-line interface built on FreeRTOS+CLI. Connect with any serial terminal at **115200 8N1, no flow control**.
 
@@ -13,7 +13,7 @@ On H723, `printk()` output and the interactive shell share the same UART (`UART_
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Connecting with PuTTY](#connecting-with-putty)
   - [Windows](#windows)
@@ -31,9 +31,9 @@ On H723, `printk()` output and the interactive shell share the same UART (`UART_
 
 ---
 
-## Connecting with PuTTY
+## Connecting with PuTTY {#connecting-with-putty}
 
-### Windows
+### Windows {#windows}
 
 1. Find the COM port number: **Device Manager → Ports (COM & LPT)** — look for your USB-to-serial adapter (e.g. CH340, CP2102, FTDI). Note the COM number, e.g. `COM5`.
 
@@ -72,7 +72,7 @@ On H723, `printk()` output and the interactive shell share the same UART (`UART_
 
 ---
 
-### Linux
+### Linux {#linux}
 
 **H723 NUCLEO-H723ZG** — STLink VCP on `/dev/ttyACM0`:
 
@@ -121,7 +121,7 @@ newgrp dialout
 
 ---
 
-### First Boot Sequence
+### First Boot Sequence {#first-boot-sequence}
 
 The shell has a startup delay to let the UART driver initialise first:
 
@@ -142,7 +142,7 @@ Type `help` and press Enter to list all registered commands.
 
 ---
 
-### Quick Session Example
+### Quick Session Example {#quick-session-example}
 
 ```
 > help
@@ -191,7 +191,7 @@ Rebooting...
 
 ---
 
-## Architecture
+## Architecture {#architecture}
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -232,9 +232,9 @@ The shell task never interacts with the `uart_mgmt` management queue — it writ
 
 ---
 
-## I/O Paths in Detail
+## I/O Paths in Detail {#io-paths-in-detail}
 
-### RX Path — UART ISR to Shell Task
+### RX Path — UART ISR to Shell Task {#rx-path--uart-isr-to-shell-task}
 
 ```
 USART2_IRQHandler()  (RXNE flag)
@@ -252,7 +252,7 @@ _os_shell_task()
 
 The 5 ms yield when empty keeps CPU load near zero for interactive use.
 
-### TX Path — Shell Task to UART Wire
+### TX Path — Shell Task to UART Wire {#tx-path--shell-task-to-uart-wire}
 
 ```
 _shell_write(str, len)
@@ -269,7 +269,7 @@ USART2_IRQHandler()  (TXE flag)
 
 ---
 
-## Shell UART Assignment
+## Shell UART Assignment {#shell-uart-assignment}
 
 The shell runs on **UART_APP** (dev_id = 1, USART2, PA2 TX / PA3 RX).
 
@@ -284,7 +284,7 @@ Set in `config/conf_os.h`:
 
 ---
 
-## Configuration
+## Configuration {#configuration}
 
 All in `config/conf_os.h`:
 
@@ -300,7 +300,7 @@ All in `config/conf_os.h`:
 
 ---
 
-## Built-in Commands
+## Built-in Commands {#built-in-commands}
 
 | Command  | Arguments | Description |
 |---|---|---|
@@ -313,11 +313,11 @@ All in `config/conf_os.h`:
 
 ---
 
-## Registering Commands
+## Registering Commands {#registering-commands}
 
 Call `os_shell_mgmt_start()` from `app_main()`. Register extra commands before or after — FreeRTOS+CLI's linked list is safe to modify at any time before the shell processes input.
 
-### Simple command (no arguments)
+### Simple command (no arguments) {#simple-command-no-arguments}
 
 ```c
 #include <services/os_shell_management.h>
@@ -344,7 +344,7 @@ int app_main(void)
 }
 ```
 
-### Command with arguments
+### Command with arguments {#command-with-arguments}
 
 Use `FreeRTOS_CLIGetParameter()` to extract space-separated arguments:
 
@@ -371,7 +371,7 @@ static const CLI_Command_Definition_t _cmd_gpio = {
 };
 ```
 
-### Multi-page output
+### Multi-page output {#multi-page-output}
 
 Return `pdTRUE` to request another call; `pdFALSE` to signal done. Use a `static` counter that resets on the final return:
 
@@ -392,7 +392,7 @@ static BaseType_t _cmd_list_fn(char *out, size_t len, const char *args)
 
 ---
 
-## Line Editing
+## Line Editing {#line-editing}
 
 | Keystroke | Action |
 |---|---|
@@ -408,9 +408,9 @@ Lines longer than `SHELL_LINE_BUF_LEN - 1` bytes are silently truncated.
 
 ---
 
-## printk vs Shell
+## printk vs Shell {#printk-vs-shell}
 
-### H723 (NUCLEO-H723ZG) — shared UART
+### H723 (NUCLEO-H723ZG) — shared UART {#h723-nucleo-h723zg--shared-uart}
 
 On H723 both `printk()` and the interactive shell share a single UART:
 
@@ -428,7 +428,7 @@ On H723 both `printk()` and the interactive shell share a single UART:
 
 `printk()` is automatically enabled ~20 ms after scheduler start by `uart_mgmt_thread`. No manual `printk_enable()` call needed from `app_main()`.
 
-### F411 — separate UARTs
+### F411 — separate UARTs {#f411--separate-uarts}
 
 On F411 `printk()` and the shell are on separate UARTs:
 
@@ -449,7 +449,7 @@ Keep these on separate UARTs so `printk` log output does not appear mid-line in 
 
 ---
 
-## File Map
+## File Map {#file-map}
 
 | File | Role |
 |---|---|

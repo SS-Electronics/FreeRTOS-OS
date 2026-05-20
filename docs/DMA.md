@@ -1,11 +1,11 @@
-# DMA Engine — FreeRTOS-OS
+# DMA Engine — FreeRTOS-OS {#dma-engine--freertos-os}
 
 A Linux `dmaengine`-style DMA framework for bare-metal ARM Cortex-M4.  
 Provides a vendor-agnostic API for submitting DMA transfers asynchronously, with completion callbacks fired from ISR context.
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Architecture Overview](#architecture-overview)
 - [Directory Layout](#directory-layout)
@@ -37,7 +37,7 @@ Provides a vendor-agnostic API for submitting DMA transfers asynchronously, with
 
 ---
 
-## Architecture Overview
+## Architecture Overview {#architecture-overview}
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -68,7 +68,7 @@ The engine core is vendor-agnostic. Porting to a new MCU only requires a new HAL
 
 ---
 
-## Directory Layout
+## Directory Layout {#directory-layout}
 
 ```
 FreeRTOS-OS/
@@ -89,9 +89,9 @@ FreeRTOS-OS/
 
 ---
 
-## Core Concepts
+## Core Concepts {#core-concepts}
 
-### `dma_device` — Controller
+### `dma_device` — Controller {#dma_device--controller}
 
 Represents one physical DMA controller (DMA1 or DMA2).  
 Each device holds an array of `dma_chan_t` (one per stream) and a pointer to the `dma_chan_hal_ops_t` vtable.
@@ -111,7 +111,7 @@ For STM32 targets `hal_dma_stm32_init()` does this automatically.
 
 ---
 
-### `dma_chan` — Channel / Stream
+### `dma_chan` — Channel / Stream {#dma_chan--channel--stream}
 
 A logical channel corresponding to one DMA stream.  
 Obtained by calling `dma_request_chan()` and released with `dma_release_chan()`.
@@ -127,7 +127,7 @@ Each channel owns a **static descriptor pool** (`desc_pool[DMA_DESC_POOL_SIZE]`)
 
 ---
 
-### `dma_async_tx_descriptor` — Transfer Descriptor
+### `dma_async_tx_descriptor` — Transfer Descriptor {#dma_async_tx_descriptor--transfer-descriptor}
 
 Describes one transfer.  Allocated from the per-channel pool by any `dmaengine_prep_*()` call.
 
@@ -153,9 +153,9 @@ typedef struct dma_async_tx_descriptor {
 > **Important:** `callback` and `error_callback` are called from **ISR context**.  
 > Keep them short — set a flag or post to a FreeRTOS queue; do not block.
 
----
+<hr/>
 
-### `dma_slave_config` — Peripheral Config
+### `dma_slave_config` — Peripheral Config {#dma_slave_config--peripheral-config}
 
 Configures the channel for a slave (peripheral ↔ memory) transfer.
 
@@ -184,7 +184,7 @@ typedef struct {
 
 ---
 
-### Descriptor Pool
+### Descriptor Pool {#descriptor-pool}
 
 Each channel holds `DMA_DESC_POOL_SIZE` (default **4**) descriptors in a statically allocated pool.  
 `dmaengine_prep_*()` allocates from this pool; the descriptor is returned to the pool when the transfer completes or is terminated.
@@ -194,9 +194,9 @@ Increase `DMA_DESC_POOL_SIZE` in `drv_dma.h` if your use-case needs deeper pipel
 
 ---
 
-## Public API
+## Public API {#public-api}
 
-### Controller Registration
+### Controller Registration {#controller-registration}
 
 ```c
 int32_t dma_register_device(dma_device_t *dev);
@@ -206,7 +206,7 @@ Registers a DMA controller.  Initialises every channel's pending queue and calls
 
 ---
 
-### Channel Allocation
+### Channel Allocation {#channel-allocation}
 
 ```c
 dma_chan_t *dma_request_chan(const char *dev_name, uint8_t chan_id);
@@ -220,7 +220,7 @@ void        dma_release_chan(dma_chan_t *chan);
 
 ---
 
-### Slave Configuration
+### Slave Configuration {#slave-configuration}
 
 ```c
 int32_t dmaengine_slave_config(dma_chan_t *chan, const dma_slave_config_t *cfg);
@@ -230,7 +230,7 @@ Stores the config in the channel and calls the HAL `slave_config` op, which prog
 
 ---
 
-### Descriptor Preparation
+### Descriptor Preparation {#descriptor-preparation}
 
 ```c
 // Peripheral ↔ memory single-shot
@@ -253,7 +253,7 @@ After receiving the descriptor, set `callback` / `callback_param` before submitt
 
 ---
 
-### Submission and Execution
+### Submission and Execution {#submission-and-execution}
 
 ```c
 dma_cookie_t dmaengine_submit        (dma_async_tx_descriptor_t *desc);
@@ -265,7 +265,7 @@ void         dma_async_issue_pending (dma_chan_t *chan);
 
 ---
 
-### Control
+### Control {#control}
 
 ```c
 int32_t  dmaengine_terminate_all (dma_chan_t *chan);
@@ -280,9 +280,9 @@ uint32_t dmaengine_get_residue   (dma_chan_t *chan);  // bytes remaining
 
 ---
 
-## STM32F4 HAL Backend
+## STM32F4 HAL Backend {#stm32f4-hal-backend}
 
-### Stream / Channel Mux Table
+### Stream / Channel Mux Table {#stream--channel-mux-table}
 
 STM32F411 DMA request line assignments (abbreviated).  Full table: RM0383 §9.3.3.
 
@@ -301,7 +301,7 @@ Set `dma_slave_config_t.request` to the **channel number** (0–7); the backend 
 
 ---
 
-### Initialisation
+### Initialisation {#initialisation}
 
 Call once at boot, **after** the system clock is configured and **before** any driver that uses DMA:
 
@@ -323,7 +323,7 @@ hal_dma_stm32_init();
 
 ---
 
-### IRQ Dispatch Wiring
+### IRQ Dispatch Wiring {#irq-dispatch-wiring}
 
 The project's IRQ framework owns the `DMAx_StreamY_IRQHandler` symbols through the generated `irq_periph_dispatch_generated.c`.  Wire each stream you use by adding a `<dma>` entry in `app/board/irq_table.xml` and re-running `make irq_gen`:
 
@@ -349,11 +349,11 @@ The project's IRQ framework owns the `DMAx_StreamY_IRQHandler` symbols through t
 
 > **Priority rule:** DMA stream IRQs must be at NVIC priority ≥ `configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY` (5 on this project) to safely use FreeRTOS API from callbacks.
 
----
+<hr/>
 
-## Usage Examples
+## Usage Examples {#usage-examples}
 
-### UART TX — Memory to Peripheral
+### UART TX — Memory to Peripheral {#uart-tx--memory-to-peripheral}
 
 ```c
 #include <drivers/dma/drv_dma.h>
@@ -403,7 +403,7 @@ void uart_dma_transmit(const uint8_t *buf, uint32_t len)
 
 ---
 
-### UART RX — Peripheral to Memory
+### UART RX — Peripheral to Memory {#uart-rx--peripheral-to-memory}
 
 ```c
 static dma_chan_t *_uart_rx_chan;
@@ -440,7 +440,7 @@ void uart_dma_receive(uint8_t *buf, uint32_t len,
 
 ---
 
-### Memory-to-Memory Copy
+### Memory-to-Memory Copy {#memory-to-memory-copy}
 
 ```c
 static dma_chan_t *_memcpy_chan;
@@ -471,9 +471,9 @@ void dma_memcpy_async(void *dst, const void *src, uint32_t len,
 
 > **STM32F4 note:** Memory-to-memory DMA is only supported on **DMA2**, not DMA1.
 
----
+<hr/>
 
-### Cyclic Transfer (Audio / ADC Ring)
+### Cyclic Transfer (Audio / ADC Ring) {#cyclic-transfer-audio--adc-ring}
 
 ```c
 static dma_chan_t *_adc_chan;
@@ -520,7 +520,7 @@ void adc_dma_cyclic_init(void)
 
 ---
 
-## Transfer Flow
+## Transfer Flow {#transfer-flow}
 
 ```
 dmaengine_prep_slave_single()
@@ -555,7 +555,7 @@ dma_complete_callback()
 
 ---
 
-## Configuration Reference
+## Configuration Reference {#configuration-reference}
 
 All limits are in `include/drivers/dma/drv_dma.h`:
 
@@ -567,7 +567,7 @@ All limits are in `include/drivers/dma/drv_dma.h`:
 
 ---
 
-## Adding a New Vendor Backend
+## Adding a New Vendor Backend {#adding-a-new-vendor-backend}
 
 Implement the `dma_chan_hal_ops_t` vtable:
 

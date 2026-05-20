@@ -1,10 +1,10 @@
-# CMSIS-DSP Integration — FreeRTOS-OS
+# CMSIS-DSP Integration — FreeRTOS-OS {#cmsis-dsp-integration--freertos-os}
 
 This document explains how ARM CMSIS-DSP function groups are selected, configured, code-generated, and compiled into the firmware. It covers the XML schema, the generator script, the Makefile integration, module dependency rules, and how to use the built-in PID controller in application code.
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Concept](#concept)
 - [Directory Layout](#directory-layout)
@@ -33,7 +33,7 @@ This document explains how ARM CMSIS-DSP function groups are selected, configure
 
 ---
 
-## Concept
+## Concept {#concept}
 
 CMSIS-DSP is a large library. Compiling the whole library into a Cortex-M4F firmware with 512 KB flash is not feasible. The DSP integration in FreeRTOS-OS provides:
 
@@ -43,7 +43,7 @@ CMSIS-DSP is a large library. Compiling the whole library into a Cortex-M4F firm
 
 ---
 
-## Directory Layout
+## Directory Layout {#directory-layout}
 
 ```
 FreeRTOS-OS-App/
@@ -77,7 +77,7 @@ FreeRTOS-OS-App/
 
 ---
 
-## End-to-End Flow
+## End-to-End Flow {#end-to-end-flow}
 
 ```
 app/board/dsp_dev.xml
@@ -107,9 +107,9 @@ make app
 
 ---
 
-## XML Schema — dsp_dev.xml
+## XML Schema — dsp_dev.xml {#xml-schema--dsp_devxml}
 
-### Root Element
+### Root Element {#root-element}
 
 ```xml
 <dsp_config target="STM32F411xE"
@@ -125,7 +125,7 @@ make app
 | `fpu`         | yes | FPU type (informational; `cortex-m4` for Cortex-M4F) |
 | `description` | no  | Human-readable label written into the generated file banner |
 
-### Module Elements
+### Module Elements {#module-elements}
 
 ```xml
 <module name="basic_math" enabled="yes"/>
@@ -138,7 +138,7 @@ make app
 
 Unknown `name` values are reported as warnings by the generator and ignored.
 
-### Module Dependency Rules
+### Module Dependency Rules {#module-dependency-rules}
 
 Some modules have hard link-time dependencies on other modules:
 
@@ -152,9 +152,9 @@ Some modules have hard link-time dependencies on other modules:
 
 ---
 
-## Code Generator — arm_dsp_gen.py
+## Code Generator — arm_dsp_gen.py {#code-generator--arm_dsp_genpy}
 
-### Usage
+### Usage {#usage}
 
 ```bash
 # From the project root:
@@ -170,7 +170,7 @@ Re-run the generator whenever `dsp_dev.xml` changes, then rebuild:
 python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml && make app
 ```
 
-### Generated Files
+### Generated Files {#generated-files}
 
 | File | Purpose |
 |---|---|
@@ -179,7 +179,7 @@ python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml && make app
 
 Both files carry a `AUTO-GENERATED — DO NOT EDIT` banner and a re-generate recipe.
 
-### dsp_config.h
+### dsp_config.h {#dsp_configh}
 
 ```c
 #ifndef BOARD_DSP_CONFIG_H_
@@ -207,7 +207,7 @@ Include this header before `arm_math.h` to drive conditional compilation:
 #endif
 ```
 
-### dsp_config.mk
+### dsp_config.mk {#dsp_configmk}
 
 ```makefile
 CONFIG_ARM_DSP_ENABLED          := 1
@@ -220,7 +220,7 @@ Consumed by `lib/Makefile` via `-include $(APP_DIR)/board/dsp_config.mk`. The le
 
 ---
 
-## Makefile Integration
+## Makefile Integration {#makefile-integration}
 
 `FreeRTOS-OS/lib/Makefile` contains the full DSP block. Key excerpts:
 
@@ -244,7 +244,7 @@ endif
 endif # CONFIG_ARM_DSP_ENABLED
 ```
 
-### Include Paths Added
+### Include Paths Added {#include-paths-added}
 
 When `CONFIG_ARM_DSP_ENABLED=1` the following paths are added to the compiler search path:
 
@@ -254,7 +254,7 @@ When `CONFIG_ARM_DSP_ENABLED=1` the following paths are added to the compiler se
 | `lib/CMSIS-DSP/PrivateInclude` | Internal CMSIS-DSP headers (arm_vec_fft.h, arm_sorting.h, …) |
 | `arch/arm/CMSIS_6/CMSIS/Core/Include` | `cmsis_compiler.h`, `cmsis_gcc.h` (required by `arm_math_types.h`) |
 
-### Source Files Compiled
+### Source Files Compiled {#source-files-compiled}
 
 | Makefile variable | Source compiled |
 |---|---|
@@ -277,7 +277,7 @@ When `CONFIG_ARM_DSP_ENABLED=1` the following paths are added to the compiler se
 
 Most modules use the aggregate `.c` file that `#include`s every individual `.c` in the module directory.
 
-### Controller Special Case
+### Controller Special Case {#controller-special-case}
 
 `ControllerFunctions.c` is **not** used. It includes `arm_sin_cos_f32.c` and `arm_sin_cos_q31.c`, which reference `sinTable_f32` and `sinTable_q31` defined in `CommonTables`. Those tables are part of a 45 000-line file that also contains all FFT twiddle factors — several hundred KB of rodata.
 
@@ -287,7 +287,7 @@ To also use `arm_sin_cos_f32` (required for Clarke/Park transforms), enable `com
 
 ---
 
-## Module Reference
+## Module Reference {#module-reference}
 
 | XML name | Macro suffix | Header | Typical use |
 |---|---|---|---|
@@ -310,7 +310,7 @@ To also use `arm_sin_cos_f32` (required for Clarke/Park transforms), enable `com
 
 ---
 
-## Flash Budget
+## Flash Budget {#flash-budget}
 
 Approximate `.text` + `.rodata` cost per module compiled for Cortex-M4F at `-O2`:
 
@@ -329,9 +329,9 @@ STM32F411xE has 512 KB flash. The baseline OS + app firmware is ~180 KB, leaving
 
 ---
 
-## Using the PID Controller
+## Using the PID Controller {#using-the-pid-controller}
 
-### Enabling the Module
+### Enabling the Module {#enabling-the-module}
 
 1. Set `enabled="yes"` for `controller` in `app/board/dsp_dev.xml`.
 2. Regenerate:
@@ -345,7 +345,7 @@ STM32F411xE has 512 KB flash. The baseline OS + app firmware is ~180 KB, leaving
 
 `common_tables` does **not** need to be enabled for PID-only use (see [Controller Special Case](#controller-special-case)).
 
-### API
+### API {#api}
 
 ```c
 #include <board/dsp_config.h>
@@ -380,7 +380,7 @@ where  A0 = Kp + Ki + Kd
 
 This is a positional-form PID. The output accumulates over time; clamp it to the actuator range after each call.
 
-### Example — Accelerometer Tilt PID
+### Example — Accelerometer Tilt PID {#example--accelerometer-tilt-pid}
 
 `app_main.c` demonstrates the PID running inside `acc_poll_task` at 1 Hz, using the LSM303DLHC X-axis acceleration as the process variable:
 
@@ -423,7 +423,7 @@ for (;;) {
 
 Replace `PID_SETPOINT_MG` with the desired physical setpoint (temperature, speed, angle, etc.) and map `output` to the actual actuator (PWM duty cycle, DAC value, motor command).
 
-### Tuning Guide
+### Tuning Guide {#tuning-guide}
 
 | Step | Action |
 |---|---|
@@ -437,7 +437,7 @@ For a 1 Hz sample rate, the defaults in `app_main.c` (`Kp = 0.10`, `Ki = 0.02`, 
 
 ---
 
-## IntelliSense Configuration
+## IntelliSense Configuration {#intellisense-configuration}
 
 `.vscode/c_cpp_properties.json` must include the CMSIS-DSP paths and `CONFIG_ARM_DSP_*` defines so the IDE resolves `arm_math.h` and `float32_t` correctly. The following entries are required:
 

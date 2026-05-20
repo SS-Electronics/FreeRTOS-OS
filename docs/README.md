@@ -1,10 +1,10 @@
-# FreeRTOS-OS
+# FreeRTOS-OS {#freertos-os}
 
 A layered embedded OS framework built on top of the FreeRTOS kernel, targeting ARM Cortex-M4F (STM32F411VET6) with a vendor-abstracted driver stack and compile-time board configuration.
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Project Overview](#project-overview)
 - [Repository Layout](#repository-layout)
@@ -20,7 +20,7 @@ A layered embedded OS framework built on top of the FreeRTOS kernel, targeting A
 
 ---
 
-## Project Overview
+## Project Overview {#project-overview}
 
 FreeRTOS-OS provides:
 
@@ -34,7 +34,7 @@ FreeRTOS-OS provides:
 
 ---
 
-## Repository Layout
+## Repository Layout {#repository-layout}
 
 ```
 FreeRTOS-OS-App/
@@ -111,7 +111,7 @@ FreeRTOS-OS-App/
 
 ---
 
-## Architecture Diagram
+## Architecture Diagram {#architecture-diagram}
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -155,7 +155,7 @@ FreeRTOS-OS-App/
 
 ---
 
-## Quick Start
+## Quick Start {#quick-start}
 
 ```bash
 # 1. Install ARM toolchain and OpenOCD
@@ -183,7 +183,7 @@ make flash
 
 ---
 
-## Build System
+## Build System {#build-system}
 
 The build system is a hand-written recursive `make`. The top-level `Makefile` in `FreeRTOS-OS/` drives everything.
 
@@ -208,7 +208,7 @@ SYMBOL_DEF        += -DUSE_HAL_DRIVER
 
 ---
 
-## Configuration (Kconfig)
+## Configuration (Kconfig) {#configuration-kconfig}
 
 Configuration lives in `FreeRTOS-OS/.config` and is managed by `make menuconfig`. The `.config` file is processed into:
 
@@ -230,7 +230,7 @@ Key configuration sections (see `arch/Kconfig` and `kernel/Kconfig`):
 
 ---
 
-## Board Configuration
+## Board Configuration {#board-configuration}
 
 All hardware peripheral parameters live in `app/board/<board>.xml`. Running `make board-gen` invokes `scripts/gen_board_config.py` which produces four files in `app/board/`:
 
@@ -261,7 +261,7 @@ See [BOARD.md](BOARD.md) for the full XML format, generator architecture, and Ma
 
 ---
 
-## Driver Stack
+## Driver Stack {#driver-stack}
 
 The driver stack has four layers:
 
@@ -272,7 +272,7 @@ The driver stack has four layers:
 | **Layer 2** | `drivers/hal/<vendor>/` | Vendor HAL backends — all `HAL_xxx_*()` calls are here |
 | **Layer 3** | `drivers/drv_*.c` | Vendor-agnostic generic drivers — dispatch through ops vtables |
 
-### Clock Initialisation (RCC)
+### Clock Initialisation (RCC) {#clock-initialisation-rcc}
 
 `drv_rcc_clock_init()` is called from `main()` after `HAL_Init()`. It dispatches to the vendor backend registered by `_hal_rcc_stm32_register()`:
 
@@ -287,7 +287,7 @@ main()
 
 `hal_rcc_stm32.c` also provides the CMSIS system symbols (`SystemInit`, `SystemCoreClockUpdate`, `SystemCoreClock`, `AHBPrescTable`, `APBPrescTable`), absorbing the former `system_stm32f4xx.c`.
 
-### `device.h` — Vendor Detection
+### `device.h` — Vendor Detection {#deviceh--vendor-detection}
 
 `arch/devices/device.h` is the single include used by all driver-layer files. It detects the vendor from the chip symbol injected at compile time (`-DSTM32F411xE` etc.):
 
@@ -314,7 +314,7 @@ See [DRIVERS.md](DRIVERS.md) for the complete driver architecture, vtable interf
 
 ---
 
-## OS Services
+## OS Services {#os-services}
 
 Four FreeRTOS management threads own the bus hardware and serialise access:
 
@@ -333,7 +333,7 @@ See [DEV_MGMT.md](DEV_MGMT.md) for message protocols, sync/async patterns, and c
 
 ---
 
-## Debug Setup
+## Debug Setup {#debug-setup}
 
 The debug system auto-detects the target MCU from `config/autoconf.h` and generates `build/active_debug.cfg` for OpenOCD:
 
@@ -352,7 +352,7 @@ See [DEBUG.md](DEBUG.md) for the complete setup, configuration, and troubleshoot
 
 ---
 
-## Documentation Index
+## Documentation Index {#documentation-index}
 
 | Document | Covers |
 |----------|--------|

@@ -1,18 +1,18 @@
-# OS_INSIDE — FreeRTOS-OS Internals & Post-Mortems
+# OS_INSIDE — FreeRTOS-OS Internals & Post-Mortems {#os_inside--freertos-os-internals--post-mortems}
 
 Deep-dive notes on how FreeRTOS-OS works under the hood, and documented post-mortems for non-obvious bugs that were traced to root cause and fixed.
 
 ---
 
-## Post-Mortem: USART2 Silent — ISR Priority + Non-ISR-Safe ringbuffer_getchar
+## Post-Mortem: USART2 Silent — ISR Priority + Non-ISR-Safe ringbuffer_getchar {#post-mortem-usart2-silent--isr-priority--non-isr-safe-ringbuffer_getchar}
 
-### Symptom
+### Symptom {#symptom}
 
 After bringing up the scheduler, USART1 (UART_DEBUG) produced output but USART2 (UART_APP, `/dev/ttyUSB0`) remained completely silent. `uart_mgmt_thread` iterates `bc->uart_count` UARTs in order — UART_DEBUG first, UART_APP second. A live memory dump via OpenOCD confirmed that `drv_uart_handle_t` for UART_APP (`_uart_handles[1]`) was entirely zero: `initialized == 0`, `ops == NULL`. The thread froze during iteration 0 before ever reaching iteration 1.
 
 ---
 
-### Investigation: Locating the Freeze
+### Investigation: Locating the Freeze {#investigation-locating-the-freeze}
 
 OpenOCD was used to halt the running MCU and read the program counter:
 
@@ -47,7 +47,7 @@ The MCU was frozen in the `configASSERT` infinite loop inside `vPortEnterCritica
 
 ---
 
-### Investigation: Tracing the ISR Call Chain
+### Investigation: Tracing the ISR Call Chain {#investigation-tracing-the-isr-call-chain}
 
 Reading `ICSR` while halted confirmed `VECTACTIVE = 37` — exception 37 on STM32F4 is `USART1_IRQn`. The ISR had preempted the scheduler and was stuck in the assert.
 
@@ -69,7 +69,7 @@ The RX path (`_uart_rx_cb` → `ringbuffer_putchar`) was already ISR-safe and wa
 
 ---
 
-### Root Cause 1 — Non-ISR-Safe `ringbuffer_getchar` in TX ISR Path
+### Root Cause 1 — Non-ISR-Safe `ringbuffer_getchar` in TX ISR Path {#root-cause-1--non-isr-safe-ringbuffer_getchar-in-tx-isr-path}
 
 `ringbuffer_getchar` was documented as "task context only" and used `taskENTER_CRITICAL`. Its caller `drv_uart_tx_get_next_byte` was documented as "called from the UART TXE ISR" but used the non-ISR-safe getchar. The two were inconsistent.
 
@@ -100,7 +100,7 @@ uint32_t ringbuffer_getchar_from_isr(struct ringbuffer *rb, uint8_t *ch)
 
 ---
 
-### Root Cause 2 — UART IRQ Priorities Above `configMAX_SYSCALL_INTERRUPT_PRIORITY`
+### Root Cause 2 — UART IRQ Priorities Above `configMAX_SYSCALL_INTERRUPT_PRIORITY` {#root-cause-2--uart-irq-priorities-above-configmax_syscall_interrupt_priority}
 
 FreeRTOS on Cortex-M enforces a strict priority boundary. The kernel uses `BASEPRI` to create critical sections. Any ISR with a **numerically lower** NVIC priority value than `configMAX_SYSCALL_INTERRUPT_PRIORITY` runs above this BASEPRI mask — it can preempt FreeRTOS critical sections in task context, and calling **any** FreeRTOS API from it (even `FROM_ISR` variants) is undefined behavior.
 
@@ -135,7 +135,7 @@ I2C and SPI were similarly configured at priority `3U` (also above the FreeRTOS-
 
 ---
 
-### FreeRTOS Priority Rule Summary
+### FreeRTOS Priority Rule Summary {#freertos-priority-rule-summary}
 
 On a Cortex-M4 with 4-bit NVIC priority field (STM32F4):
 
@@ -162,7 +162,7 @@ The register values written to the NVIC `IPR` byte are shifted left by `(8 - con
 
 ---
 
-### Diagnosis Tools Used
+### Diagnosis Tools Used {#diagnosis-tools-used}
 
 **OpenOCD + Tcl script to dump live memory:**
 
@@ -205,7 +205,7 @@ arm-none-eabi-objdump -d build/app.elf \
 
 ---
 
-### Files Changed
+### Files Changed {#files-changed}
 
 | File | Change |
 |---|---|
@@ -217,7 +217,7 @@ arm-none-eabi-objdump -d build/app.elf \
 
 ---
 
-### Prevention Guidelines
+### Prevention Guidelines {#prevention-guidelines}
 
 1. **Any function documented "called from ISR" must only use `FROM_ISR` FreeRTOS API.** Check call sites when writing a new ISR or callback.
 
@@ -233,15 +233,15 @@ arm-none-eabi-objdump -d build/app.elf \
 
 ---
 
-## ISR Dispatch Architecture
+## ISR Dispatch Architecture {#isr-dispatch-architecture}
 
 FreeRTOS-OS uses a Linux-inspired two-level IRQ dispatch to decouple hardware vectors from application handlers.
 
-### Layer 1 — Hardware Vector (generated)
+### Layer 1 — Hardware Vector (generated) {#layer-1--hardware-vector-generated}
 
 `app/board/irq_periph_dispatch_generated.c` provides the actual `USART1_IRQHandler` etc. These are thin wrappers that call the HAL peripheral driver (to clear the hardware flag) and then call `drv_irq_dispatch_from_isr(irq_id, &data, &hpt)`.
 
-### Layer 2 — Software irq_desc Chain
+### Layer 2 — Software irq_desc Chain {#layer-2--software-irq_desc-chain}
 
 `drv_irq_dispatch_from_isr` → `__do_IRQ_from_isr` → `irq_to_desc(irq_id)` → `desc->handle_irq()` → `handle_irq_event()` → walks the `irqaction` chain, calling each registered handler.
 
@@ -263,7 +263,7 @@ irq_notify_cb_t trampoline  (registered via irq_register)
 FreeRTOS task unblocks
 ```
 
-### Registering a Handler
+### Registering a Handler {#registering-a-handler}
 
 **Linux-style `request_irq`** (direct `irqaction`, returns `irqreturn_t`):
 ```c
@@ -279,15 +279,15 @@ Both must follow the ISR-safe API rules above.
 
 ---
 
-## Post-Mortem: Shell Silent — Four Independent Defects
+## Post-Mortem: Shell Silent — Four Independent Defects {#post-mortem-shell-silent--four-independent-defects}
 
-### Symptom
+### Symptom {#symptom}
 
 After wiring the interactive shell service (`os_shell_management.c`) to `app_main()` and connecting PuTTY to `/dev/ttyUSB0` (USART2, 115200 8N1), no banner appeared and keystrokes produced no response. The MCU was running (heartbeat LED toggling), USART2 was initialized (previous `[APP] Hello` messages had worked), but the shell was completely silent.
 
 ---
 
-### Root Cause 1 — `os_shell_management.c` Never Compiled
+### Root Cause 1 — `os_shell_management.c` Never Compiled {#root-cause-1--os_shell_managementc-never-compiled}
 
 `services/Makefile` controlled which `.c` files were included in the build. `os_shell_management.c` was present in `services/` but had no entry in the Makefile. The linker silently discarded the compilation unit, so `os_shell_mgmt_start()` resolved to its `__attribute__((weak))` stub in `main.c` (which does nothing).
 
@@ -305,7 +305,7 @@ endif
 
 ---
 
-### Root Cause 2 — `FreeRTOS_CLI.h` Missing `FreeRTOS.h` Include
+### Root Cause 2 — `FreeRTOS_CLI.h` Missing `FreeRTOS.h` Include {#root-cause-2--freertos_clih-missing-freertosh-include}
 
 `FreeRTOS_CLI.h` uses `BaseType_t` and `UBaseType_t` (FreeRTOS-defined types) without including `FreeRTOS.h` itself. The header relies on the caller to pull in FreeRTOS types first. The `os_shell_management.h` public header included `FreeRTOS_CLI.h` directly after `def_std.h` — FreeRTOS types were not yet in scope, causing compile errors:
 
@@ -325,7 +325,7 @@ FreeRTOS_CLI.h:95: error: unknown type name 'BaseType_t'
 
 ---
 
-### Root Cause 3 — `echo_task` Consuming Shell RX Bytes
+### Root Cause 3 — `echo_task` Consuming Shell RX Bytes {#root-cause-3--echo_task-consuming-shell-rx-bytes}
 
 `app_main.c` ran an `echo_task` that polled the UART_APP RX ring buffer via `uart_mgmt_read_byte(UART_APP, &rx_byte)`. The shell task polls the **same** ring buffer via `ringbuffer_getchar(rx_rb, &byte)`. Both are task-context readers of a single-consumer ring buffer:
 
@@ -345,7 +345,7 @@ Each byte in the ring buffer could be consumed by either task. In practice `echo
 
 ---
 
-### Root Cause 4 — `printk` and Shell on the Same UART
+### Root Cause 4 — `printk` and Shell on the Same UART {#root-cause-4--printk-and-shell-on-the-same-uart}
 
 `conf_os.h` had both `COMM_PRINTK_HW_ID` and `UART_SHELL_HW_ID` set to `1` (UART_APP / USART2). `printk()` writes asynchronously to the TX ring buffer from any task. With the shell also writing to the same TX ring buffer, `printk` output would appear interspersed with shell prompts and command output:
 
@@ -370,7 +370,7 @@ Both writers are individually correct (both use `ringbuffer_putchar` which is IS
 
 ---
 
-### Files Changed
+### Files Changed {#files-changed}
 
 | File | Change |
 |---|---|
@@ -381,7 +381,7 @@ Both writers are individually correct (both use `ringbuffer_putchar` which is IS
 
 ---
 
-### Boot Timing After the Fix
+### Boot Timing After the Fix {#boot-timing-after-the-fix}
 
 ```
 T + 0 s    MCU reset
@@ -400,7 +400,7 @@ Type 'help' for available commands.
 
 ---
 
-### Prevention Guidelines
+### Prevention Guidelines {#prevention-guidelines}
 
 1. **Every `.c` file in `services/` needs a Makefile entry.** After adding a new service source, verify with `arm-none-eabi-nm build/app.elf | grep <symbol>` that the expected symbols have real addresses and non-zero size.
 
@@ -412,15 +412,15 @@ Type 'help' for available commands.
 
 ---
 
-## Post-Mortem: H723 HAL Tick Silent — HAL Timebase Timer Mismatch (TIM1 vs TIM6)
+## Post-Mortem: H723 HAL Tick Silent — HAL Timebase Timer Mismatch (TIM1 vs TIM6) {#post-mortem-h723-hal-tick-silent--hal-timebase-timer-mismatch-tim1-vs-tim6}
 
 *Board: NUCLEO-H723ZG (STM32H723ZG) · Date: 2026-05-14*
 
-### Symptom
+### Symptom {#symptom}
 
 After porting to STM32H723, FreeRTOS ran (idle task visible via OpenOCD), but `HAL_GetTick()` appeared to return 0 and HAL driver timeouts behaved incorrectly. The HAL tick counter was not advancing.
 
-### Root Cause
+### Root Cause {#root-cause}
 
 `hal_timebase_stm32.c` contains an `#if defined(STM32H7)` branch that was added to use TIM6 for the HAL timebase on H7, matching the generated IRQ dispatch. However, the generated `irq_periph_dispatch_generated.c` for H723 routes:
 
@@ -431,7 +431,7 @@ void TIM1_UP_IRQHandler(void)  { }                                     /* empty 
 
 The original H7 code called `HAL_InitTick()` with TIM1 + `TIM1_UP_IRQn`. TIM1 fired, but the empty `TIM1_UP_IRQHandler` stub swallowed the interrupt — `hal_timebase_stm32_irq_handler()` was never called, so `HAL_IncTick()` and `g_ms_ticks` were never incremented.
 
-### Fix
+### Fix {#fix}
 
 Added an `#if defined(STM32H7)` split in `HAL_InitTick()` to use **TIM6** with `TIM6_DAC_IRQn` on H7:
 
@@ -453,21 +453,21 @@ Also added `DRV_RCC_PERIPH_TIM6` to the `drv_rcc_periph_t` enum and the `hal_rcc
 
 **Files changed:** `drivers/hal/stm32/hal_timebase_stm32.c`, `drivers/hal/stm32/hal_rcc_stm32.c`, `include/drivers/drv_rcc.h`
 
-### Lesson
+### Lesson {#lesson}
 
 When generating the IRQ dispatch table (`gen_irq_table.py`) for a new MCU, verify that the HAL timebase timer in `hal_timebase_stm32.c` matches the timer routed in `irq_periph_dispatch_generated.c`. On H7, the generated table uses TIM6 (because TIM10 does not exist and `TIM1_UP_TIM10_IRQn` is an alias that maps to `TIM1_UP_IRQn`, which is stubbed out). Always confirm with OpenOCD: halt, read `TIMx->CNT` and `TIMx->CR1` to verify which timer is actually running.
 
 ---
 
-## Post-Mortem: H723 UART Silent — `printk_init` / `printk_enable` Never Called
+## Post-Mortem: H723 UART Silent — `printk_init` / `printk_enable` Never Called {#post-mortem-h723-uart-silent--printk_init--printk_enable-never-called}
 
 *Board: NUCLEO-H723ZG (STM32H723ZG) · Date: 2026-05-14*
 
-### Symptom
+### Symptom {#symptom}
 
 After confirming FreeRTOS was running (heartbeat LED toggling, OpenOCD showed idle task), no output appeared on `/dev/ttyACM0` — not even the shell banner. USART3 registers confirmed via OpenOCD that the hardware was correctly initialized: BRR=0x22C (115200 baud at 64 MHz PCLK1), CR1: UE=1, TE=1, RE=1, RXNEIE=1, TEACK=1, REACK=1.
 
-### Root Cause
+### Root Cause {#root-cause}
 
 `uart_mgmt_thread` in `services/uart_mgmt.c` contains this comment at the top of the file:
 
@@ -484,11 +484,11 @@ But the actual code **never called `printk_init()` or `printk_enable()`**. As a 
 
 The shell banner uses `_shell_write()` which bypasses the `_printk_enabled` gate and writes directly to the TX ring buffer. It was being sent but lost because the STLink VCP discards bytes transmitted before the host opens `/dev/ttyACM0`. The heartbeat's `printk()` calls were also silently dropped.
 
-### Diagnosis
+### Diagnosis {#diagnosis}
 
 OpenOCD confirmed USART3 ISR=0x006000D0: TC=1, TXE=1, TEACK=1, REACK=1 — transmitter idle and ready. TXEIE=0 at halt time, consistent with TX having completed or never started. Suspicion moved from hardware to software after reading UART register state. Traced `_printk_enabled` in the map file; confirmed it was 0 at runtime via memory read. Source audit revealed `printk_init()`/`printk_enable()` were never called from `uart_mgmt_thread`.
 
-### Fix
+### Fix {#fix}
 
 Added two calls to `uart_mgmt_thread`:
 
@@ -506,11 +506,11 @@ printk_enable();
 
 **File changed:** `services/uart_mgmt.c`
 
-### STLink VCP data-before-open behavior
+### STLink VCP data-before-open behavior {#stlink-vcp-data-before-open-behavior}
 
 A secondary finding: data sent by the MCU before the host opens `/dev/ttyACM0` is silently discarded by the STLink USB CDC ACM layer. Always open the terminal **before** resetting or flashing the board, or design the firmware to output something periodically (like heartbeat `printk`) so that connecting at any time catches subsequent output.
 
-### Prevention Guidelines (updated)
+### Prevention Guidelines (updated) {#prevention-guidelines-updated}
 
 5. **`uart_mgmt_thread` must call `printk_init()` after queue registration and `printk_enable()` after UART hardware init.** If either is missing, `printk()` is a no-op. Verify at board bring-up with a simple heartbeat printk and confirm output on the serial port before building on top of it.
 

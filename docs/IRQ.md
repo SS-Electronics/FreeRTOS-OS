@@ -1,10 +1,10 @@
-# IRQ System
+# IRQ System {#irq-system}
 
 Linux-style interrupt descriptor chain for FreeRTOS / bare-metal Cortex-M4.
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Overview](#overview)
 - [Common Dispatch Spine](#common-dispatch-spine)
@@ -24,7 +24,7 @@ Linux-style interrupt descriptor chain for FreeRTOS / bare-metal Cortex-M4.
 
 ---
 
-## Overview
+## Overview {#overview}
 
 The IRQ system adapts the Linux `irq_desc` chain to a single-core embedded
 target. Each software IRQ ID maps to a descriptor (`struct irq_desc`) that
@@ -47,7 +47,7 @@ Both ultimately insert an `irqaction` into the same `irq_desc` chain.
 
 ---
 
-## Common Dispatch Spine
+## Common Dispatch Spine {#common-dispatch-spine}
 
 Every peripheral feeds into the same spine once it calls
 `drv_irq_dispatch_from_isr`:
@@ -72,7 +72,7 @@ __do_IRQ_from_isr(irq_id, data, pxHPT)            irq/irq_desc.c
 
 ---
 
-## UART ISR Chain
+## UART ISR Chain {#uart-isr-chain}
 
 UART uses direct register-level handling — no HAL state machine is invoked.
 The RXNE bit is enabled inside `stm32_uart_hw_init()`; no separate
@@ -121,7 +121,7 @@ decouples ISR rate from task scheduling.
 
 ---
 
-## I2C ISR Chain
+## I2C ISR Chain {#i2c-isr-chain}
 
 I2C uses two NVIC lines (EV + ER). The HAL state machine is kept for the
 complex I2C protocol handling; completion is detected by comparing
@@ -161,7 +161,7 @@ CPU vector table
 
 ---
 
-## SPI ISR Chain
+## SPI ISR Chain {#spi-isr-chain}
 
 SPI has a single NVIC line. The HAL state machine is kept for multi-interrupt
 operations; completion/error is detected by checking state and error code after
@@ -197,11 +197,11 @@ SPI1_IRQHandler()
 
 ---
 
-## Task Notification Mechanism
+## Task Notification Mechanism {#task-notification-mechanism}
 
 Two distinct notification patterns are used depending on the peripheral:
 
-### UART RX — ring buffer (decoupled)
+### UART RX — ring buffer (decoupled) {#uart-rx--ring-buffer-decoupled}
 
 ```
 ISR context                         Task context
@@ -214,7 +214,7 @@ _uart_rx_cb()                       uart_mgmt_read_byte() / read_line()
 The ring buffer decouples ISR throughput from task scheduling. The producer
 (ISR) never blocks; the consumer (task) sleeps until data arrives.
 
-### I2C / SPI — direct task notification (coupled)
+### I2C / SPI — direct task notification (coupled) {#i2c--spi--direct-task-notification-coupled}
 
 ```
 Management thread (task context)         ISR context
@@ -230,7 +230,7 @@ The management thread suspends on `ulTaskNotifyTake` after kicking the IT
 transfer. The ISR's subscriber callback wakes exactly that thread via
 `vTaskNotifyGiveFromISR`. One transfer completes before the next begins.
 
-### Subscribers registered at startup
+### Subscribers registered at startup {#subscribers-registered-at-startup}
 
 | IRQ ID | Subscriber | Registered in |
 |--------|-----------|---------------|
@@ -246,7 +246,7 @@ transfer. The ISR's subscriber callback wakes exactly that thread via
 
 ---
 
-## IRQ ID Space
+## IRQ ID Space {#irq-id-space}
 
 Software IRQ IDs are consecutive integers defined in `include/irq/irq_notify.h`:
 
@@ -282,9 +282,9 @@ ID   Macro                    Description
 
 ---
 
-## Key Data Structures
+## Key Data Structures {#key-data-structures}
 
-### `struct irq_desc`  (`include/irq/irq_desc.h`)
+### `struct irq_desc`  (`include/irq/irq_desc.h`) {#struct-irq_desc--includeirqirq_desch}
 
 Per-IRQ descriptor. One instance per software IRQ ID in a static table.
 
@@ -304,7 +304,7 @@ struct irq_desc {
 };
 ```
 
-### `struct irqaction`  (`include/irq/irq_desc.h`)
+### `struct irqaction`  (`include/irq/irq_desc.h`) {#struct-irqaction--includeirqirq_desch}
 
 One node in the per-IRQ handler chain. Allocated from a static pool.
 
@@ -317,7 +317,7 @@ struct irqaction {
 };
 ```
 
-### `struct irq_chip`  (`include/irq/irq_desc.h`)
+### `struct irq_chip`  (`include/irq/irq_desc.h`) {#struct-irq_chip--includeirqirq_desch}
 
 Interrupt controller operations. The NVIC chip is in
 `drivers/hal/stm32/irq_chip_nvic.c`.
@@ -337,7 +337,7 @@ struct irq_chip {
 
 ---
 
-## Flow Handlers
+## Flow Handlers {#flow-handlers}
 
 Three flow handlers are provided in `irq/irq_desc.c`:
 
@@ -351,9 +351,9 @@ Default at `irq_desc_init_all()` is `handle_simple_irq` for all IDs.
 
 ---
 
-## Registration APIs
+## Registration APIs {#registration-apis}
 
-### `request_irq()` — direct irqaction registration
+### `request_irq()` — direct irqaction registration {#request_irq--direct-irqaction-registration}
 
 ```c
 int request_irq(irq_id_t irq, irq_handler_t handler,
@@ -377,7 +377,7 @@ static irqreturn_t my_handler(irq_id_t irq, void *data,
 request_irq(IRQ_ID_EXTI(0), my_handler, "my_btn", xTaskGetCurrentTaskHandle());
 ```
 
-### `free_irq()` — remove a handler
+### `free_irq()` — remove a handler {#free_irq--remove-a-handler}
 
 ```c
 void free_irq(irq_id_t irq, void *dev_id);
@@ -385,7 +385,7 @@ void free_irq(irq_id_t irq, void *dev_id);
 
 Walks the chain and unlinks the `irqaction` whose `dev_id` matches.
 
-### `irq_register()` — notify-style wrapper
+### `irq_register()` — notify-style wrapper {#irq_register--notify-style-wrapper}
 
 ```c
 int32_t irq_register(irq_id_t id, irq_notify_cb_t cb, void *arg);
@@ -397,7 +397,7 @@ For new code, prefer `request_irq()` directly.
 
 ---
 
-## Boot Sequence
+## Boot Sequence {#boot-sequence}
 
 ```
 main()
@@ -421,7 +421,7 @@ main()
 
 ---
 
-## EXTI Example
+## EXTI Example {#exti-example}
 
 `app/app_main.c` demonstrates a GPIO EXTI interrupt (BTN_USER, PA0):
 
@@ -449,7 +449,7 @@ Key points:
 
 ---
 
-## UART Echo Example
+## UART Echo Example {#uart-echo-example}
 
 `echo_task` in `app/app_main.c` uses the `irq_register()` compatibility path:
 
@@ -464,7 +464,7 @@ it in a trampoline and appends it to the same descriptor chain as
 
 ---
 
-## IRQ Table Generator
+## IRQ Table Generator {#irq-table-generator}
 
 `app/board/irq_table.xml` is the single source of truth for IRQ names and NVIC priorities.
 
@@ -490,7 +490,7 @@ XML schema at a glance:
 
 ---
 
-## File Map
+## File Map {#file-map}
 
 | File | Role |
 |------|------|

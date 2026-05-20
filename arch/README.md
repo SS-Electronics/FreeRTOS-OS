@@ -1,4 +1,4 @@
-# `arch/` — Architecture & MCU Vendor Support
+# `arch/` — Architecture & MCU Vendor Support {#arch--architecture--mcu-vendor-support}
 
 This directory holds everything the build needs to retarget FreeRTOS-OS
 from one ARM Cortex-M MCU to another:
@@ -17,7 +17,7 @@ chosen part.
 
 ---
 
-## Directory Layout
+## Directory Layout {#directory-layout}
 
 ```
 arch/
@@ -55,7 +55,7 @@ arch/
 
 ---
 
-## The Per-Part Contract
+## The Per-Part Contract {#the-per-part-contract}
 
 For every supported MCU part the directory
 `arch/devices/<VENDOR>/<FAMILY>/<PART>/` MUST provide:
@@ -71,7 +71,7 @@ shared umbrella headers (`<family>.h`, `system_<family>.c|.h`).  Some
 vendors also publish a HAL SDK as a sibling submodule, e.g.
 `stm32f4xx-hal-driver/` next to `STM32F4xx/`.
 
-### Critical: `KEEP(.init)` / `KEEP(.fini)` in every linker script
+### Critical: `KEEP(.init)` / `KEEP(.fini)` in every linker script {#critical-keepinit--keepfini-in-every-linker-script}
 
 GCC's bare-metal CRT splits `_init` / `_fini` across **two** input
 sections — `crti.o` ships the prolog (with the symbol) and `crtn.o`
@@ -87,7 +87,7 @@ board appears dead, OpenOCD struggles to halt.
 
 ---
 
-## How `arch/Makefile` Dispatches
+## How `arch/Makefile` Dispatches {#how-archmakefile-dispatches}
 
 Each supported part has an `ifeq ($(CONFIG_TARGET_MCU),"<PART>")` block.
 The block:
@@ -108,7 +108,7 @@ copying the closest existing one.
 
 ---
 
-## Adding a New Vendor — Worked Example
+## Adding a New Vendor — Worked Example {#adding-a-new-vendor--worked-example}
 
 Suppose you want to bring up NXP LPC55S69 (Cortex-M33 dual-core).
 
@@ -157,7 +157,7 @@ vendor-agnostic and does not change.
 
 ---
 
-## The `device.h` Selection Header
+## The `device.h` Selection Header {#the-deviceh-selection-header}
 
 `arch/devices/device.h` is the single header that translation units
 include via `<device.h>`.  It branches on the chip symbol injected by
@@ -169,7 +169,7 @@ STM32 / Infineon / Microchip blocks are the template.
 
 ---
 
-## Cross-References
+## Cross-References {#cross-references}
 
   - `docs/ARCHITECTURE.md` — full architectural overview, layer model,
     safety layer, boot FSM.

@@ -1,6 +1,6 @@
 <div align="center">
 
-# FreeRTOS-OS
+# FreeRTOS-OS {#freertos-os}
 
 **A Linux-inspired OS layer for ARM Cortex-M, built on the FreeRTOS kernel.**
 
@@ -32,9 +32,9 @@ medical-grade safety stack.
 > [Per-vendor `/arch` contract](arch/README.md) ·
 > [Per-devboard examples](examples/README.md)
 
----
+<hr/>
 
-## ✨ Highlights
+## ✨ Highlights {#highlights}
 
 | | |
 |---|---|
@@ -49,7 +49,7 @@ medical-grade safety stack.
 
 ---
 
-## 🎯 Supported Targets & Build Footprint
+## 🎯 Supported Targets & Build Footprint {#supported-targets--build-footprint}
 
 Footprint figures below are for the standalone devboard examples under
 [`examples/`](examples/) (no application code beyond `app_main.c`).
@@ -64,7 +64,7 @@ threads occupy before your application allocates anything.
 
 ---
 
-## 🚀 Quick Start (5 minutes, no application code needed)
+## 🚀 Quick Start (5 minutes, no application code needed) {#quick-start-5-minutes-no-application-code-needed}
 
 ```bash
 git clone --recurse-submodules https://github.com/SS-Electronics/FreeRTOS-OS.git
@@ -101,14 +101,14 @@ Try: `help`, `ps`, `mem`, `log dump`.
 
 ---
 
-## 🛠 Use Cases
+## 🛠 Use Cases {#use-cases}
 
 | Mode | Builds from | Entry point | Best for |
 |---|---|---|---|
 | **Devboard example** | `examples/<target>/` | `make dev-<target>` | Port validation, CI, evaluating the OS without writing app code. |
 | **OS + Application** | sibling `../app/` | `make app TARGET=<target>` | Real product firmware.  FreeRTOS-OS is a git submodule of your application repo. |
 
-### Mode 1 — Devboard Example (Standalone)
+### Mode 1 — Devboard Example (Standalone) {#mode-1--devboard-example-standalone}
 
 1. **Install prerequisites** *(once)*
    ```bash
@@ -140,7 +140,7 @@ Try: `help`, `ps`, `mem`, `log dump`.
    `make dev-<target>-clean` only removes that devboard's generated
    outputs plus `build/`; the *other* devboard's `board/` is untouched.
 
-### Mode 2 — OS + Application (Your Product)
+### Mode 2 — OS + Application (Your Product) {#mode-2--os--application-your-product}
 
 FreeRTOS-OS is consumed as a **git submodule** of your application
 repository.  Your project supplies a thin root `Makefile`, an `app/`
@@ -222,7 +222,7 @@ directory, and per-target configuration.
 
 ---
 
-## 🧭 Architecture
+## 🧭 Architecture {#architecture}
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -247,7 +247,7 @@ new MCU vendor by following the contract in
 
 ---
 
-## ⚙️ Make Target Reference
+## ⚙️ Make Target Reference {#make-target-reference}
 
 Run all targets from `FreeRTOS-OS/`.  `<t>` = `stm32f411` or `stm32h723`.
 
@@ -314,7 +314,7 @@ Run all targets from `FreeRTOS-OS/`.  `<t>` = `stm32f411` or `stm32h723`.
 
 ---
 
-## 🔬 Static Analysis
+## 🔬 Static Analysis {#static-analysis}
 
 ```bash
 ./scripts/install_cppcheck.sh
@@ -336,7 +336,7 @@ deviation table.
 
 ---
 
-## 🤖 CI Pipeline
+## 🤖 CI Pipeline {#ci-pipeline}
 
 Every push and pull request runs a 5-stage matrix pipeline against
 every supported target:
@@ -355,18 +355,20 @@ artifacts.  See [`.github/workflows/static_analysis.yml`](.github/workflows/stat
 
 ---
 
-## 📚 Documentation
+## 📚 Documentation {#documentation}
 
 | Document | Topic |
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Full architecture reference — layer model, drivers, safety, boot FSM, invariants |
+| [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) | **All architectural diagrams** — layer stack, boot FSM, thread map, IRQ flow (Doxygen-rendered SVG) |
+| [`docs/FLOW.md`](docs/FLOW.md) | Boot flow & function-call structure — `Reset_Handler → main → app_main → vTaskStartScheduler` |
 | [`arch/README.md`](arch/README.md) | `/arch` contract — adding a new MCU / vendor |
 | [`examples/README.md`](examples/README.md) | Devboard example layout + how to add a new devboard |
-| [`docs/OS_THREAD.md`](docs/OS_THREAD.md) | Thread API |
+| [`docs/OS_THREAD.md`](docs/OS_THREAD.md) | Thread API, lifecycle, intrusive thread list |
 | [`docs/QUEUE.md`](docs/QUEUE.md) | IPC message queues + ring buffer |
 | [`docs/DRIVERS.md`](docs/DRIVERS.md) | Driver vtables and HAL backends |
 | [`docs/BOARD.md`](docs/BOARD.md) | Board XML schema, BSP generator |
-| [`docs/DEV_MGMT.md`](docs/DEV_MGMT.md) | Service-thread internals |
+| [`docs/DEV_MGMT.md`](docs/DEV_MGMT.md) | Service-thread internals — every OS task explained |
 | [`docs/SHELL_CLI.md`](docs/SHELL_CLI.md) | Shell, CLI, command registration |
 | [`docs/IRQ.md`](docs/IRQ.md) | Linux-style IRQ subsystem |
 | [`docs/DMA.md`](docs/DMA.md) | DMA engine + HAL backend |
@@ -377,7 +379,7 @@ artifacts.  See [`.github/workflows/static_analysis.yml`](.github/workflows/stat
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contributing {#contributing}
 
 Bug reports, ports to new MCUs, and pull requests are welcome.
 
@@ -396,7 +398,7 @@ before starting a large change so we can scope it together.
 
 ---
 
-## 📄 License
+## 📄 License {#license}
 
 FreeRTOS-OS is licensed under **GPL v3.0**.  See [`LICENSE`](LICENSE) or
 <https://www.gnu.org/licenses/gpl-3.0.html>.

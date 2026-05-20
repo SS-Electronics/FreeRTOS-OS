@@ -1,4 +1,4 @@
-# Driver Management Services — FreeRTOS-OS
+# Driver Management Services — FreeRTOS-OS {#driver-management-services--freertos-os}
 
 This document describes in detail how the four peripheral management service threads work: their startup sequence, internal state, message dispatch, synchronisation patterns, error recovery, and public APIs.
 
@@ -7,7 +7,7 @@ For the board configuration system that drives peripheral registration, see [BOA
 
 ---
 
-## Table of Contents
+## Table of Contents {#table-of-contents}
 
 - [Design Principles](#design-principles)
 - [Overall Architecture](#overall-architecture)
@@ -53,7 +53,7 @@ For the board configuration system that drives peripheral registration, see [BOA
 
 ---
 
-## Design Principles
+## Design Principles {#design-principles}
 
 **1. One thread owns one bus type.**
 Each management thread holds exclusive ownership of its driver handles. No application task ever calls `drv_uart_transmit()` directly — all hardware access goes through the management queue. This eliminates the need for per-handle mutexes and makes bus-level serialisation implicit.
@@ -76,7 +76,7 @@ Each management thread begins with `os_thread_delay(TIME_OFFSET_xxx)` so that th
 
 ---
 
-## Overall Architecture
+## Overall Architecture {#overall-architecture}
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -115,9 +115,61 @@ Each management thread has:
 - A **`_start()` function** that creates the queue and spawns the thread
 - **Public helper functions** that package messages and call `xQueueSend`
 
+The canonical synchronous request flow (the example below is I²C; UART,
+SPI and ADC follow the same shape) involves three contexts — the
+calling application task, the management thread, and the peripheral
+ISR — coordinated through one queue and one task notification:
+
+\dot
+digraph svc_request {
+    rankdir=TB;
+    splines=ortho;
+    node [shape=box, fontname="Helvetica", fontsize=10, style="rounded,filled"];
+
+    subgraph cluster_app {
+        label="Application task";
+        style="rounded,filled"; fillcolor="#FFF8E1";
+        AP1 [label="iic_app_sync_read(dev, addr, buf, len)"];
+        AP2 [label="ulTaskNotifyTake (blocks)"];
+        AP3 [label="resumes, returns buf"];
+    }
+
+    subgraph cluster_mgmt {
+        label="iic_mgmt_thread (prio 1)";
+        style="rounded,filled"; fillcolor="#E3F2FD";
+        MG1 [label="xQueueReceive(_mgmt_queue)"];
+        MG2 [label="drv_iic_read(...)\n→ ops->read()"];
+        MG3 [label="hal_iic_read_stm32\n→ HAL_I2C_Master_Receive_IT"];
+        MG4 [label="ulTaskNotifyTake\nwait HW completion"];
+        MG5 [label="xTaskNotifyGive(caller)"];
+    }
+
+    subgraph cluster_isr {
+        label="I2C ISR (NVIC ≥ 5)";
+        style="rounded,filled"; fillcolor="#FFEBEE";
+        IS1 [label="I2Cx_EV_IRQHandler\n→ flow_handler"];
+        IS2 [label="drv_irq_notify(irq_id)"];
+        IS3 [label="vTaskNotifyGiveFromISR\n(iic_mgmt_thread)"];
+    }
+
+    AP1 -> MG1 [label="xQueueSend(cmd)"];
+    AP1 -> AP2;
+    MG1 -> MG2 -> MG3 -> MG4;
+    MG4 -> MG5;
+    MG5 -> AP3 [style=dashed, label="notify wakes caller"];
+
+    IS1 -> IS2 -> IS3;
+    IS3 -> MG4 [style=dashed, label="notify wakes mgmt thread"];
+}
+\enddot
+
+The same picture in a separate page, with cross-links to driver,
+ISR and notify source files: [DIAGRAMS.md § Service Thread Request /
+Notify Sequence](DIAGRAMS.md#service-thread-request--notify-sequence).
+
 ---
 
-## Startup Sequence
+## Startup Sequence {#startup-sequence}
 
 ```
 main() / app_main()
@@ -162,9 +214,9 @@ main() / app_main()
 
 > Offsets are measured from `vTaskStartScheduler()`. GPIO starts first at 3 000 ms because GPIO clocks must be enabled before any UART/SPI/I2C HAL MSP init functions run (they call `HAL_GPIO_Init` internally). The `set_config` → `register` → `hw_init` ordering within each thread ensures the vendor hardware context is fully populated before `hw_init` reads it.
 
----
+<hr/>
 
-## UART Management — `uart_mgmt`
+## UART Management — `uart_mgmt` {#uart-management--uart_mgmt}
 
 **Files:**
 - [services/uart_mgmt.c](services/uart_mgmt.c)
@@ -172,7 +224,7 @@ main() / app_main()
 
 **Compile guard:** `INC_SERVICE_UART_MGMT == 1` (set in `config/conf_os.h` via `make menuconfig`)
 
-### UART State
+### UART State {#uart-state}
 
 ```c
 /* uart_mgmt.c — translation unit private */
@@ -181,7 +233,7 @@ static QueueHandle_t _mgmt_queue = NULL;
 
 The single private queue is the only way into the thread. The driver handles themselves live in `drv_uart.c` (static array indexed by `dev_id`).
 
-### UART Thread Body
+### UART Thread Body {#uart-thread-body}
 
 ```
 uart_mgmt_thread()
@@ -236,7 +288,7 @@ uart_mgmt_thread()
            xTaskNotifyGive(msg.result_notify)  // wake sync caller
 ```
 
-### UART Message Protocol
+### UART Message Protocol {#uart-message-protocol}
 
 ```c
 typedef enum {
@@ -257,7 +309,7 @@ typedef struct {
 
 **Buffer lifetime:** The caller must keep `data` valid until the management thread drains the queue item and completes `ops->transmit()`. Use a static buffer, a heap buffer that is freed by the callback, or a buffer copied before returning (the transmit is synchronous inside the management thread).
 
-### Async Transmit Flow
+### Async Transmit Flow {#async-transmit-flow}
 
 ```
 Application task
@@ -279,7 +331,7 @@ uart_mgmt thread (running independently)
          └─ board_get_uart_cbs(dev_id)->on_tx_done(dev_id)   // app callback if registered
 ```
 
-### UART Error Recovery
+### UART Error Recovery {#uart-error-recovery}
 
 On `transmit` failure the management thread attempts one automatic recovery cycle:
 
@@ -293,7 +345,7 @@ if (err != OS_ERR_NONE) {
 
 For explicit recovery from application code, post `UART_MGMT_CMD_REINIT`.
 
-### UART Public API
+### UART Public API {#uart-public-api}
 
 ```c
 // Start the thread — call before vTaskStartScheduler()
@@ -320,7 +372,7 @@ HAL_UART_RxCpltCallback(huart)
        └─ board_get_uart_cbs(dev_id)->on_rx_byte(dev_id, byte)   // app callback
 ```
 
-### UART Configuration Knobs
+### UART Configuration Knobs {#uart-configuration-knobs}
 
 All in `config/conf_os.h` (editable via `make menuconfig`):
 
@@ -334,7 +386,7 @@ All in `config/conf_os.h` (editable via `make menuconfig`):
 
 ---
 
-## I2C Management — `iic_mgmt`
+## I2C Management — `iic_mgmt` {#i2c-management--iic_mgmt}
 
 **Files:**
 - [services/iic_mgmt.c](services/iic_mgmt.c)
@@ -342,13 +394,13 @@ All in `config/conf_os.h` (editable via `make menuconfig`):
 
 **Compile guard:** `INC_SERVICE_IIC_MGMT == 1`
 
-### I2C State
+### I2C State {#i2c-state}
 
 ```c
 static QueueHandle_t _mgmt_queue = NULL;
 ```
 
-### I2C Thread Body
+### I2C Thread Body {#i2c-thread-body}
 
 ```
 iic_mgmt_thread()
@@ -398,7 +450,7 @@ notify:
            xTaskNotifyGive(msg.result_notify)  // wake waiting caller
 ```
 
-### I2C Message Protocol
+### I2C Message Protocol {#i2c-message-protocol}
 
 ```c
 typedef enum {
@@ -423,7 +475,7 @@ typedef struct {
 
 **`use_reg`:** When `1`, the management thread prefixes the transfer with the 8-bit `reg_addr` byte (memory-write or memory-read pattern). When `0`, a raw I2C write is performed with the data buffer only.
 
-### Async Write Flow
+### Async Write Flow {#async-write-flow}
 
 ```
 Task A
@@ -441,7 +493,7 @@ iic_mgmt thread
   └─ result_notify = NULL → skip notify
 ```
 
-### Sync Read Flow — Task-Notification Pattern
+### Sync Read Flow — Task-Notification Pattern {#sync-read-flow--task-notification-pattern}
 
 ```
 Task A (sensor_task)
@@ -469,7 +521,7 @@ Task A resumes
 
 **Key point:** `result` lives on Task A's stack. The management thread writes to it through the pointer stored in the message. This is safe because Task A is blocked for the duration — it cannot touch `result` or `buf` until the notify arrives.
 
-### Device Probe Flow
+### Device Probe Flow {#device-probe-flow}
 
 ```
 iic_mgmt_msg_t msg = {
@@ -484,7 +536,7 @@ ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
 // result == OS_ERR_NONE → device present
 ```
 
-### I2C Public API
+### I2C Public API {#i2c-public-api}
 
 ```c
 int32_t       iic_mgmt_start(void);
@@ -517,7 +569,7 @@ int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
                              uint32_t timeout_ms);
 ```
 
-### I2C Configuration Knobs
+### I2C Configuration Knobs {#i2c-configuration-knobs}
 
 | Macro | Default | Effect |
 |-------|---------|--------|
@@ -530,7 +582,7 @@ int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
 
 ---
 
-## SPI Management — `spi_mgmt`
+## SPI Management — `spi_mgmt` {#spi-management--spi_mgmt}
 
 **Files:**
 - [services/spi_mgmt.c](services/spi_mgmt.c)
@@ -538,13 +590,13 @@ int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
 
 **Compile guard:** `BOARD_SPI_COUNT > 0` (no Kconfig flag — always compiled, C guard eliminates dead code when no SPI buses are defined in the board XML)
 
-### SPI State
+### SPI State {#spi-state}
 
 ```c
 static QueueHandle_t _mgmt_queue = NULL;
 ```
 
-### SPI Thread Body
+### SPI Thread Body {#spi-thread-body}
 
 ```
 spi_mgmt_thread()
@@ -590,7 +642,7 @@ notify:
        if msg.result_notify != NULL: xTaskNotifyGive(msg.result_notify)
 ```
 
-### SPI Message Protocol
+### SPI Message Protocol {#spi-message-protocol}
 
 ```c
 typedef enum {
@@ -611,7 +663,7 @@ typedef struct {
 } spi_mgmt_msg_t;
 ```
 
-### Sync Full-Duplex Transfer Flow
+### Sync Full-Duplex Transfer Flow {#sync-full-duplex-transfer-flow}
 
 ```
 Task A
@@ -634,7 +686,7 @@ Task A resumes
   └─ rx buffer filled, result available
 ```
 
-### CS Pin Responsibility
+### CS Pin Responsibility {#cs-pin-responsibility}
 
 The SPI management thread does **not** control chip-select (CS) GPIO pins. The caller is responsible for asserting CS before posting the transfer message and deasserting it after the blocking call returns (or after the async transmit completes):
 
@@ -651,7 +703,7 @@ drv_gpio_set(drv_gpio_get_handle(GPIO_FLASH_CS));
 
 Or use `gpio_mgmt_post()` with `delay_ms = 0` for deferred deassert.
 
-### SPI Public API
+### SPI Public API {#spi-public-api}
 
 ```c
 int32_t       spi_mgmt_start(void);
@@ -682,7 +734,7 @@ int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
                                 uint16_t len, uint32_t timeout_ms);
 ```
 
-### SPI Configuration Knobs
+### SPI Configuration Knobs {#spi-configuration-knobs}
 
 | Macro | Default | Effect |
 |-------|---------|--------|
@@ -693,7 +745,7 @@ int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
 
 ---
 
-## GPIO Management — `gpio_mgmt`
+## GPIO Management — `gpio_mgmt` {#gpio-management--gpio_mgmt}
 
 **Files:**
 - [services/gpio_mgmt.c](services/gpio_mgmt.c)
@@ -701,13 +753,13 @@ int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
 
 **Compile guard:** always compiled (no Kconfig or count guard). GPIO registration always runs at startup regardless of what other peripherals are defined.
 
-### GPIO State
+### GPIO State {#gpio-state}
 
 ```c
 static QueueHandle_t _mgmt_queue = NULL;
 ```
 
-### GPIO Thread Body
+### GPIO Thread Body {#gpio-thread-body}
 
 ```
 gpio_mgmt_thread()
@@ -754,7 +806,7 @@ gpio_mgmt_thread()
            h->ops->hw_init(h)
 ```
 
-### GPIO Registration Sequence
+### GPIO Registration Sequence {#gpio-registration-sequence}
 
 The three-step ordering for each GPIO pin is critical:
 
@@ -777,7 +829,7 @@ Step 3 — drv_gpio_register(dev_id, ops)
 
 If `set_config` called `HAL_GPIO_Init` directly, then `drv_gpio_register` would call it again through `hw_init`, producing a double-init. The store-only design avoids this.
 
-### GPIO Message Protocol
+### GPIO Message Protocol {#gpio-message-protocol}
 
 ```c
 typedef enum {
@@ -798,7 +850,7 @@ typedef struct {
 
 **`active_state` abstraction:** `GPIO_MGMT_CMD_SET` drives the pin to its logical active level (could be `GPIO_PIN_SET` or `GPIO_PIN_RESET` depending on what was configured in the board XML). The driver layer handles the polarity inversion — callers always think in terms of "active" / "inactive".
 
-### Delayed Command Flow
+### Delayed Command Flow {#delayed-command-flow}
 
 The `delay_ms` field allows time-sequenced GPIO operations without blocking the calling task:
 
@@ -816,7 +868,7 @@ gpio_mgmt_post(GPIO_RESET, GPIO_MGMT_CMD_SET,   0, 50);  // 50 ms later
 // messages need to be serviced promptly.
 ```
 
-### GPIO Public API
+### GPIO Public API {#gpio-public-api}
 
 ```c
 int32_t       gpio_mgmt_start(void);
@@ -836,7 +888,7 @@ h->ops->toggle(h);   // no queue, no FreeRTOS involvement
 
 This is safe as long as only one execution context accesses the same pin at a time.
 
-### GPIO Configuration Knobs
+### GPIO Configuration Knobs {#gpio-configuration-knobs}
 
 | Macro | Default | Effect |
 |-------|---------|--------|
@@ -847,7 +899,7 @@ This is safe as long as only one execution context accesses the same pin at a ti
 
 ---
 
-## OS Shell Management — `os_shell_mgmt`
+## OS Shell Management — `os_shell_mgmt` {#os-shell-management--os_shell_mgmt}
 
 **Files:**
 - [services/os_shell_management.c](services/os_shell_management.c)
@@ -857,7 +909,7 @@ This is safe as long as only one execution context accesses the same pin at a ti
 
 The OS shell is a FreeRTOS+CLI-backed interactive console accessed over the designated shell UART (`UART_SHELL_HW_ID`). It is a consumer of the UART ring-buffer infrastructure rather than a management owner — it reads from `global_uart_rx_mqueue_list[UART_SHELL_HW_ID]` (filled by the UART ISR via the IRQ desc chain) and writes into `global_uart_tx_mqueue_list[UART_SHELL_HW_ID]` (drained by the TXEIE interrupt path).
 
-### Shell I/O Path
+### Shell I/O Path {#shell-io-path}
 
 ```
 USART2_IRQHandler()
@@ -876,7 +928,7 @@ _os_shell_task()
 
 The shell task never calls `uart_mgmt_async_transmit()`. It writes directly to the TX ring buffer and calls `drv_uart_tx_kick()` to enable TXEIE, so the shell works independently of the `uart_mgmt` queue depth.
 
-### Thread Body
+### Thread Body {#thread-body}
 
 ```
 _os_shell_task()
@@ -904,7 +956,7 @@ _os_shell_task()
            emit prompt "> "
 ```
 
-### Built-in Commands
+### Built-in Commands {#built-in-commands}
 
 | Command   | Description |
 |-----------|-------------|
@@ -913,7 +965,7 @@ _os_shell_task()
 | `uptime`  | Prints scheduler tick count and elapsed time |
 | `reboot`  | Calls `NVIC_SystemReset()` — immediate MCU reset |
 
-### Registering Application Commands
+### Registering Application Commands {#registering-application-commands}
 
 ```c
 #include <services/os_shell_management.h>
@@ -936,7 +988,7 @@ static const CLI_Command_Definition_t my_cmd = {
 os_shell_register_command(&my_cmd);
 ```
 
-### Public API
+### Public API {#public-api}
 
 ```c
 /* Start the shell task — call before vTaskStartScheduler() */
@@ -947,7 +999,7 @@ static inline BaseType_t os_shell_register_command(
         const CLI_Command_Definition_t *cmd);
 ```
 
-### Configuration Knobs
+### Configuration Knobs {#configuration-knobs}
 
 All in `config/conf_os.h`:
 
@@ -963,7 +1015,7 @@ See [SHELL_CLI.md](SHELL_CLI.md) for the full shell system architecture and guid
 
 ---
 
-## Application Driver Layer — `drv_app`
+## Application Driver Layer — `drv_app` {#application-driver-layer--drv_app}
 
 **Files:**
 - `drv_app/uart_app.c` / `include/drv_app/uart_app.h`
@@ -973,7 +1025,7 @@ See [SHELL_CLI.md](SHELL_CLI.md) for the full shell system architecture and guid
 
 The `drv_app` layer provides the **recommended application-facing API**. It wraps the management service queues and the task-notification sync pattern into simple function calls so application tasks do not need to know about `QueueHandle_t`, `TaskHandle_t`, or `xTaskNotifyTake`.
 
-### UART App API
+### UART App API {#uart-app-api}
 
 ```c
 // Blocking TX — posts to uart_mgmt queue with result_notify set
@@ -991,7 +1043,7 @@ int32_t uart_async_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len);
 int32_t uart_async_read_byte(uint8_t dev_id, uint8_t *byte);
 ```
 
-### SPI App API
+### SPI App API {#spi-app-api}
 
 ```c
 int32_t spi_sync_transmit(uint8_t bus_id, const uint8_t *data,
@@ -1005,7 +1057,7 @@ int32_t spi_async_transfer(uint8_t bus_id, const uint8_t *tx, uint8_t *rx,
                             uint16_t len);
 ```
 
-### I2C App API
+### I2C App API {#i2c-app-api}
 
 ```c
 int32_t iic_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
@@ -1025,7 +1077,7 @@ int32_t iic_async_receive(uint8_t bus_id, uint16_t dev_addr,
                            uint8_t *data, uint16_t len);
 ```
 
-### GPIO App API
+### GPIO App API {#gpio-app-api}
 
 ```c
 // Direct driver read — bypasses management queue for zero-latency reads
@@ -1042,9 +1094,9 @@ int32_t gpio_async_delayed(uint8_t gpio_id, gpio_mgmt_cmd_t cmd,
 
 > **`gpio_read` note:** GPIO reads are instantaneous and non-serialisation-critical. `gpio_read()` calls `drv_gpio_get_handle(gpio_id)->ops->read(h)` directly without going through the management queue, giving zero-latency reads safe from any task (but not from an ISR — use the HAL directly from ISR context).
 
----
+<hr/>
 
-## Compile-Time Activation
+## Compile-Time Activation {#compile-time-activation}
 
 Management threads are enabled/disabled in `config/conf_os.h` (set via `make menuconfig`):
 
@@ -1069,7 +1121,7 @@ GPIO has no guard — it always registers all GPIOs from the board config.
 
 ---
 
-## Thread Timing Summary
+## Thread Timing Summary {#thread-timing-summary}
 
 | Thread | Startup delay | Board config iterated | First message after |
 |--------|--------------|----------------------|---------------------|
@@ -1082,7 +1134,7 @@ GPIO runs first because UART, SPI, and I2C MSP init functions (`stm32f4xx_hal_ms
 
 ---
 
-## Adding a New Management Thread
+## Adding a New Management Thread {#adding-a-new-management-thread}
 
 Follow this pattern to add a new peripheral class (e.g. `can_mgmt`):
 
