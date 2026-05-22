@@ -60,7 +60,10 @@
     defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx) || \
     /* STM32H7xx individual variants */                               \
     defined(STM32H723xx) || defined(STM32H733xx) || defined(STM32H725xx) || \
-    defined(STM32H735xx) || defined(STM32H743xx) || defined(STM32H750xx)
+    defined(STM32H735xx) || defined(STM32H743xx) || defined(STM32H750xx) || \
+    /* STM32U5xx individual variants (Cortex-M33 + TrustZone) */      \
+    defined(STM32U575xx) || defined(STM32U585xx) || defined(STM32U595xx) || \
+    defined(STM32U599xx) || defined(STM32U5A5xx) || defined(STM32U5A9xx)
 
 #define DEVICE_VENDOR_STM32     1
 
@@ -103,6 +106,26 @@ extern const uint8_t APBPrescTable[8];   /*!< APB prescaler shift LUT     */
 
 extern const uint8_t AHBPrescTable[8];   /*!< AHB prescaler shift LUT     */
 extern const uint8_t APBPrescTable[4];   /*!< APB prescaler shift LUT     */
+
+/* ── STM32U5xx family — Cortex-M33 + TrustZone ─────────────────────────────*/
+#elif defined(STM32U5) || \
+      defined(STM32U575xx) || defined(STM32U585xx) || \
+      defined(STM32U595xx) || defined(STM32U599xx) || \
+      defined(STM32U5A5xx) || defined(STM32U5A9xx)
+
+/* CMSIS device header — Cortex-M33 core, peripheral registers, IRQ numbers */
+#include <stm32u5xx.h>
+
+/* STM32U5 HAL — pulls in all modules enabled in the generated hal_conf.h.
+ * Only included when the upstream stm32u5xx-hal-driver submodule is checked
+ * out (see arch/Makefile dispatch block). */
+#if defined(USE_HAL_DRIVER) && __has_include(<stm32u5xx_hal_conf.h>)
+#  include <stm32u5xx_hal_conf.h>
+#  include <stm32u5xx_hal.h>
+#endif
+
+extern const uint8_t AHBPrescTable[16];  /*!< AHB prescaler shift LUT     */
+extern const uint8_t APBPrescTable[8];   /*!< APB prescaler shift LUT     */
 
 #endif /* STM32 family sub-selection */
 

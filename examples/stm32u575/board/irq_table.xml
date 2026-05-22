@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  examples/stm32u575/board/irq_table.xml — IRQ table for the
+  Nucleo-U575ZI-Q (STM32U575ZITxQ) example.
+
+  Key U575 IRQ differences from H723
+  ──────────────────────────────────
+  • HAL timebase uses TIM6_IRQn (irqn=55) — no shared DAC alias on U5.
+  • LPUART1 is the VCP and gets its own IRQ line (LPUART1_IRQn=70).
+  • BTN_USER is on PC13 → EXTI13_IRQn (irqn=19) — U5 has one IRQ per
+    EXTI line (no shared EXTI15_10 vector).
+  • All ISR priorities must be ≥ configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY (5).
+
+  Regenerate board headers:
+    make dev-stm32u575-gen
+-->
+
+<irq_table board="demo_stm32u575">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Software IRQ capacity — drives irq_hw_conf.h generation
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <config max_uart="4"  uart_events="3"
+          max_i2c="4"   i2c_events="3"
+          max_spi="4"   spi_events="4"
+          max_exti="16"
+          notify_max_subs="4"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       UART peripherals
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <uart dev_id="0" label="UART_APP"   irqn="USART1_IRQn"  priority="5" hal_inst="USART1"/>
+  <uart dev_id="1" label="UART_DEBUG" irqn="LPUART1_IRQn" priority="5" hal_inst="LPUART1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       I2C peripherals
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <i2c dev_id="0" label="I2C_SENSOR_BUS"
+       irqn_ev="I2C1_EV_IRQn" priority_ev="6"
+       irqn_er="I2C1_ER_IRQn" priority_er="6"
+       hal_inst="I2C1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SPI peripherals
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <spi dev_id="0" label="SPI_FLASH_BUS" irqn="SPI1_IRQn" priority="6" hal_inst="SPI1"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       GPIO EXTI lines
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- PC13 → EXTI line 13 → EXTI13_IRQn (U5 has 1-per-line vectors) -->
+  <exti line="13" label="BTN_USER" irqn="EXTI13_IRQn" priority="6"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       RCC peripheral clock enables — U5 GPIO is on AHB2
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <sys_clk inst="SYSCFG"/>
+  <sys_clk inst="PWR"/>
+  <gpio_clk port="A"/>
+  <gpio_clk port="B"/>
+  <gpio_clk port="C"/>
+  <gpio_clk port="G"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       System / core IRQs
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <sys name="SysTick" irqn="SysTick_IRQn" priority="15" action="set_priority"/>
+  <sys name="PendSV"  irqn="PendSV_IRQn"  priority="15" action="set_priority"/>
+  <sys name="SVCall"  irqn="SVCall_IRQn"  priority="14" action="set_priority"/>
+
+  <!--
+    HAL timebase on TIM6 (basic timer, irqn=55 on U5).
+    FreeRTOS-OS routes it through the dispatch layer:
+      dispatch="hal_timebase_stm32_irq_handler()"
+  -->
+  <sys name="TIM6" irqn="TIM6_IRQn" priority="1" action="enable"
+       irq_id="TIM_TICK" flow="edge"
+       dispatch="hal_timebase_stm32_irq_handler()"
+       dispatch_include="&lt;drivers/hal/stm32/hal_timebase_stm32.h&gt;"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       STM32U575 peripheral vector table  (RM0456 Table 138)
+       Only vectors with dedicated handlers are listed; remaining positions
+       resolve to Default_Handler via the weak alias mechanism.
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <vector_table device="STM32U575">
+    <entry irqn="0"   handler="WWDG_IRQHandler"          comment="Window Watchdog"/>
+    <entry irqn="1"   handler="PVD_PVM_IRQHandler"       comment="PVD/PVM"/>
+    <entry irqn="2"   handler="RTC_IRQHandler"           comment="RTC"/>
+    <entry irqn="4"   handler="FLASH_IRQHandler"         comment="Flash global"/>
+    <entry irqn="5"   handler="RCC_IRQHandler"           comment="RCC global"/>
+    <entry irqn="6"   handler="EXTI0_IRQHandler"         comment="EXTI Line 0"/>
+    <entry irqn="7"   handler="EXTI1_IRQHandler"         comment="EXTI Line 1"/>
+    <entry irqn="8"   handler="EXTI2_IRQHandler"         comment="EXTI Line 2"/>
+    <entry irqn="9"   handler="EXTI3_IRQHandler"         comment="EXTI Line 3"/>
+    <entry irqn="10"  handler="EXTI4_IRQHandler"         comment="EXTI Line 4"/>
+    <entry irqn="11"  handler="EXTI5_IRQHandler"         comment="EXTI Line 5"/>
+    <entry irqn="12"  handler="EXTI6_IRQHandler"         comment="EXTI Line 6"/>
+    <entry irqn="13"  handler="EXTI7_IRQHandler"         comment="EXTI Line 7"/>
+    <entry irqn="14"  handler="EXTI8_IRQHandler"         comment="EXTI Line 8"/>
+    <entry irqn="15"  handler="EXTI9_IRQHandler"         comment="EXTI Line 9"/>
+    <entry irqn="16"  handler="EXTI10_IRQHandler"        comment="EXTI Line 10"/>
+    <entry irqn="17"  handler="EXTI11_IRQHandler"        comment="EXTI Line 11"/>
+    <entry irqn="18"  handler="EXTI12_IRQHandler"        comment="EXTI Line 12"/>
+    <entry irqn="19"  handler="EXTI13_IRQHandler"        comment="EXTI Line 13 (BTN_USER PC13)"/>
+    <entry irqn="20"  handler="EXTI14_IRQHandler"        comment="EXTI Line 14"/>
+    <entry irqn="21"  handler="EXTI15_IRQHandler"        comment="EXTI Line 15"/>
+    <entry irqn="25"  handler="DMA1_Channel1_IRQHandler" comment="DMA1 Channel 1"/>
+    <entry irqn="37"  handler="ADC1_IRQHandler"          comment="ADC1"/>
+    <entry irqn="55"  handler="TIM6_IRQHandler"          comment="TIM6 (HAL timebase)"/>
+    <entry irqn="57"  handler="I2C1_EV_IRQHandler"       comment="I2C1 Event"/>
+    <entry irqn="58"  handler="I2C1_ER_IRQHandler"       comment="I2C1 Error"/>
+    <entry irqn="63"  handler="SPI1_IRQHandler"          comment="SPI1"/>
+    <entry irqn="66"  handler="USART1_IRQHandler"        comment="USART1"/>
+    <entry irqn="67"  handler="USART2_IRQHandler"        comment="USART2"/>
+    <entry irqn="68"  handler="USART3_IRQHandler"        comment="USART3"/>
+    <entry irqn="70"  handler="LPUART1_IRQHandler"       comment="LPUART1 (STLink VCP)"/>
+    <entry irqn="83"  handler="FPU_IRQHandler"           comment="FPU"/>
+    <entry irqn="106" handler="GTZC_IRQHandler"          comment="Global TrustZone Controller"/>
+  </vector_table>
+
+</irq_table>

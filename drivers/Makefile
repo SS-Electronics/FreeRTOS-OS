@@ -30,8 +30,8 @@ obj-y += drivers/drv_adc.o
 endif
 
 # ── Vendor HAL backend — STM32 ─────────────────────────────────────────────
-# Common to all supported STM32 targets (F4xx and H7xx)
-ifneq ($(filter $(CONFIG_TARGET_MCU),"STM32F411xE" "STM32F401xE" "STM32H723xx"),)
+# Common to all supported STM32 targets (F4xx, H7xx, U5xx)
+ifneq ($(filter $(CONFIG_TARGET_MCU),"STM32F411xE" "STM32F401xE" "STM32H723xx" "STM32U575xx"),)
 obj-y += drivers/hal/stm32/stm32_exceptions.o
 obj-y += drivers/hal/stm32/irq_chip_nvic.o
 obj-y += drivers/hal/stm32/hal_uart_stm32.o

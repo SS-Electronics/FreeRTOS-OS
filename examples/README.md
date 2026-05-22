@@ -25,8 +25,17 @@ examples/
 │           irq_periph_vectors_generated.inc,
 │           irq_table_generated.c
 │
-└── stm32h723/                   NUCLEO-H723ZG (Cortex-M7)
-    │   …same layout as above…
+├── stm32h723/                   NUCLEO-H723ZG (Cortex-M7)
+│   │   …same layout as above…
+│   └── …
+│
+└── stm32u575/                   NUCLEO-U575ZI-Q (Cortex-M33 + TrustZone)
+    │   …same layout as above, plus…
+    ├── trustcore/                  Per-board Trust Core module
+    │   ├── trustcore.h             Public API
+    │   └── trustcore.c             Strong override of weak
+    │                               trustcore_init_secure_world() and
+    │                               runtime attestation (CRC32 + UID)
     └── …
 ```
 
@@ -43,6 +52,7 @@ clobbering generated state.
 |---|---|---|
 | STM32F411VET6 | `make dev-stm32f411` | `make dev-stm32f411-flash` |
 | STM32H723ZGTx (NUCLEO) | `make dev-stm32h723` | `make dev-stm32h723-flash` |
+| STM32U575ZITxQ (NUCLEO-U575ZI-Q, M33 + TrustZone) | `make dev-stm32u575` | `make dev-stm32u575-flash` |
 
 Each `make dev-*` invocation chains internally:
 

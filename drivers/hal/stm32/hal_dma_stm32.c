@@ -76,7 +76,11 @@
 #include <drivers/hal/stm32/hal_dma_stm32.h>
 #include <def_err.h>
 
-#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
+/* U5 has a different DMA controller (GPDMA + LPDMA with link-list nodes)
+ * — DMA_Stream_TypeDef / DMA_SxCR_EN don't exist there. The U5 example
+ * doesn't use DMA today; compile this backend out for U5 until a dedicated
+ * stm32u5xx_gpdma backend lands. */
+#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM) && !defined(STM32U5)
 #ifdef HAL_DMA_MODULE_ENABLED
 
 /* ────────────────────────────────────────────────────────────────────────── */

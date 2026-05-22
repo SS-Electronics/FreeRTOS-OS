@@ -12,7 +12,7 @@
 
 [![Language](https://img.shields.io/badge/language-C99-00599C?logo=c&logoColor=white)](https://en.wikipedia.org/wiki/C99)
 [![Platform](https://img.shields.io/badge/platform-ARM%20Cortex--M-orange?logo=arm&logoColor=white)](https://developer.arm.com/Architectures/Cortex-M)
-[![MCU](https://img.shields.io/badge/MCU-STM32F4%20%7C%20STM32H7-03234B?logo=stmicroelectronics&logoColor=white)](docs/ARCHITECTURE.md)
+[![MCU](https://img.shields.io/badge/MCU-STM32F4%20%7C%20STM32H7%20%7C%20STM32U5-03234B?logo=stmicroelectronics&logoColor=white)](docs/ARCHITECTURE.md)
 [![FreeRTOS](https://img.shields.io/badge/FreeRTOS-V11.1%2B-2E9F4D)](https://www.freertos.org/)
 [![CPPcheck](https://img.shields.io/badge/CPPcheck-clean-success)](.github/workflows/static_analysis.yml)
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-7E57C2)](docs/CHECK.md)
@@ -59,8 +59,9 @@ threads occupy before your application allocates anything.
 
 | Target | Core | Clock | Flash | RAM | OS Flash | OS Static RAM | FreeRTOS Heap | `TARGET_NAME` | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| **stm32f411** | Cortex-M4F (`fpv4-sp-d16`, hard) | 100 MHz | 512 KB | 128 KB | **47.8 KB** *(9.3 %)* | **18.9 KB** *(14.8 %)* | 64.0 KB | `stm32f411` | ✅ Supported |
-| **stm32h723** | Cortex-M7  (`fpv5-d16`,  hard) | 64 MHz HSI | 1 MB | 128 KB DTCM | **48.4 KB** *(4.7 %)* | **19.1 KB** *(15.0 %)* | 78.1 KB | `stm32h723` | ✅ Running, validated |
+| **stm32f411** | Cortex-M4F  (`fpv4-sp-d16`, hard) | 100 MHz | 512 KB | 128 KB | **47.8 KB** *(9.3 %)* | **18.9 KB** *(14.8 %)* | 64.0 KB | `stm32f411` | ✅ Supported |
+| **stm32h723** | Cortex-M7   (`fpv5-d16`,    hard) | 64 MHz HSI | 1 MB | 128 KB DTCM | **48.4 KB** *(4.7 %)* | **19.1 KB** *(15.0 %)* | 78.1 KB | `stm32h723` | ✅ Running, validated |
+| **stm32u575** | Cortex-M33 + TrustZone (`fpv5-sp-d16`, hard) | 4 MHz MSI (PLL hooked, not yet enabled) | 2 MB | 192 KB SRAM1 + 64K SRAM2 + 512K SRAM3 | **50.4 KB** *(2.5 %)* | **20.5 KB** *(10.7 % of SRAM1)* | 80.0 KB | `stm32u575` | 🧪 Builds, trustcore + heartbeat |
 
 ---
 
@@ -74,8 +75,8 @@ cd FreeRTOS-OS
 make install-prerequisites
 
 # 2. Build + flash a devboard example
-make dev-stm32f411          # or  make dev-stm32h723
-make dev-stm32f411-flash    #      make dev-stm32h723-flash
+make dev-stm32f411          # or  make dev-stm32h723 / make dev-stm32u575
+make dev-stm32f411-flash    #      make dev-stm32h723-flash / make dev-stm32u575-flash
 
 # 3. Open the shell
 stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0   # H723
@@ -122,6 +123,7 @@ Try: `help`, `ps`, `mem`, `log dump`.
    ```bash
    make dev-stm32f411        # STM32F411 Devboard
    make dev-stm32h723        # NUCLEO-H723ZG
+   make dev-stm32u575        # NUCLEO-U575ZI-Q  (Cortex-M33 + TrustZone)
    ```
    Each invocation chains 5 internal sub-steps: IRQ gen → BSP gen →
    Kconfig activation → clean → compile + link.  Outputs land in
@@ -249,7 +251,7 @@ new MCU vendor by following the contract in
 
 ## ⚙️ Make Target Reference {#make-target-reference}
 
-Run all targets from `FreeRTOS-OS/`.  `<t>` = `stm32f411` or `stm32h723`.
+Run all targets from `FreeRTOS-OS/`.  `<t>` ∈ {`stm32f411`, `stm32h723`, `stm32u575`}.
 
 <details>
 <summary><b>Devboard examples</b> (no sibling <code>app/</code> required)</summary>
@@ -264,6 +266,10 @@ Run all targets from `FreeRTOS-OS/`.  `<t>` = `stm32f411` or `stm32h723`.
 | `make dev-stm32h723-gen`    | Regenerate H723 board + IRQ outputs only |
 | `make dev-stm32h723-clean`  | Remove H723 generated outputs + `build/` |
 | `make dev-stm32h723-flash`  | Flash via OpenOCD |
+| `make dev-stm32u575`        | `build/stm32u575.elf`  (Cortex-M33 + TrustZone, trustcore demo) |
+| `make dev-stm32u575-gen`    | Regenerate U575 board + IRQ outputs only |
+| `make dev-stm32u575-clean`  | Remove U575 generated outputs + `build/` |
+| `make dev-stm32u575-flash`  | Flash via OpenOCD |
 </details>
 
 <details>
@@ -311,6 +317,47 @@ Run all targets from `FreeRTOS-OS/`.  `<t>` = `stm32f411` or `stm32h723`.
 | `make clean`                 | Remove `build/` |
 | `make print-target`          | Print OpenOCD target script for active MCU |
 </details>
+
+---
+
+## 🔐 STM32U575 / Cortex-M33 Trust Core {#stm32u575--cortex-m33-trust-core}
+
+The `stm32u575` example wires a small **Trust Core** module into
+`app_main()` to exercise the TrustZone-capable side of the M33:
+
+  - **Secure-world hook** (`trustcore_init_secure_world`) — strong
+    override of the weak symbol in `startup_stm32u575zitxq.c`; runs from
+    `Reset_Handler` **before** `.data` copy / `.bss` clear, so it owns
+    the address map before the C runtime touches it.  Today it caches
+    the 96-bit STM32 device UID; the SAU programming hook is left in
+    place commented for the `CONFIG_U5_TRUSTZONE_ENABLED=y` path.
+  - **Boot attestation** (`trustcore_attest_runtime`) — runs from a
+    dedicated priority-3 RTOS task once `printk` is online.  CRC32 of
+    the vector table + `.text` + `.trustcore_text` is captured into a
+    `.noinit` baseline on first boot and re-verified on every soft
+    reset.
+  - **Operator-visible verdict** — `LED_BOARD` blinks on integrity
+    success; `LED_RED` latches on integrity failure; identity failure
+    halts the application and fast-blinks `LED_RED`.
+  - **Banner over LPUART1 (STLink VCP)** showing device UID + code CRC +
+    boot count + status.
+
+A green-light boot looks like this:
+
+```
+[trustcore] ───────────────────────────────────────────────
+[trustcore]  STM32U575ZI — Cortex-M33 + TrustZone (U5)
+[trustcore]  Device UID : 00120036-32365119-32383230
+[trustcore]  World      : non-secure (single-image)
+[trustcore]  Code CRC32 : 0x9f3b1a04
+[trustcore]  Boot count : 4
+[trustcore]  Status     : OK — integrity verified
+[trustcore] ───────────────────────────────────────────────
+```
+
+The trustcore module is in `examples/stm32u575/trustcore/` and is the
+recommended starting point for porting TF-M, MCUboot, or any
+roll-your-own secure-boot anchor onto this OS.
 
 ---
 

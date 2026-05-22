@@ -162,7 +162,13 @@ class VendorCodegen:
 class STM32Codegen(VendorCodegen):
 
     def __init__(self, mcu: str = ''):
-        self._family = 'H7' if 'H7' in mcu.upper() else 'F4'
+        u = mcu.upper()
+        if 'H7' in u:
+            self._family = 'H7'
+        elif 'U5' in u:
+            self._family = 'U5'
+        else:
+            self._family = 'F4'
 
     _SPEED = {
         'low':       'GPIO_SPEED_FREQ_LOW',
@@ -275,6 +281,11 @@ class STM32Codegen(VendorCodegen):
         'i2c':  'stm32h7xx_hal_i2c.h',
         'spi':  'stm32h7xx_hal_spi.h',
     }
+    _HAL_INCLUDE_U5 = {
+        'uart': 'stm32u5xx_hal_uart.h',
+        'i2c':  'stm32u5xx_hal_i2c.h',
+        'spi':  'stm32u5xx_hal_spi.h',
+    }
 
     def hal_handle_type(self, periph_type: str) -> str:
         return self._HAL_HANDLE_TYPE.get(periph_type.lower(), '')
@@ -292,7 +303,12 @@ class STM32Codegen(VendorCodegen):
         return self._HAL_MODULE_GUARD.get(periph_type.lower(), '')
 
     def hal_handle_includes(self, periph_type: str) -> list:
-        tbl = self._HAL_INCLUDE_H7 if self._family == 'H7' else self._HAL_INCLUDE_F4
+        if self._family == 'H7':
+            tbl = self._HAL_INCLUDE_H7
+        elif self._family == 'U5':
+            tbl = self._HAL_INCLUDE_U5
+        else:
+            tbl = self._HAL_INCLUDE_F4
         inc = tbl.get(periph_type.lower(), '')
         return [f'#include "{inc}"'] if inc else []
 
@@ -303,6 +319,7 @@ class STM32Codegen(VendorCodegen):
                 'const uint8_t AHBPrescTable[8] = {0, 0, 0, 0, 0, 1, 2, 3};',
                 'const uint8_t APBPrescTable[4] = {0, 1, 2, 3};',
             ]
+        # F4 and U5 both use the 16-entry AHB / 8-entry APB layout.
         return [
             'const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};',
             'const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};',
@@ -514,6 +531,40 @@ _MCU_PERIPH_MAP = {
             'sysclk_hz':      '550000000UL',
             'apb1_hz':        '137500000UL',
             'apb2_hz':        '275000000UL',
+            'flash_latency':  'FLASH_LATENCY_4',
+        },
+    },
+    # ── STM32U575ZITxQ — Cortex-M33 + TrustZone, 160 MHz, 2 MB Flash ────────
+    # PLL1 configuration (MSI=4 MHz source, 160 MHz output):
+    #   ref_clk = 4  / PLLM(1)  = 4 MHz
+    #   VCO     = 4  * PLLN(80) = 320 MHz
+    #   sysclk  = 320 / PLLR(2) = 160 MHz
+    # APB prescalers: PPRE1(APB1) = /1 → 160 MHz, PPRE2(APB2) = /1 → 160 MHz
+    'STM32U575ZITxQ': {
+        'vendor_var':    'MCU_VAR_STM',
+        'max_uart':      6,   # USART1-3, UART4-5, LPUART1
+        'max_iic':       4,   # I2C1..I2C4
+        'max_spi':       3,   # SPI1..SPI3
+        'max_tim':       17,  # TIM1..TIM8 + TIM15..TIM17 + LPTIM1..LPTIM4
+        'note':          'Cortex-M33 + TrustZone, GTZC, PKA, ICACHE, FDCAN1, OCTOSPI',
+        'uart_en_order': ['UART_1', 'UART_2', 'UART_3', 'UART_4',
+                          'UART_5', 'UART_6'],
+        'uart_ports':    [('UART_1', 'USART1'), ('UART_2', 'USART2'),
+                          ('UART_3', 'USART3'), ('UART_4', 'UART4'),
+                          ('UART_5', 'UART5'),  ('UART_6', 'LPUART1'),
+                          ('UART_7', ''),       ('UART_8', '')],
+        'iic_ports':     [('IIC_1', ''), ('IIC_2', ''), ('IIC_3', ''), ('IIC_4', '')],
+        'tim_ports':     [('TIMER_1', ''), ('TIMER_2', ''),
+                          ('TIMER_3', ''), ('TIMER_4', ''), ('INVALID_TIMER_ID', '')],
+        'clock': {
+            'note':           'STM32U575ZITxQ @ 160 MHz  MSI=4 MHz (PLL1: M=1 N=80 R=2)',
+            'pllm':           '1U',
+            'plln':           '80U',
+            'pllp':           '2U',
+            'pllq':           '2U',
+            'sysclk_hz':      '160000000UL',
+            'apb1_hz':        '160000000UL',
+            'apb2_hz':        '160000000UL',
             'flash_latency':  'FLASH_LATENCY_4',
         },
     },
@@ -931,8 +982,9 @@ class BoardConfigGenerator:
             L.append('/* Placed in .boot_data: valid before the .data copy in Reset_Handler.      */')
             L.append('#if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)')
             L.append('#include <def_attributes.h>')
-            # H7 defines SystemCoreClock in system_stm32h7xx.c; only F4 needs it here
-            if self.cg._family != 'H7':
+            # H7 / U5 define SystemCoreClock in their system_stm32*.c file;
+            # only F4 needs the definition emitted here.
+            if self.cg._family not in ('H7', 'U5'):
                 L.append('__SECTION_BOOT_DATA uint32_t SystemCoreClock = BOARD_SYSCLK_HZ;')
             for tbl_line in self.cg.cmsis_psc_tables():
                 L.append(tbl_line)

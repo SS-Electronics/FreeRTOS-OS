@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-gen_stm32_hal_conf.py — Generate stm32f4xx_hal_conf.h or stm32h7xx_hal_conf.h
-                         from the values in autoconf.h.
+gen_stm32_hal_conf.py — Generate stm32{f4,h7,u5}xx_hal_conf.h from the values
+                         in autoconf.h.
 
-The output family (F4 or H7) is auto-detected from CONFIG_TARGET_MCU in
-autoconf.h ("STM32H7…" → H7, everything else → F4).
+The output family (F4, H7 or U5) is auto-detected from CONFIG_TARGET_MCU in
+autoconf.h:
+    "STM32H7…" → H7
+    "STM32U5…" → U5  (Cortex-M33 + TrustZone)
+    everything else → F4
 
 Usage:
     python3 scripts/gen_stm32_hal_conf.py <autoconf_h> <output_path>
@@ -125,6 +128,62 @@ _CALLBACK_MODULES_H7 = [
     "SMBUS", "SPDIFRX", "SPI", "TIM", "UART", "USART", "WWDG",
 ]
 
+# ── STM32U5 (Cortex-M33 + TrustZone) ──────────────────────────────────────────
+
+_HAL_MODULES_U5 = [
+    ("RCC",        "stm32u5xx_hal_rcc.h"),
+    ("GPIO",       "stm32u5xx_hal_gpio.h"),
+    ("EXTI",       "stm32u5xx_hal_exti.h"),
+    ("DMA",        "stm32u5xx_hal_dma.h"),
+    ("CORTEX",     "stm32u5xx_hal_cortex.h"),
+    ("ICACHE",     "stm32u5xx_hal_icache.h"),
+    ("ADC",        "stm32u5xx_hal_adc.h"),
+    ("DAC",        "stm32u5xx_hal_dac.h"),
+    ("CRC",        "stm32u5xx_hal_crc.h"),
+    ("FLASH",      "stm32u5xx_hal_flash.h"),
+    ("FDCAN",      "stm32u5xx_hal_fdcan.h"),
+    ("GTZC",       "stm32u5xx_hal_gtzc.h"),
+    ("I2C",        "stm32u5xx_hal_i2c.h"),
+    ("SMBUS",      "stm32u5xx_hal_smbus.h"),
+    ("IWDG",       "stm32u5xx_hal_iwdg.h"),
+    ("LPTIM",      "stm32u5xx_hal_lptim.h"),
+    ("PKA",        "stm32u5xx_hal_pka.h"),
+    ("PWR",        "stm32u5xx_hal_pwr.h"),
+    ("RNG",        "stm32u5xx_hal_rng.h"),
+    ("RTC",        "stm32u5xx_hal_rtc.h"),
+    ("SD",         "stm32u5xx_hal_sd.h"),
+    ("SPI",        "stm32u5xx_hal_spi.h"),
+    ("TIM",        "stm32u5xx_hal_tim.h"),
+    ("UART",       "stm32u5xx_hal_uart.h"),
+    ("USART",      "stm32u5xx_hal_usart.h"),
+    ("WWDG",       "stm32u5xx_hal_wwdg.h"),
+    ("CRYP",       "stm32u5xx_hal_cryp.h"),
+    ("HASH",       "stm32u5xx_hal_hash.h"),
+    ("OSPI",       "stm32u5xx_hal_ospi.h"),
+    ("PCD",        "stm32u5xx_hal_pcd.h"),
+    ("HCD",        "stm32u5xx_hal_hcd.h"),
+]
+
+_MODULE_GROUPS_U5 = [
+    ("Core",             ["CORTEX", "PWR", "RCC", "GPIO", "EXTI",
+                          "FLASH", "DMA", "ICACHE", "IWDG", "WWDG", "CRC"]),
+    ("TrustZone",        ["GTZC", "PKA"]),
+    ("Communication",    ["UART", "USART", "SPI", "I2C", "FDCAN",
+                          "SMBUS"]),
+    ("Timer",            ["TIM", "LPTIM"]),
+    ("Analog",           ["ADC", "DAC"]),
+    ("USB",              ["PCD", "HCD"]),
+    ("Storage",          ["SD", "OSPI"]),
+    ("RTC & Security",   ["RTC", "RNG", "CRYP", "HASH"]),
+]
+
+_CALLBACK_MODULES_U5 = [
+    "ADC", "CRYP", "DAC", "DCMI", "DMA", "DMA2D", "FDCAN", "HASH",
+    "HCD", "I2C", "IRDA", "LPTIM", "MMC", "OSPI", "PCD", "PKA",
+    "RNG", "RTC", "SAI", "SD", "SMARTCARD", "SMBUS", "SPI", "TIM",
+    "UART", "USART", "WWDG",
+]
+
 # ── Clock / scalar config items (common to F4 and H7) ────────────────────────
 CLOCK_ITEMS = [
     ("CONFIG_HSE_VALUE",           "HSE_VALUE"),
@@ -141,14 +200,41 @@ CLOCK_ITEMS_H7 = [
     ("CONFIG_CSI_VALUE", "CSI_VALUE"),
 ]
 
+# U5-specific clock items not present on F4. MSI is the post-reset clock
+# source on U5 (4 MHz default); HSI48 is the 48 MHz internal oscillator
+# used for USB / RNG; SHSI/MSIK are extra internal oscillators the HAL
+# references; EXTERNAL_SAI*_CLOCK_VALUE feed I2S/SAI inputs from a pin.
+CLOCK_ITEMS_U5 = [
+    ("CONFIG_MSI_VALUE",                "MSI_VALUE"),
+    ("CONFIG_MSIK_VALUE",               "MSIK_VALUE"),
+    ("CONFIG_SHSI_VALUE",               "SHSI_VALUE"),
+    ("CONFIG_HSI48_VALUE",              "HSI48_VALUE"),
+    ("CONFIG_EXTERNAL_SAI1_CLOCK_VALUE","EXTERNAL_SAI1_CLOCK_VALUE"),
+    ("CONFIG_EXTERNAL_SAI2_CLOCK_VALUE","EXTERNAL_SAI2_CLOCK_VALUE"),
+]
+
 # Default CSI value for H7 when not set in Kconfig (hardware constant: 4 MHz)
 _H7_CSI_DEFAULT = 4000000
 
+# Defaults for the U5 oscillators when Kconfig doesn't override them.
+_U5_DEFAULTS = {
+    "MSI_VALUE":                 4_000_000,   # MSI post-reset = 4 MHz
+    "MSIK_VALUE":                4_000_000,   # MSIK secondary MSI for kernels
+    "SHSI_VALUE":               48_000_000,   # secure HSI = 48 MHz
+    "HSI48_VALUE":              48_000_000,   # HSI48 for USB / RNG
+    "EXTERNAL_SAI1_CLOCK_VALUE": 48_000,      # 48 kHz audio default
+    "EXTERNAL_SAI2_CLOCK_VALUE": 48_000,
+}
+
 
 def _detect_family(cfg: dict) -> str:
-    """Return 'H7' when CONFIG_TARGET_MCU starts with STM32H7, else 'F4'."""
-    mcu = cfg.get("CONFIG_TARGET_MCU", "")
-    return "H7" if mcu.upper().startswith("STM32H7") else "F4"
+    """Return 'H7' / 'U5' / 'F4' based on CONFIG_TARGET_MCU."""
+    mcu = cfg.get("CONFIG_TARGET_MCU", "").upper()
+    if mcu.startswith("STM32H7"):
+        return "H7"
+    if mcu.startswith("STM32U5"):
+        return "U5"
+    return "F4"
 
 
 def parse_autoconf(path):
@@ -197,6 +283,12 @@ def generate(cfg, out_path):
         cb_modules     = _CALLBACK_MODULES_H7
         guard          = "__STM32H7xx_HAL_CONF_H"
         fname          = "stm32h7xx_hal_conf.h"
+    elif family == "U5":
+        hal_modules    = _HAL_MODULES_U5
+        module_groups  = _MODULE_GROUPS_U5
+        cb_modules     = _CALLBACK_MODULES_U5
+        guard          = "__STM32U5xx_HAL_CONF_H"
+        fname          = "stm32u5xx_hal_conf.h"
     else:
         hal_modules    = _HAL_MODULES_F4
         module_groups  = _MODULE_GROUPS_F4
@@ -266,6 +358,16 @@ def generate(cfg, out_path):
     if family == "H7":
         for cfg_key, macro in CLOCK_ITEMS_H7:
             val = cfg.get(cfg_key, _H7_CSI_DEFAULT)
+            L += [
+                f"#if !defined({macro})",
+                f"  #define {macro:<28} ((uint32_t){val}U)",
+                f"#endif",
+                "",
+            ]
+
+    if family == "U5":
+        for cfg_key, macro in CLOCK_ITEMS_U5:
+            val = cfg.get(cfg_key, _U5_DEFAULTS[macro])
             L += [
                 f"#if !defined({macro})",
                 f"  #define {macro:<28} ((uint32_t){val}U)",

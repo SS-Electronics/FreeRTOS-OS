@@ -77,11 +77,13 @@
 
 /* ── H7 / F4 USART register compatibility shim ──────────────────────────── */
 /* F4: SR (status) + DR (data). H7: ISR (status) + RDR/TDR (data) + ICR (clear). */
-#if defined(STM32H7)
+#if defined(STM32H7) || defined(STM32U5)
+/* U5 and H7 share the Armv8-M-era USART register layout: split RX/TX data
+ * registers (RDR / TDR), status in ISR, error clears via ICR. The H7 names
+ * USART_ISR_RXNE_RXFNE / USART_ISR_TXE_TXFNF are reused by the U5 HAL. */
 #  define _USART_SR(inst)              READ_REG((inst)->ISR)
 #  define _USART_READ_DR(inst)         (READ_REG((inst)->RDR) & 0xFFU)
 #  define _USART_WRITE_DR(inst, byte)  WRITE_REG((inst)->TDR, (byte))
-/* H7 error flags live in ISR and must be cleared via ICR */
 #  define _USART_CLR_ERRORS(inst, fl) \
      WRITE_REG((inst)->ICR, (fl) & (USART_ISR_PE | USART_ISR_FE | \
                                     USART_ISR_ORE | USART_ISR_NE))

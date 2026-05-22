@@ -43,8 +43,10 @@
 #include <def_attributes.h>
 #include <device.h>
 
-/* H7 uses SystemInit() from system_stm32h7xx.c (handles D1/D2/D3 domains + FPU). */
-#if !defined(STM32H7)
+/* H7 ships SystemInit() in system_stm32h7xx.c (handles D1/D2/D3 + FPU);
+ * U5 ships its own in arch/devices/STM/STM32U5xx/system_stm32u5xx.c (TZ-aware).
+ * Compile this generic F4-style fallback only when neither is in play. */
+#if !defined(STM32H7) && !defined(STM32U5)
 __SECTION_BOOT
 void SystemInit(void)
 {
@@ -62,4 +64,4 @@ void SystemInit(void)
 #  endif
 #endif
 }
-#endif /* !STM32H7 */
+#endif /* !(STM32H7 || STM32U5) */

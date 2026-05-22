@@ -161,6 +161,42 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
         }
     }
 
+#elif defined(STM32U5)
+    /* TIM6 on APB1. The U5 reference manual (RM0456) splits TIM6_DAC into
+     * a dedicated TIM6_IRQn line (no shared DAC alias). When PPRE1 == /1
+     * (reset default) TIM6 clock = PCLK1; otherwise it's 2 × PCLK1. */
+    drv_rcc_periph_clk_en(DRV_RCC_PERIPH_TIM6);
+    uwTimclock = (READ_BIT(RCC->CFGR2, RCC_CFGR2_PPRE1) != 0U)
+                 ? (2U * HAL_RCC_GetPCLK1Freq())
+                 : HAL_RCC_GetPCLK1Freq();
+    uwPrescalerValue = (uwTimclock / 1000000U) - 1U;
+
+    _htim_base.Instance               = TIM6;
+    _htim_base.Init.Period            = (1000000U / 1000U) - 1U;
+    _htim_base.Init.Prescaler         = uwPrescalerValue;
+    _htim_base.Init.ClockDivision     = 0;
+    _htim_base.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    _htim_base.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+    status = HAL_TIM_Base_Init(&_htim_base);
+    if (status == HAL_OK)
+    {
+        status = HAL_TIM_Base_Start_IT(&_htim_base);
+        if (status == HAL_OK)
+        {
+            HAL_NVIC_EnableIRQ(TIM6_IRQn);
+            if (TickPriority < (1UL << __NVIC_PRIO_BITS))
+            {
+                HAL_NVIC_SetPriority(TIM6_IRQn, TickPriority, 0U);
+                uwTickPrio = TickPriority;
+            }
+            else
+            {
+                status = HAL_ERROR;
+            }
+        }
+    }
+
 #else /* F4: TIM1 on APB2 */
 
     RCC_ClkInitTypeDef clkconfig;

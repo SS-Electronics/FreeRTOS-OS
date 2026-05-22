@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Board description: Nucleo-U575ZI-Q (STM32U575ZITxQ)
+  Vendor:  STM
+  MCU:     STM32U575ZITxQ — ARM Cortex-M33 + TrustZone, 160 MHz,
+                            2 MB Flash, 786 KB SRAM (192K+64K+512K+16K)
+
+  Key U575 differences from H723 / F411
+  ─────────────────────────────────────
+    Cortex-M33 (Armv8-M Mainline) with TrustZone — SAU/GTZC available.
+    GPIO clocks are on AHB2 (not AHB1/AHB4) — __HAL_RCC_GPIOx_CLK_ENABLE().
+    LPUART1 is the Nucleo-U575ZI-Q virtual COM port on STLink (PG7/PG8).
+    No dedicated USART3 VCP — debug shell runs on LPUART1 instead.
+    ICACHE peripheral (separate IP) replaces the M7 integrated cache.
+
+  Pin fields
+  ──────────
+    port   : GPIO port letter  (A..I)
+    pin    : GPIO pin number   (0–15)
+    af     : Alternate function number (see DS13986 Table 12)
+    speed  : low | medium | high | very_high
+    pull   : none | pullup | pulldown
+
+  Alternate functions used
+  ────────────────────────
+    AF7  USART1 (PA9/PA10)
+    AF8  LPUART1 (PG7/PG8 — STLink VCP on Nucleo)
+    AF4  I2C1   (PB8/PB9)
+    AF5  SPI1   (PA5/PA6/PA7)
+-->
+
+<board name="STM32U575 Demo Devboard"
+       vendor="STM"
+       mcu="STM32U575ZITxQ"
+       description="Nucleo-U575ZI-Q (STM32U575ZITxQ, Cortex-M33 + TrustZone)">
+
+  <peripherals>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         UART / USART
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!--
+      UART_APP → USART1  PA9/TX  PA10/RX
+      Secondary application serial port (e.g. external module / sensor link).
+      AF7 = USART1 on STM32U5 pins PA9 / PA10.
+      USART1 is clocked from APB2.
+    -->
+    <uart id="UART_APP"
+          dev_id="0"
+          instance="USART1"
+          baudrate="115200"
+          word_len="8"
+          stop_bits="1"
+          parity="none"
+          mode="tx_rx">
+      <tx   port="A" pin="9"  af="7" speed="very_high" pull="none"/>
+      <rx   port="A" pin="10" af="7" speed="very_high" pull="none"/>
+      <irq  name="USART1_IRQn" priority="5"/>
+    </uart>
+
+    <!--
+      UART_DEBUG → LPUART1  PG7/TX  PG8/RX
+      Virtual COM port (STLink-V3) on Nucleo-U575ZI-Q.
+      Role "shell" — OS shell CLI + trustcore boot banner.
+      AF8 = LPUART1 on STM32U5 pins PG7 / PG8.
+      LPUART1 lives on APB1 and supports low-power Stop-mode wakeup.
+    -->
+    <uart id="UART_DEBUG"
+          dev_id="1"
+          instance="LPUART1"
+          baudrate="115200"
+          word_len="8"
+          stop_bits="1"
+          parity="none"
+          mode="tx_rx"
+          role="shell">
+      <tx   port="G" pin="7" af="8" speed="very_high" pull="none"/>
+      <rx   port="G" pin="8" af="8" speed="very_high" pull="none"/>
+      <irq  name="LPUART1_IRQn" priority="5"/>
+    </uart>
+
+
+    <!-- ═══════════════════════════════════════════════════════════
+         I2C
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!--
+      I2C_SENSOR_BUS → I2C1  PB8/SCL  PB9/SDA
+      Fast-mode 400 kHz sensor bus.
+      AF4 = I2C1 on STM32U5 pins PB8 / PB9.
+      I2C1 is clocked from APB1.
+    -->
+    <i2c id="I2C_SENSOR_BUS"
+         dev_id="0"
+         instance="I2C1"
+         clock_hz="400000"
+         addr_mode="7bit"
+         dual_addr="disable">
+      <scl   port="B" pin="8" af="4" speed="very_high" pull="none"/>
+      <sda   port="B" pin="9" af="4" speed="very_high" pull="none"/>
+      <irq_ev name="I2C1_EV_IRQn" priority="6"/>
+      <irq_er name="I2C1_ER_IRQn" priority="6"/>
+    </i2c>
+
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SPI
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!--
+      SPI_FLASH_BUS → SPI1  PA5/SCK  PA6/MISO  PA7/MOSI  (software NSS)
+      AF5 = SPI1 on STM32U5 pins PA5 / PA6 / PA7.
+    -->
+    <spi id="SPI_FLASH_BUS"
+         dev_id="0"
+         instance="SPI1"
+         mode="master"
+         direction="2lines"
+         data_size="8"
+         clk_polarity="low"
+         clk_phase="1edge"
+         nss="soft"
+         baud_prescaler="16"
+         bit_order="msb">
+      <sck  port="A" pin="5" af="5" speed="very_high" pull="none"/>
+      <miso port="A" pin="6" af="5" speed="very_high" pull="none"/>
+      <mosi port="A" pin="7" af="5" speed="very_high" pull="none"/>
+      <irq  name="SPI1_IRQn" priority="6"/>
+    </spi>
+
+
+    <!-- ═══════════════════════════════════════════════════════════
+         GPIO
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!-- PC7 — LD1 green LED on Nucleo-U575ZI-Q (active-high) -->
+    <gpio id="LED_BOARD"
+          dev_id="0"
+          port="C" pin="7"
+          mode="output_pp"
+          pull="none"
+          speed="low"
+          active_state="high"
+          initial_state="inactive"/>
+
+    <!-- PB7 — LD2 blue LED on Nucleo-U575ZI-Q (active-high) -->
+    <gpio id="LED_BLUE"
+          dev_id="1"
+          port="B" pin="7"
+          mode="output_pp"
+          pull="none"
+          speed="low"
+          active_state="high"
+          initial_state="inactive"/>
+
+    <!-- PG2 — LD3 red LED on Nucleo-U575ZI-Q (active-high) -->
+    <gpio id="LED_RED"
+          dev_id="2"
+          port="G" pin="2"
+          mode="output_pp"
+          pull="none"
+          speed="low"
+          active_state="high"
+          initial_state="inactive"/>
+
+    <!-- PC13 — B1 user push-button on Nucleo-U575ZI-Q (active-high, no pull) -->
+    <gpio id="BTN_USER"
+          dev_id="3"
+          port="C" pin="13"
+          mode="it_rising"
+          pull="none"
+          speed="low"
+          active_state="high"
+          initial_state="inactive"/>
+
+  </peripherals>
+
+</board>

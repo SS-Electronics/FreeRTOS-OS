@@ -174,6 +174,16 @@ OPENOCD_INTERFACE  += interface/stlink.cfg
 CC_TARGET_PROP     += -mthumb -mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard
 endif
 
+ifeq ($(CONFIG_TARGET_MCU),"STM32U575xx")
+STM32_HAL_CONF_H   := $(if $(APP_DIR),$(APP_DIR)/board/stm32u5xx_hal_conf.h,config/stm32u5xx_hal_conf.h)
+OPENOCD_TARGET     += arch/debug/target/stm32_u575xx_debug.cfg
+OPENOCD_INTERFACE  += interface/stlink.cfg
+# Cortex-M33 — single-precision FPU (fpv5-sp-d16), DSP extensions present on U5.
+# -mcmse needed only when building secure-world entries; the single-image
+# example targets non-secure so we leave -mcmse off here.
+CC_TARGET_PROP     += -mthumb -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard
+endif
+
 export OPENOCD_INTERFACE
 
 export OPENOCD_TARGET
@@ -314,6 +324,7 @@ endif
 EXAMPLES_DIR        := examples
 F411_DIR            := $(EXAMPLES_DIR)/stm32f411
 H723_DIR            := $(EXAMPLES_DIR)/stm32h723
+U575_DIR            := $(EXAMPLES_DIR)/stm32u575
 CPPCHECK_BOARD_DIR  := build/cppcheck-board
 
 # Per-board generated files — listed here so the corresponding -clean
@@ -405,6 +416,43 @@ dev-stm32h723-clean:
 	@rm -f $(call GENERATED_BOARD_FILES,$(H723_DIR))
 	@$(MAKE) clean
 	@echo "### [dev-stm32h723] Clean complete"
+
+
+# ── STM32U575 devboard (NUCLEO-U575ZI-Q, Cortex-M33 + TrustZone) ───────────
+
+.PHONY: dev-stm32u575-gen
+dev-stm32u575-gen:
+	@echo "### [dev-stm32u575] Generating IRQ headers from $(U575_DIR)/board/irq_table.xml ..."
+	@python3 scripts/gen_irq_table.py \
+		$(U575_DIR)/board/irq_table.xml \
+		--outdir $(U575_DIR)/board
+	@echo "### [dev-stm32u575] Generating board BSP from $(U575_DIR)/board/stm32u575_devboard.xml ..."
+	@python3 scripts/gen_board_config.py \
+		$(U575_DIR)/board/stm32u575_devboard.xml \
+		--outdir $(U575_DIR)/board
+	@echo "### [dev-stm32u575] Board generation done — outputs in $(U575_DIR)/board/"
+
+.PHONY: dev-stm32u575
+dev-stm32u575: dev-stm32u575-gen
+	@echo "### [dev-stm32u575] Activating Kconfig from $(U575_DIR)/kconfig.conf ..."
+	@cp $(U575_DIR)/kconfig.conf .config
+	@$(MAKE) config-outputs
+	@echo "### [dev-stm32u575] Cleaning stale build artifacts ..."
+	@$(MAKE) clean
+	@echo "### [dev-stm32u575] Building firmware → build/stm32u575.elf ..."
+	@$(MAKE) all APP_DIR=$(U575_DIR) TARGET_NAME=stm32u575 CONFIG_BOARD=stm32u575_devboard
+	@echo "### [dev-stm32u575] Build complete: build/stm32u575.elf"
+
+.PHONY: dev-stm32u575-flash
+dev-stm32u575-flash:
+	@$(MAKE) flash TARGET_NAME=stm32u575
+
+.PHONY: dev-stm32u575-clean
+dev-stm32u575-clean:
+	@echo "### [dev-stm32u575] Removing generated board files ..."
+	@rm -f $(call GENERATED_BOARD_FILES,$(U575_DIR))
+	@$(MAKE) clean
+	@echo "### [dev-stm32u575] Clean complete"
 
 
 # ── Static-analysis helper ─────────────────────────────────────────────────
@@ -676,8 +724,13 @@ else ifeq ($(TARGET),stm32h723)
   _CONFIG_BOARD  := stm32h723_devboard
   _APP_KCONF     := ../app/kconfig_ecg_h723.conf
   _APP_ELF       := ecg_h723
+else ifeq ($(TARGET),stm32u575)
+  _OS_DEV_TARGET := dev-stm32u575
+  _CONFIG_BOARD  := stm32u575_devboard
+  _APP_KCONF     := ../app/kconfig_u575.conf
+  _APP_ELF       := app-stm32u575
 else
-  $(error TARGET='$(TARGET)' is not valid. Valid targets: stm32f411  stm32h723)
+  $(error TARGET='$(TARGET)' is not valid. Valid targets: stm32f411  stm32h723  stm32u575)
 endif
 
 .PHONY: os os-flash app app-gen app-flash
@@ -720,6 +773,7 @@ app-flash:
 .PHONY: print-interface print-target flash docs clean-docs \
         dev-stm32f411 dev-stm32f411-gen dev-stm32f411-clean dev-stm32f411-flash \
         dev-stm32h723 dev-stm32h723-gen dev-stm32h723-clean dev-stm32h723-flash \
+        dev-stm32u575 dev-stm32u575-gen dev-stm32u575-clean dev-stm32u575-flash \
         cppcheck-board-gen clean-cppcheck-board
 
 print-interface:

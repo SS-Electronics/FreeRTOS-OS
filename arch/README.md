@@ -36,17 +36,22 @@ arch/
 │
 └── devices/                    MCU vendor packages
     ├── device.h                Vendor / family selection umbrella header
-    ├── STM/                    STMicroelectronics — supported (F4xx, H7xx)
+    ├── STM/                    STMicroelectronics — supported (F4xx, H7xx, U5xx)
     │   ├── stm32f4xx-hal-driver/   HAL SDK (submodule)
     │   ├── stm32h7xx-hal-driver/   HAL SDK (submodule)
+    │   ├── stm32u5xx-hal-driver/   HAL SDK (submodule — Cortex-M33 + TrustZone)
     │   ├── STM32F4xx/
     │   │   ├── stm32f4xx.h        CMSIS family header
     │   │   ├── STM32F401/         (part) startup + linker + chip header
     │   │   └── STM32F411/         (part)
-    │   └── STM32H7xx/
-    │       ├── stm32h7xx.h        CMSIS family header
-    │       ├── system_stm32h7xx.c CMSIS system_init
-    │       └── STM32H723/         (part)
+    │   ├── STM32H7xx/
+    │   │   ├── stm32h7xx.h        CMSIS family header
+    │   │   ├── system_stm32h7xx.c CMSIS system_init
+    │   │   └── STM32H723/         (part)
+    │   └── STM32U5xx/             ARM Cortex-M33 + TrustZone
+    │       ├── stm32u5xx.h        CMSIS family header
+    │       ├── system_stm32u5xx.{c,h}  CMSIS system_init
+    │       └── STM32U575/         (part) startup + linker + chip header stub
     │
     ├── NXP/                    NXP — placeholder (see NXP/README.md)
     ├── TI/                     Texas Instruments — placeholder
@@ -166,6 +171,34 @@ CMSIS + HAL headers for the active part.
 
 Add a new vendor block whenever you add a new family — the existing
 STM32 / Infineon / Microchip blocks are the template.
+
+---
+
+## STM32U5 — Cortex-M33 + TrustZone Notes {#stm32u5--cortex-m33--trustzone-notes}
+
+The U5 port (`arch/devices/STM/STM32U5xx/`) reuses every contract above
+with three additional things to know:
+
+  - **Toolchain flags** are emitted from the top-level Makefile:
+    `-mthumb -mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard`.
+    `-mcmse` is *not* added by default — the example builds a
+    single-image (non-secure) binary.  When you flip
+    `CONFIG_U5_TRUSTZONE_ENABLED=y` in your Kconfig preset, append
+    `-mcmse` to `CC_TARGET_PROP` and split your build into a secure
+    image (`-D__ARM_FEATURE_CMSE=3`) and a non-secure image
+    (`-D__ARM_FEATURE_CMSE=1`) per the ARMv8-M TrustZone guidance.
+  - **Vector-table slot 7** is `SecureFault_Handler` on M33 — the
+    startup file places it explicitly; do not leave it as a `Reserved`
+    zero or the CPU will trip on the first secure fault.
+  - **HAL submodule** is opt-in via the per-part Makefile dispatch
+    block: when `arch/devices/STM/stm32u5xx-hal-driver/` is absent the
+    build still links the kernel, startup, system file and the
+    trustcore stub, which is useful for arch-dispatch CI before the
+    full vendor SDK is pulled in.
+
+The example `examples/stm32u575/` exercises a small `trustcore/` module
+that owns the U5-specific secure-world bring-up; see the
+[main README's Trust Core section](../README.md#stm32u575--cortex-m33-trust-core).
 
 ---
 

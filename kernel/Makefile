@@ -76,3 +76,20 @@ INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1
 obj-y += kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM7/r0p1/port.o
 
 endif
+
+#####################################################################
+#                     Device STM32U575xx  (Cortex-M33 + TrustZone)
+#
+# ARM_CM33_NTZ/non_secure — non-TrustZone (single-image) port. Used when
+# CONFIG_U5_TRUSTZONE_ENABLED=n (the example default).
+# Switch to ARM_CM33/non_secure + ARM_CM33/secure when building the
+# TZ-split firmware.
+#####################################################################
+ifeq ($(CONFIG_TARGET_MCU),"STM32U575xx")
+
+INCLUDES += -I$(CURDIR)/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure
+
+obj-y += kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure/port.o
+obj-y += kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure/portasm.o
+
+endif

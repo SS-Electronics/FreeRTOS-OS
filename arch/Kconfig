@@ -27,18 +27,20 @@ config TARGET_MCU
     default "STM32F411xE"
     help
       The HAL symbol passed to the STM32 HAL layer.
-      Examples: STM32F411xE, STM32H723xx.
+      Examples: STM32F411xE, STM32H723xx, STM32U575xx.
       This must match the CMSIS device header guard symbol.
       F4 variants: STM32F411xE, STM32F405xx, STM32F429xx.
       H7 variants: STM32H723xx, STM32H733xx, STM32H743xx.
+      U5 variants: STM32U575xx, STM32U585xx (Cortex-M33 + TrustZone).
 
 config CPU_ARCH
     string "CPU architecture"
     default "ARM-CM4F"
     help
       Used to select the correct FreeRTOS portable layer.
-      STM32F4xx → ARM-CM4F (hard-float ABI, fpv4-sp-d16).
-      STM32H7xx → ARM-CM7  (hard-float ABI, fpv5-d16).
+      STM32F4xx → ARM-CM4F  (hard-float ABI, fpv4-sp-d16).
+      STM32H7xx → ARM-CM7   (hard-float ABI, fpv5-d16).
+      STM32U5xx → ARM-CM33  (hard-float ABI, fpv5-sp-d16, TrustZone-capable).
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -135,6 +137,48 @@ config HAL_OSPI_MODULE_ENABLED
 config HAL_SDMMC_MODULE_ENABLED
     bool "SDMMC (SD/eMMC controller)"
     default n
+
+endmenu
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STM32U5 — Cortex-M33 + TrustZone specific options
+# Only meaningful when CONFIG_TARGET_MCU = STM32U5xx variant.
+# ─────────────────────────────────────────────────────────────────────────────
+
+menu "STM32U5 / Cortex-M33 (U575 / U5xx only)"
+
+config U5_TRUSTZONE_ENABLED
+    bool "Enable TrustZone secure/non-secure split"
+    default n
+    help
+      When set, the application builds against TZ-aware HAL symbols and
+      the trustcore module configures the SAU (Security Attribution Unit)
+      and GTZC (Global TrustZone Controller) during Reset_Handler.
+      Default n — the example board ships as a single-image non-secure
+      build; the trustcore module still runs for device-identity and
+      flash-integrity attestation but does not partition the address map.
+
+config HAL_GTZC_MODULE_ENABLED
+    bool "GTZC — Global TrustZone Controller"
+    default n
+    help
+      U5-only. Enables HAL_GTZC_* APIs that configure peripheral and
+      memory-region secure attributions. Requires CONFIG_U5_TRUSTZONE_ENABLED.
+
+config HAL_ICACHE_MODULE_ENABLED
+    bool "ICACHE — Instruction cache"
+    default n
+    help
+      U5-only. STM32U5 ships a dedicated ICACHE peripheral (separate from
+      the Cortex-M33 core, which has no built-in cache). Enable to use
+      HAL_ICACHE_Enable() once the system clock is up.
+
+config HAL_PKA_MODULE_ENABLED
+    bool "PKA — Public Key Accelerator"
+    default n
+    help
+      U5-only. Used by the trustcore attestation path (ECDSA P-256 etc.).
 
 endmenu
 

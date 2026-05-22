@@ -45,6 +45,24 @@ MCU_DEBUG_MAP = {
         "fpu":         "fpv4-sp-d16",
         "swo_freq":    2_000_000,
     },
+    "STM32H723xx": {
+        "openocd_cfg": "arch/debug/target/stm32_h723xx_debug.cfg",
+        "svd":         "arch/debug/target/STM32H723.svd",
+        "device":      "STM32H723ZG",
+        "cpu_freq":    550_000_000,
+        "cpu_core":    "cortex-m7",
+        "fpu":         "fpv5-d16",
+        "swo_freq":    2_000_000,
+    },
+    "STM32U575xx": {
+        "openocd_cfg": "arch/debug/target/stm32_u575xx_debug.cfg",
+        "svd":         "arch/debug/target/STM32U575.svd",
+        "device":      "STM32U575ZI",
+        "cpu_freq":    160_000_000,
+        "cpu_core":    "cortex-m33",
+        "fpu":         "fpv5-sp-d16",
+        "swo_freq":    2_000_000,
+    },
 }
 
 AUTOCONF_H  = "config/autoconf.h"

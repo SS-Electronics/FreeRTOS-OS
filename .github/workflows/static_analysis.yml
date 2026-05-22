@@ -2,8 +2,8 @@
 #
 # Per-target 5-stage CI pipeline for FreeRTOS-OS.
 #
-# For every supported devboard target (stm32f411, stm32h723) the workflow
-# runs these stages in order:
+# For every supported devboard target (stm32f411, stm32h723, stm32u575)
+# the workflow runs these stages in order:
 #
 #   1. generation   make dev-<target>-gen   →  board_config.*, irq_*_generated.*
 #   2. cppcheck     scripts/run_cppcheck.sh --target=<target>
@@ -13,7 +13,7 @@
 #                                            all target builds succeed)
 #
 # Each downstream stage gates on the previous via `needs:`.  Within a
-# stage both targets run in parallel (matrix), so the wall-clock budget
+# stage all targets run in parallel (matrix), so the wall-clock budget
 # is roughly 5 × (longest target stage).
 #
 # Triggered on every push or PR touching code, generators, board XML,
@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [stm32f411, stm32h723]
+        target: [stm32f411, stm32h723, stm32u575]
 
     steps:
       - name: Checkout repository (with submodules)
@@ -111,7 +111,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [stm32f411, stm32h723]
+        target: [stm32f411, stm32h723, stm32u575]
 
     steps:
       - name: Checkout repository (with submodules)
@@ -183,7 +183,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [stm32f411, stm32h723]
+        target: [stm32f411, stm32h723, stm32u575]
 
     steps:
       - name: Checkout repository (with submodules)
@@ -277,7 +277,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [stm32f411, stm32h723]
+        target: [stm32f411, stm32h723, stm32u575]
 
     steps:
       - name: Checkout repository (with submodules)

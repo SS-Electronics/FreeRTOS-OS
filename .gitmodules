@@ -25,3 +25,9 @@
 [submodule "arch/devices/STM/stm32h7xx-hal-driver"]
 	path = arch/devices/STM/stm32h7xx-hal-driver
 	url = https://github.com/STMicroelectronics/stm32h7xx-hal-driver.git
+[submodule "arch/devices/STM/stm32u5xx-hal-driver"]
+	path = arch/devices/STM/stm32u5xx-hal-driver
+	url = https://github.com/STMicroelectronics/stm32u5xx-hal-driver.git
+[submodule "arch/devices/STM/cmsis-device-u5"]
+	path = arch/devices/STM/cmsis-device-u5
+	url = https://github.com/STMicroelectronics/cmsis-device-u5.git

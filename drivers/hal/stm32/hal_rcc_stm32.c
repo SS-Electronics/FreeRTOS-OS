@@ -127,9 +127,11 @@
  * @warning
  * Assumes PLL and prescaler configuration follow STM32 reference manual.
  */
-/* H7 provides SystemCoreClockUpdate() in system_stm32h7xx.c (D1/D2/D3 domain aware).
- * Compile this F4-only version only for non-H7 targets. */
-#if !defined(STM32H7)
+/* H7 ships SystemCoreClockUpdate() in system_stm32h7xx.c (D1/D2/D3 domain
+ * aware); U5 ships its own in arch/devices/STM/STM32U5xx/system_stm32u5xx.c.
+ * The F4-only manual computation below works against the F4 RCC layout and
+ * is compiled only for that family. */
+#if !defined(STM32H7) && !defined(STM32U5)
 __SECTION_OS __USED
 void SystemCoreClockUpdate(void)
 {
@@ -169,7 +171,7 @@ void SystemCoreClockUpdate(void)
     tmp = AHBPrescTable[(RCC->CFGR & RCC_CFGR_HPRE) >> 4U];
     SystemCoreClock >>= tmp;
 }
-#endif /* !STM32H7 */
+#endif /* !(STM32H7 || STM32U5) */
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Clock Configuration                                                       */
@@ -201,7 +203,20 @@ static int32_t _stm32_clock_init(void)
     return OS_ERR_NONE;
 }
 
-#else /* !STM32H7 — F4-family clock init */
+#elif defined(STM32U5)
+/* ── U5 bring-up: use MSI 4 MHz (reset default, no PLL) ──────────────────── *
+ * Mirror the H7 minimal-bring-up: SystemInit() in system_stm32u5xx.c leaves
+ * the CPU on the post-reset MSI = 4 MHz. LPUART1 @ 115200 baud works at that
+ * clock (fractional baud divider). The example board doesn't need 160 MHz
+ * for the trustcore + heartbeat demo. Switch to PLL1 = 160 MHz here once
+ * the U5 board calls for it (see BOARD_RCC_PLL* macros in board_config.h). */
+__SECTION_OS __USED
+static int32_t _stm32_clock_init(void)
+{
+    return OS_ERR_NONE;
+}
+
+#else /* !STM32H7 && !STM32U5 — F4-family clock init */
 
 __SECTION_OS __USED
 static int32_t _stm32_clock_init(void)
@@ -238,7 +253,7 @@ static int32_t _stm32_clock_init(void)
     return OS_ERR_NONE;
 }
 
-#endif /* STM32H7 */
+#endif /* STM32H7 / STM32U5 / F4 */
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Clock Query APIs                                                          */
@@ -273,10 +288,11 @@ static uint32_t _stm32_get_apb2_hz(void)
 __SECTION_OS __USED
 void hal_rcc_stm32_pwr_clk_en(void)
 {
-#if !defined(STM32H7)
+#if !defined(STM32H7) && !defined(STM32U5)
     __HAL_RCC_PWR_CLK_ENABLE();   /* F4: PWR in APB1 — needs explicit enable */
 #endif
-    /* H7: PWR is in APB4 and always clocked; HAL_PWREx_ConfigSupply() used instead */
+    /* H7: PWR in APB4, always clocked; HAL_PWREx_ConfigSupply() used instead.
+     * U5: PWR in AHB3, always clocked once VOS scaling is programmed. */
 }
 
 __SECTION_OS __USED
@@ -335,8 +351,8 @@ void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
         case DRV_RCC_PERIPH_SPI1:   __HAL_RCC_SPI1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_TIM1:   __HAL_RCC_TIM1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_SYSCFG: __HAL_RCC_SYSCFG_CLK_ENABLE(); break;
-#if defined(STM32H7)
-        /* TIM6 and USART3 exist on H7; not present on F4xx */
+#if defined(STM32H7) || defined(STM32U5)
+        /* TIM6 / USART3 / LPUART1 exist on H7 and U5; not on F4xx. */
         case DRV_RCC_PERIPH_TIM6:   __HAL_RCC_TIM6_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_USART3: __HAL_RCC_USART3_CLK_ENABLE(); break;
 #endif
@@ -344,12 +360,18 @@ void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
         case DRV_RCC_PERIPH_ADC12:  __HAL_RCC_ADC12_CLK_ENABLE();  break;
         case DRV_RCC_PERIPH_DMA1:   __HAL_RCC_DMA1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_DMA2:   __HAL_RCC_DMA2_CLK_ENABLE();   break;
+#elif defined(STM32U5)
+        case DRV_RCC_PERIPH_ADC12:  __HAL_RCC_ADC1_CLK_ENABLE();   break;
+        /* U5 DMA is GPDMA1 / LPDMA1 — different macro names, mapped to the
+         * generic DMA1/DMA2 identifiers so upper layers stay portable. */
+        case DRV_RCC_PERIPH_DMA1:   __HAL_RCC_GPDMA1_CLK_ENABLE(); break;
+        case DRV_RCC_PERIPH_DMA2:   __HAL_RCC_LPDMA1_CLK_ENABLE(); break;
 #else /* F4 */
         case DRV_RCC_PERIPH_ADC12:  __HAL_RCC_ADC1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_DMA1:   __HAL_RCC_DMA1_CLK_ENABLE();   break;
         case DRV_RCC_PERIPH_DMA2:   __HAL_RCC_DMA2_CLK_ENABLE();   break;
 #endif
-#if !defined(STM32H7)
+#if !defined(STM32H7) && !defined(STM32U5)
         case DRV_RCC_PERIPH_PWR:    __HAL_RCC_PWR_CLK_ENABLE();    break;
 #endif
         default: break;

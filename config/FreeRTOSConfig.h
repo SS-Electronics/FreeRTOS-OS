@@ -63,9 +63,23 @@
 /* Minimum newlib heap reserved by the linker (_Min_Heap_Size in .ld) */
 #define configNEWLIB_HEAP_MIN_BYTES (512UL)
 
-/* FPU / MPU — Cortex-M4F has FPU, no MPU on most F4 variants */
+/* FPU / MPU — Cortex-M4F has FPU, no MPU on most F4 variants.
+ * On Cortex-M33 (STM32U5) the MPU is always present; we leave it disabled
+ * for the single-image example to keep the boot path identical to F4/H7.   */
 #define configENABLE_FPU    1
 #define configENABLE_MPU    0
+
+/* ── ARMv8-M (Cortex-M33) port toggles ────────────────────────────────────
+ * The CM33 FreeRTOS port asserts these are explicitly defined. We default
+ * them to 0 for the single-image (non-secure) build; the secure-image
+ * variant flips configENABLE_TRUSTZONE to 1 and rebuilds the secure-side
+ * port.c against a TF-M-style entry table.
+ * Harmless for the M4/M7 ports — they ignore unknown configENABLE_* knobs. */
+#define configENABLE_TRUSTZONE   0
+#define configENABLE_PAC         0
+#define configENABLE_BTI         0
+#define configENABLE_MVE         0
+#define configRUN_FREERTOS_SECURE_ONLY  0
 
 /* ── Scheduler behaviour ──────────────────────────────────────────────────── */
 #ifdef CONFIG_RTOS_USE_PREEMPTION

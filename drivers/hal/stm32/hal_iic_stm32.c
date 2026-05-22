@@ -124,10 +124,12 @@ static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
     drv_irq_enable((int32_t)d->ev_irqn, d->irq_priority);
     drv_irq_enable((int32_t)d->er_irqn, d->irq_priority);
 
-#if defined(STM32H7)
-    /* H7 I2C HAL uses a TIMINGR pre-computed value, not a Hz clock speed.
-     * 0x10707DBC → 100 kHz SM mode at PCLK1 = 64 MHz (HSI, no PLL).
-     * Override with BOARD_I2C1_TIMING in board_config if different PCLK1. */
+#if defined(STM32H7) || defined(STM32U5)
+    /* H7 / U5 I2C HAL uses a TIMINGR pre-computed value, not a Hz clock
+     * speed. Default value below is 100 kHz SM mode at PCLK1 = 64 MHz
+     * (HSI, no PLL) for H7; on U5 (PCLK1 = 160 MHz) override via
+     * BOARD_I2C1_TIMING in board_config — the default works as a starting
+     * point but is not optimal. */
 #   ifdef BOARD_I2C1_TIMING
     hi2c->Init.Timing = BOARD_I2C1_TIMING;
 #   else
