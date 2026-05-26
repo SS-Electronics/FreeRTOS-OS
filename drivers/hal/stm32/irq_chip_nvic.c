@@ -78,7 +78,7 @@
  * - No effect if @p data is NULL
  * - No effect if @p hwirq is invalid (< 0)
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void nvic_irq_enable(struct irq_data *data)
 {
     if (data == NULL || data->hwirq < 0)
@@ -95,7 +95,7 @@ static void nvic_irq_enable(struct irq_data *data)
  * @details
  * Prevents interrupt delivery from the specified hardware IRQ.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void nvic_irq_disable(struct irq_data *data)
 {
     if (data == NULL || data->hwirq < 0)
@@ -112,7 +112,7 @@ static void nvic_irq_disable(struct irq_data *data)
  * @details
  * On Cortex-M, masking is equivalent to disabling the IRQ in NVIC.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void nvic_irq_mask(struct irq_data *data)
 {
     nvic_irq_disable(data);
@@ -126,7 +126,7 @@ static void nvic_irq_mask(struct irq_data *data)
  * @details
  * On Cortex-M, unmasking is equivalent to enabling the IRQ in NVIC.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void nvic_irq_unmask(struct irq_data *data)
 {
     nvic_irq_enable(data);
@@ -141,7 +141,7 @@ static void nvic_irq_unmask(struct irq_data *data)
  * NVIC does not require explicit acknowledgment.
  * Interrupt sources must be cleared at the peripheral level.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void nvic_irq_ack(struct irq_data *data)
 {
     (void)data;
@@ -156,7 +156,7 @@ static void nvic_irq_ack(struct irq_data *data)
  * Cortex-M automatically handles interrupt completion on ISR exit.
  * No explicit EOI operation is required.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void nvic_irq_eoi(struct irq_data *data)
 {
     (void)data;
@@ -174,7 +174,7 @@ static void nvic_irq_eoi(struct irq_data *data)
  * @warning
  * Priority encoding depends on NVIC PRIGROUP configuration.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void nvic_irq_set_affinity(struct irq_data *data, uint32_t priority)
 {
     if (data == NULL || data->hwirq < 0)
@@ -195,7 +195,7 @@ static void nvic_irq_set_affinity(struct irq_data *data, uint32_t priority)
  * NVIC does not support runtime trigger configuration.
  * Trigger type is fixed by peripheral hardware design.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int nvic_irq_set_type(struct irq_data *data, unsigned int flow_type)
 {
     (void)data;
@@ -237,7 +237,7 @@ static struct irq_chip _nvic_chip = {
  * @details
  * Used by IRQ subsystem to attach NVIC controller implementation.
  */
-__SECTION_OS __USED
+__SECTION_OS
 struct irq_chip *irq_chip_nvic_get(void)
 {
     return &_nvic_chip;
@@ -268,7 +268,7 @@ struct irq_chip *irq_chip_nvic_get(void)
  * @note
  * Does not enable the IRQ; only binds and configures it.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void irq_chip_nvic_bind_hwirq(irq_id_t irq, int32_t irqn, uint32_t priority)
 {
     struct irq_desc *desc = irq_to_desc(irq);

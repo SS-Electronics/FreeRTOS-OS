@@ -121,7 +121,7 @@ extern int32_t drv_uart_tx_get_next_byte(uint8_t dev_id, uint8_t *byte);
  * @param s HAL status
  * @return OS_ERR_NONE on success, OS_ERR_OP otherwise
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
     return (s == HAL_OK) ? OS_ERR_NONE : OS_ERR_OP;
@@ -141,7 +141,7 @@ static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
  * Configures GPIO, NVIC, and initializes UART via HAL.
  * Enables RXNE interrupt directly at register level.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_uart_hw_init(drv_uart_handle_t *h)
 {
     if (h == NULL || h->ops == NULL)
@@ -187,7 +187,7 @@ static int32_t stm32_uart_hw_init(drv_uart_handle_t *h)
  * @param h UART handle
  * @return OS error code
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_uart_hw_deinit(drv_uart_handle_t *h)
 {
     if (h == NULL)
@@ -214,7 +214,7 @@ static int32_t stm32_uart_hw_deinit(drv_uart_handle_t *h)
 /**
  * @brief Transmit data (blocking).
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_uart_transmit(drv_uart_handle_t *h,
                                    const uint8_t *data,
                                    uint16_t len,
@@ -234,7 +234,7 @@ static int32_t stm32_uart_transmit(drv_uart_handle_t *h,
 /**
  * @brief Receive data (blocking).
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_uart_receive(drv_uart_handle_t *h,
                                   uint8_t *data,
                                   uint16_t len,
@@ -251,7 +251,7 @@ static int32_t stm32_uart_receive(drv_uart_handle_t *h,
 /**
  * @brief Start TX interrupt-driven transmission.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void stm32_uart_tx_start(drv_uart_handle_t *h)
 {
     if (h == NULL || !h->initialized)
@@ -278,7 +278,7 @@ static const drv_uart_hal_ops_t _stm32_uart_ops = {
 /**
  * @brief Get STM32 UART HAL operations.
  */
-__SECTION_OS __USED
+__SECTION_OS
 const drv_uart_hal_ops_t *hal_uart_stm32_get_ops(void)
 {
     return &_stm32_uart_ops;
@@ -287,7 +287,7 @@ const drv_uart_hal_ops_t *hal_uart_stm32_get_ops(void)
 /**
  * @brief Configure UART parameters.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_uart_stm32_set_config(drv_uart_handle_t *h,
                                USART_TypeDef *instance,
                                uint32_t word_len,
@@ -322,7 +322,7 @@ void hal_uart_stm32_set_config(drv_uart_handle_t *h,
  * Handles RX, TX, and error interrupts without using HAL IRQ handlers.
  * Dispatches events through drv_irq subsystem.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_uart_stm32_irq_handler(USART_TypeDef *instance)
 {
     for (uint8_t id = 0; id < BOARD_UART_COUNT; id++)

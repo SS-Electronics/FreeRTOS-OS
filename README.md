@@ -45,7 +45,7 @@ medical-grade safety stack.
 | 🛡️ **Medical-grade safety stack**   | IWDG + per-task software watchdog + `.noinit` fault record + safe-state shutdown — designed against IEC 62304 / 60601-1. |
 | 🏭 **Code-gen pipeline**             | One XML per board → BSP, IRQ tables, NVIC init.  One XML per DSP module set → CMSIS-DSP build slice. |
 | 🧪 **Per-target CI**                 | 5-stage pipeline (gen → cppcheck → MISRA → build → Doxygen) runs for every supported target on every push. |
-| 📦 **Tiny footprint**                | ~48 KB flash + ~19 KB OS static RAM regardless of MCU. |
+| 📦 **Tiny footprint**                | ~48 KB flash + ~19 KB OS static RAM regardless of MCU. `-Os`, `--gc-sections`, no LTO. |
 
 ---
 
@@ -60,8 +60,14 @@ threads occupy before your application allocates anything.
 | Target | Core | Clock | Flash | RAM | OS Flash | OS Static RAM | FreeRTOS Heap | `TARGET_NAME` | Status |
 |---|---|---|---|---|---|---|---|---|---|
 | **stm32f411** | Cortex-M4F  (`fpv4-sp-d16`, hard) | 100 MHz | 512 KB | 128 KB | **47.8 KB** *(9.3 %)* | **18.9 KB** *(14.8 %)* | 64.0 KB | `stm32f411` | ✅ Supported |
-| **stm32h723** | Cortex-M7   (`fpv5-d16`,    hard) | 64 MHz HSI | 1 MB | 128 KB DTCM | **48.4 KB** *(4.7 %)* | **19.1 KB** *(15.0 %)* | 78.1 KB | `stm32h723` | ✅ Running, validated |
+| **stm32h723** | Cortex-M7   (`fpv5-d16`,    hard) | 64 MHz HSI | 1 MB | 128 KB DTCM | **48.1 KB** *(4.7 %)* | **19.1 KB** *(15.0 %)* | 78.1 KB | `stm32h723` | ✅ Running, validated |
 | **stm32u575** | Cortex-M33 + TrustZone (`fpv5-sp-d16`, hard) | 4 MHz MSI (PLL hooked, not yet enabled) | 2 MB | 192 KB SRAM1 + 64K SRAM2 + 512K SRAM3 | **50.4 KB** *(2.5 %)* | **20.5 KB** *(10.7 % of SRAM1)* | 80.0 KB | `stm32u575` | 🧪 Builds, trustcore + heartbeat |
+
+> **Build modes:** all figures above are `-Os` release size.  Pass `DEBUG=1` (the default)
+> to embed `-g3` DWARF info — it adds debug sections to the ELF but does **not** change the
+> flash footprint.  Pass `DEBUG=0` to strip debug sections and define `NDEBUG`.
+> LTO is intentionally omitted — on arm-none-eabi-gcc 13 it adds ~7 KB due to aggressive
+> variable promotion; dead-code elimination relies on `-ffunction-sections` + `--gc-sections`.
 
 ---
 
@@ -75,12 +81,26 @@ cd FreeRTOS-OS
 make install-prerequisites
 
 # 2. Build + flash a devboard example
-make dev-stm32f411          # or  make dev-stm32h723 / make dev-stm32u575
-make dev-stm32f411-flash    #      make dev-stm32h723-flash / make dev-stm32u575-flash
+make dev-stm32h723          # or  make dev-stm32f411 / make dev-stm32u575
+make dev-stm32h723-flash    #      make dev-stm32f411-flash / make dev-stm32u575-flash
 
 # 3. Open the shell
-stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0   # H723
+stty -F /dev/ttyACM0 115200 raw -echo && cat /dev/ttyACM0   # H723 / U575
 # screen /dev/ttyUSB0 115200                                   # F411
+```
+
+**Starting your own application project** (creates `../app/` alongside this repo):
+
+```bash
+# Scaffold from a board example — copies board XML, kconfig, and a working app_main
+make setup-project EXAMPLE=stm32h723
+
+# Or start with a blank project and pick a board later
+make setup-project
+
+# Build from the scaffolded project
+make dev-stm32h723 APP_DIR=../app
+make dev-stm32h723-flash
 ```
 
 Within ~1 s of reset you should see the banner:
@@ -107,7 +127,7 @@ Try: `help`, `ps`, `mem`, `log dump`.
 | Mode | Builds from | Entry point | Best for |
 |---|---|---|---|
 | **Devboard example** | `examples/<target>/` | `make dev-<target>` | Port validation, CI, evaluating the OS without writing app code. |
-| **OS + Application** | sibling `../app/` | `make app TARGET=<target>` | Real product firmware.  FreeRTOS-OS is a git submodule of your application repo. |
+| **OS + Application** | sibling `../app/` | `make setup-project` then `make dev-<target> APP_DIR=../app` | Real product firmware.  FreeRTOS-OS is a git submodule of your application repo. |
 
 ### Mode 1 — Devboard Example (Standalone) {#mode-1--devboard-example-standalone}
 
@@ -145,82 +165,71 @@ Try: `help`, `ps`, `mem`, `log dump`.
 ### Mode 2 — OS + Application (Your Product) {#mode-2--os--application-your-product}
 
 FreeRTOS-OS is consumed as a **git submodule** of your application
-repository.  Your project supplies a thin root `Makefile`, an `app/`
-directory, and per-target configuration.
+repository.  Use `make setup-project` to scaffold the `app/` directory
+in one command.
 
-1. **Layout**
-   ```
-   my-firmware/
-   ├── Makefile                  (Step 3)
-   ├── FreeRTOS-OS/              (this repo, added as a submodule)
-   └── app/
-       ├── app_main.c            your entry point
-       ├── Makefile              (Step 4)
-       ├── kconfig_<target>.conf Kconfig preset per supported MCU
-       └── board/
-           ├── <board>.xml       hardware description
-           ├── irq_table.xml     NVIC priorities
-           └── (generated)       board_config.{c,h}, irq_*_generated.*
-   ```
-2. **Add the submodule**
+1. **Add the submodule**
    ```bash
    git submodule add https://github.com/SS-Electronics/FreeRTOS-OS.git FreeRTOS-OS
    git submodule update --init --recursive
    ```
-3. **Top-level `Makefile`**
-   ```makefile
-   OS_DIR := FreeRTOS-OS
 
-   .PHONY: app flash menuconfig clean
-   app:        ; $(MAKE) -C $(OS_DIR) app       TARGET=stm32h723
-   flash:      ; $(MAKE) -C $(OS_DIR) app-flash TARGET=stm32h723
-   menuconfig: ; $(MAKE) -C $(OS_DIR) menuconfig
-   clean:      ; $(MAKE) -C $(OS_DIR) clean
+2. **Scaffold `../app/`** with `make setup-project`
+   ```bash
+   cd FreeRTOS-OS
+
+   # From a known board (recommended) — copies board XML, kconfig, and a working app_main:
+   make setup-project EXAMPLE=stm32h723   # NUCLEO-H723ZG  (Cortex-M7)
+   make setup-project EXAMPLE=stm32f411   # STM32F411 devboard (Cortex-M4F)
+   make setup-project EXAMPLE=stm32u575   # NUCLEO-U575ZI-Q (Cortex-M33 + TZ)
+
+   # Or start blank — creates an empty app_main.c with inline API guidelines:
+   make setup-project
    ```
-4. **`app/Makefile` fragment**
+
+   The resulting layout:
+   ```
+   my-firmware/
+   ├── FreeRTOS-OS/              this repo (git submodule)
+   ├── app/
+   │   ├── app_main.c            your entry point
+   │   ├── Makefile              app build fragment (app-obj-y, APP_INCLUDES)
+   │   ├── kconfig.conf          Kconfig preset for your target MCU
+   │   ├── board/
+   │   │   ├── <board>.xml       board peripheral descriptor
+   │   │   ├── irq_table.xml     NVIC priorities
+   │   │   └── (generated)       board_config.{c,h}, irq_*_generated.*
+   │   └── os_conf_include/
+   │       ├── conf_board.h      COMM_PRINTK_HW_ID selection
+   │       └── def_compiler.h
+   └── README.md                 generated by setup-project
+   ```
+
+3. **Build and flash**
+   ```bash
+   cd FreeRTOS-OS
+   make dev-stm32h723 APP_DIR=../app        # gen + config + compile
+   make dev-stm32h723-flash                 # flash via OpenOCD / ST-Link
+
+   # Release build (strip debug sections, define NDEBUG):
+   make dev-stm32h723 APP_DIR=../app DEBUG=0
+   ```
+
+4. **Add your own source files** — edit `app/Makefile`:
    ```makefile
-   # One entry per .c file in your application
    app-obj-y += app_main.o
-
-   # Generated BSP / IRQ outputs (recreated by `make app-gen`)
-   app-obj-y += board/board_config.o
-   app-obj-y += board/irq_hw_init_generated.o
-   app-obj-y += board/irq_periph_dispatch_generated.o
-
-   APP_INCLUDES += -I$(APP_DIR)
+   app-obj-y += my_module.o
+   app-obj-y += subdir/another.o
    ```
-5. **`app/app_main.c`**
-   ```c
-   #include <os/kernel.h>
-   #include <services/gpio_mgmt.h>
-   #include <board/board_device_ids.h>
 
-   static void heartbeat(void *p)
-   {
-       (void)p;
-       for (uint32_t t = 0;; t++) {
-           gpio_mgmt_post(LED_BOARD, GPIO_MGMT_CMD_TOGGLE, 0, 0);
-           printk("[heartbeat] tick %lu\n", (unsigned long)t);
-           os_thread_delay(500);
-       }
-   }
-
-   int app_main(void)
-   {
-       os_thread_create(heartbeat, "heartbeat", 256, 1, NULL);
-       return 0;
-   }
-   ```
-6. **First-time build:** `make app` (chains `app-gen` → `config-outputs` → clean → compile).
-7. **Iterate**:
+5. **Iterate**
 
    | Change | Re-run |
    |---|---|
-   | Kconfig (MCU, heap size, …) | `make menuconfig` → `make config-outputs` |
-   | Board XML | `make app-gen TARGET=<mcu>` |
-   | IRQ table XML | `make irq_gen APP_DIR=../app` |
-   | DSP XML | `python3 FreeRTOS-OS/scripts/arm_dsp_gen.py app/board/dsp_dev.xml` |
-   | `app_main.c` / any `.c` | `make app` |
+   | `kconfig.conf` (MCU, heap size, services) | `cp ../app/kconfig.conf .config && make config-outputs` |
+   | Board XML (pins, UARTs, peripherals) | `make dev-<target>-gen APP_DIR=../app` |
+   | IRQ table XML (priorities, new IRQs) | `make irq_gen APP_DIR=../app` |
+   | `app_main.c` / any `.c` | `make dev-<target> APP_DIR=../app` |
 
 ---
 
@@ -253,23 +262,38 @@ new MCU vendor by following the contract in
 
 Run all targets from `FreeRTOS-OS/`.  `<t>` ∈ {`stm32f411`, `stm32h723`, `stm32u575`}.
 
+**Build mode flags** (apply to any `dev-*` or `all` target):
+
+| Flag | Default | Effect |
+|---|---|---|
+| `DEBUG=1` | ✅ yes | `-g3` DWARF info embedded in ELF; flash footprint unchanged |
+| `DEBUG=0` | — | Strips debug sections, defines `NDEBUG` (`-Os -DNDEBUG`) |
+
+```bash
+make dev-stm32h723             # debug build (default)
+make dev-stm32h723 DEBUG=0     # release build
+```
+
 <details>
-<summary><b>Devboard examples</b> (no sibling <code>app/</code> required)</summary>
+<summary><b>Devboard examples</b> (standalone, no sibling <code>app/</code> required)</summary>
+
+All targets accept an optional `APP_DIR=../app` to build from your project instead of the
+built-in example, and `DEBUG=0` for a release build.
 
 | Command | Output |
 |---|---|
-| `make dev-stm32f411`        | `build/stm32f411.elf` (full gen + build) |
-| `make dev-stm32f411-gen`    | Regenerate F411 board + IRQ outputs only |
-| `make dev-stm32f411-clean`  | Remove F411 generated outputs + `build/` |
-| `make dev-stm32f411-flash`  | Flash via OpenOCD |
-| `make dev-stm32h723`        | `build/stm32h723.elf` |
-| `make dev-stm32h723-gen`    | Regenerate H723 board + IRQ outputs only |
-| `make dev-stm32h723-clean`  | Remove H723 generated outputs + `build/` |
-| `make dev-stm32h723-flash`  | Flash via OpenOCD |
-| `make dev-stm32u575`        | `build/stm32u575.elf`  (Cortex-M33 + TrustZone, trustcore demo) |
-| `make dev-stm32u575-gen`    | Regenerate U575 board + IRQ outputs only |
-| `make dev-stm32u575-clean`  | Remove U575 generated outputs + `build/` |
-| `make dev-stm32u575-flash`  | Flash via OpenOCD |
+| `make dev-stm32f411`            | `build/stm32f411.elf` — full gen + build |
+| `make dev-stm32f411-gen`        | Regenerate F411 board + IRQ outputs only |
+| `make dev-stm32f411-clean`      | Remove F411 generated outputs + `build/` |
+| `make dev-stm32f411-flash`      | Flash via OpenOCD |
+| `make dev-stm32h723`            | `build/stm32h723.elf` |
+| `make dev-stm32h723-gen`        | Regenerate H723 board + IRQ outputs only |
+| `make dev-stm32h723-clean`      | Remove H723 generated outputs + `build/` |
+| `make dev-stm32h723-flash`      | Flash via OpenOCD |
+| `make dev-stm32u575`            | `build/stm32u575.elf` (Cortex-M33 + TrustZone, trustcore demo) |
+| `make dev-stm32u575-gen`        | Regenerate U575 board + IRQ outputs only |
+| `make dev-stm32u575-clean`      | Remove U575 generated outputs + `build/` |
+| `make dev-stm32u575-flash`      | Flash via OpenOCD |
 </details>
 
 <details>
@@ -282,13 +306,30 @@ Run all targets from `FreeRTOS-OS/`.  `<t>` ∈ {`stm32f411`, `stm32h723`, `stm3
 </details>
 
 <details>
+<summary><b>Project scaffolding</b> — create <code>../app/</code></summary>
+
+| Command | Effect |
+|---|---|
+| `make setup-project` | Blank project: empty `app_main.c` with API guidelines |
+| `make setup-project EXAMPLE=stm32h723` | Scaffold from H723 example (board XML + kconfig + app_main) |
+| `make setup-project EXAMPLE=stm32f411` | Scaffold from F411 example |
+| `make setup-project EXAMPLE=stm32u575` | Scaffold from U575 example (includes trustcore/) |
+| `make setup-project EXAMPLE=<…> FORCE=1` | Overwrite existing `../app/` without prompt (CI / scripts) |
+</details>
+
+<details>
 <summary><b>OS + Application</b> (sibling <code>../app/</code>)</summary>
 
 | Command | Effect |
 |---|---|
-| `make app TARGET=<t>`      | Build OS + `../app/` |
-| `make app-gen TARGET=<t>`  | Regenerate `../app/board/*` from XML |
-| `make app-flash TARGET=<t>`| Flash the application ELF |
+| `make dev-<t> APP_DIR=../app`       | Full build: gen → config → compile with `../app/` as app root |
+| `make dev-<t> APP_DIR=../app DEBUG=0` | Release build |
+| `make dev-<t>-flash`                | Flash via OpenOCD |
+| `make dev-<t>-gen APP_DIR=../app`   | Regenerate `../app/board/*` from XML only |
+| `make board-gen APP_DIR=../app`     | Regenerate BSP (`board_config.*`, `board_device_ids.h`, …) from board XML |
+| `make irq_gen APP_DIR=../app`       | Regenerate IRQ tables from `../app/board/irq_table.xml` |
+| `make app TARGET=<t>`               | Legacy alias — builds from `../app/` using hardcoded kconfig paths |
+| `make app-flash TARGET=<t>`         | Flash the legacy app ELF |
 </details>
 
 <details>

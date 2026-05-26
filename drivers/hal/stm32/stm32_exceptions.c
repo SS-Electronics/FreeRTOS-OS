@@ -223,7 +223,7 @@ static void _decode_cfsr(uint32_t cfsr)
 /* ── Central C fault handler ─────────────────────────────────────────────── */
 /* Called from naked trampoline — arguments in R0, R1, R2. */
 
-__SECTION_OS __USED
+__SECTION_OS
 void __attribute__((used, noinline))
 _fault_handler_c(uint32_t *frame, uint32_t exc_return, uint32_t fault_type)
 {
@@ -323,7 +323,7 @@ void fault_handler_clear(void)
 
 /* ── Naked trampolines — ARM Cortex-M exception handlers ─────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 __attribute__((naked)) void HardFault_Handler(void)
 {
     __asm volatile(
@@ -337,7 +337,7 @@ __attribute__((naked)) void HardFault_Handler(void)
         : : "i"(FAULT_TYPE_HARD));
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 __attribute__((naked)) void MemManage_Handler(void)
 {
     __asm volatile(
@@ -351,7 +351,7 @@ __attribute__((naked)) void MemManage_Handler(void)
         : : "i"(FAULT_TYPE_MEM));
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 __attribute__((naked)) void BusFault_Handler(void)
 {
     __asm volatile(
@@ -365,7 +365,7 @@ __attribute__((naked)) void BusFault_Handler(void)
         : : "i"(FAULT_TYPE_BUS));
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 __attribute__((naked)) void UsageFault_Handler(void)
 {
     __asm volatile(
@@ -379,7 +379,7 @@ __attribute__((naked)) void UsageFault_Handler(void)
         : : "i"(FAULT_TYPE_USAGE));
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void NMI_Handler(void)
 {
     _flt_puts("\r\n*** NMI ***\r\n");
@@ -387,7 +387,7 @@ void NMI_Handler(void)
     for (;;) {}
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void DebugMon_Handler(void)
 {
     for (;;) {}

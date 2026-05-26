@@ -123,7 +123,7 @@
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /** @brief UART management command queue */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static QueueHandle_t _mgmt_queue = NULL;
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -137,7 +137,7 @@ static QueueHandle_t _mgmt_queue = NULL;
  * Called in ISR context when a byte is received.
  * Pushes received byte into the UART RX ring buffer.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _uart_rx_cb(irq_id_t id,
                          void *data,
                          void *arg,
@@ -158,7 +158,7 @@ static void _uart_rx_cb(irq_id_t id,
  * @details
  * Updates driver error state for the corresponding UART handle.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _uart_err_cb(irq_id_t id,
                          void *data,
                          void *arg,
@@ -186,7 +186,7 @@ static void _uart_err_cb(irq_id_t id,
  *   - IRQ subscription setup
  *   - Processing UART management commands
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void uart_mgmt_thread(void *arg)
 {
     (void)arg;
@@ -324,7 +324,7 @@ static void uart_mgmt_thread(void *arg)
 /**
  * @brief Start UART management service.
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t uart_mgmt_start(void)
 {
     _mgmt_queue = xQueueCreate(UART_MGMT_QUEUE_DEPTH,
@@ -345,7 +345,7 @@ int32_t uart_mgmt_start(void)
 /**
  * @brief Get UART management queue handle.
  */
-__SECTION_OS __USED
+__SECTION_OS
 QueueHandle_t uart_mgmt_get_queue(void)
 {
     return _mgmt_queue;
@@ -354,7 +354,7 @@ QueueHandle_t uart_mgmt_get_queue(void)
 /**
  * @brief Send UART transmit request (non-blocking).
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t uart_mgmt_async_transmit(uint8_t dev_id,
                                  const uint8_t *data,
                                  uint16_t len)
@@ -379,7 +379,7 @@ int32_t uart_mgmt_async_transmit(uint8_t dev_id,
 /**
  * @brief Read one byte from UART RX ring buffer.
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t uart_mgmt_read_byte(uint8_t dev_id, uint8_t *byte)
 {
     if (dev_id >= BOARD_UART_COUNT || byte == NULL)

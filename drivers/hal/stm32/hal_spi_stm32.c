@@ -94,7 +94,7 @@
 /**
  * @brief Convert HAL status to OS error code
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
     return (s == HAL_OK) ? OS_ERR_NONE : OS_ERR_OP;
@@ -117,7 +117,7 @@ static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
  *
  * GPIO/NVIC ownership is handled here (not MSP).
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_hw_init(drv_spi_handle_t *h)
 {
     if (h == NULL)
@@ -166,7 +166,7 @@ static int32_t stm32_spi_hw_init(drv_spi_handle_t *h)
 /**
  * @brief Deinitialize SPI hardware
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_hw_deinit(drv_spi_handle_t *h)
 {
     if (h == NULL)
@@ -194,7 +194,7 @@ static int32_t stm32_spi_hw_deinit(drv_spi_handle_t *h)
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Blocking Operations                                                      */
 /* ────────────────────────────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_transmit(drv_spi_handle_t *h,
                                   const uint8_t    *data,
                                   uint16_t          len,
@@ -210,7 +210,7 @@ static int32_t stm32_spi_transmit(drv_spi_handle_t *h,
     return h->last_err;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_receive(drv_spi_handle_t *h,
                                  uint8_t          *data,
                                  uint16_t          len,
@@ -226,7 +226,7 @@ static int32_t stm32_spi_receive(drv_spi_handle_t *h,
     return h->last_err;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_transfer(drv_spi_handle_t *h,
                                   const uint8_t    *tx,
                                   uint8_t          *rx,
@@ -246,7 +246,7 @@ static int32_t stm32_spi_transfer(drv_spi_handle_t *h,
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Interrupt-based Operations                                               */
 /* ────────────────────────────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_transmit_it(drv_spi_handle_t *h,
                                      const uint8_t    *data,
                                      uint16_t          len)
@@ -261,7 +261,7 @@ static int32_t stm32_spi_transmit_it(drv_spi_handle_t *h,
     return h->last_err;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_receive_it(drv_spi_handle_t *h,
                                     uint8_t          *data,
                                     uint16_t          len)
@@ -276,7 +276,7 @@ static int32_t stm32_spi_receive_it(drv_spi_handle_t *h,
     return h->last_err;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_spi_transfer_it(drv_spi_handle_t *h,
                                      const uint8_t    *tx,
                                      uint8_t          *rx,
@@ -317,7 +317,7 @@ static const drv_spi_hal_ops_t _stm32_spi_ops = {
 /**
  * @brief Get STM32 SPI HAL operations
  */
-__SECTION_OS __USED
+__SECTION_OS
 const drv_spi_hal_ops_t *hal_spi_stm32_get_ops(void)
 {
     return &_stm32_spi_ops;
@@ -326,7 +326,7 @@ const drv_spi_hal_ops_t *hal_spi_stm32_get_ops(void)
 /**
  * @brief Configure SPI peripheral parameters
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_spi_stm32_set_config(drv_spi_handle_t *h,
                               SPI_TypeDef      *instance,
                               uint32_t          mode,
@@ -368,7 +368,7 @@ void hal_spi_stm32_set_config(drv_spi_handle_t *h,
  * Uses HAL state comparison before/after IRQ handling to determine
  * transfer completion and dispatch appropriate events.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_spi_stm32_irq_handler(SPI_TypeDef *instance)
 {
     for (uint8_t id = 0; id < BOARD_SPI_COUNT; id++)

@@ -50,30 +50,30 @@
 
 
 /* ── printk state ─────────────────────────────────────────────────────────── */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static char              _time_buf[10];
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static char              _msg_buf[CONF_MAX_CHAR_IN_PRINTK];
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static struct ringbuffer *_printk_rb;
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static volatile uint8_t  _printk_enabled = 0;
 
 
 
 
 /* ── printk functions──────────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 void printk_enable(void)  
 { 
     _printk_enabled = 1; 
 }
 
 
-__SECTION_OS __USED
+__SECTION_OS
 void printk_disable(void) 
 { 
     _printk_enabled = 0; 
@@ -81,39 +81,39 @@ void printk_disable(void)
 
 
 /* ── Newlib byte-level I/O hooks ──────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 int __io_putchar(int ch) 
 { 
     (void)ch; return 0; 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int __io_getchar(void)         
 { 
     return 0; 
 }
 
 /* ── Newlib environment ───────────────────────────────────────────────────── */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 char  *__env[1] = { 0 };
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 char **environ  = __env;
 
-__SECTION_OS __USED
+__SECTION_OS
 void initialise_monitor_handles(void) 
 {
 
 }
 
 /* ── Newlib syscall stubs ─────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 int _getpid(void) 
 { 
     return 1; 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _kill(int pid, int sig)
 {
     (void)pid; (void)sig;
@@ -121,7 +121,7 @@ int _kill(int pid, int sig)
     return -1;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void _exit(int status)
 {
     _kill(status, -1);
@@ -146,13 +146,13 @@ int _write(int file, char *ptr, int len)
     return len;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _close(int file)  
 { 
     (void)file; return -1;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _fstat(int file, struct stat *st)
 {
     (void)file;
@@ -160,45 +160,45 @@ int _fstat(int file, struct stat *st)
     return 0;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _isatty(int file) 
 { 
     (void)file; return 1; 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _lseek(int file, int ptr, int dir)
 {
     (void)file; (void)ptr; (void)dir;
     return 0;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _open(char *path, int flags, ...)
 {
     (void)path; (void)flags;
     return -1;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _wait(int *status)      
 { 
     (void)status; errno = ECHILD; return -1; 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _unlink(char *name)     
 { 
     (void)name;   errno = ENOENT; return -1; 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _times(struct tms *buf) 
 { 
     (void)buf;    return -1; 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _stat(char *file, struct stat *st)
 {
     (void)file;
@@ -206,7 +206,7 @@ int _stat(char *file, struct stat *st)
     return 0;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _link(char *old, char *new)
 {
     (void)old; (void)new;
@@ -214,13 +214,13 @@ int _link(char *old, char *new)
     return -1;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _fork(void) 
 { 
     errno = EAGAIN; return -1; 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int _execve(char *name, char **argv, char **env)
 {
     (void)name; (void)argv; (void)env;
@@ -229,7 +229,7 @@ int _execve(char *name, char **argv, char **env)
 }
 
 /* ── printk ───────────────────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 void printk_init(void)
 {
 #ifdef UART_SHELL_HW_ID
@@ -241,7 +241,7 @@ void printk_init(void)
 #endif
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int32_t printk(const char *fmt, ...)
 {
 #if (BOARD_UART_COUNT > 0)

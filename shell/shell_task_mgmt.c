@@ -301,7 +301,7 @@ static BaseType_t _cmd_debug_fn(char *out, size_t len, const char *in)
 }
 
 /* ── Built-in command implementations ───────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static BaseType_t _cmd_help_fn(char *out, size_t len, const char *in)
 {
     (void)in;
@@ -311,7 +311,7 @@ static BaseType_t _cmd_help_fn(char *out, size_t len, const char *in)
     return pdFALSE;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static BaseType_t _cmd_version_fn(char *out, size_t len, const char *in)
 {
     (void)in;
@@ -321,7 +321,7 @@ static BaseType_t _cmd_version_fn(char *out, size_t len, const char *in)
     return pdFALSE;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static BaseType_t _cmd_uptime_fn(char *out, size_t len, const char *in)
 {
     (void)in;
@@ -332,7 +332,7 @@ static BaseType_t _cmd_uptime_fn(char *out, size_t len, const char *in)
     return pdFALSE;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static BaseType_t _cmd_reboot_fn(char *out, size_t len, const char *in)
 {
     (void)in;

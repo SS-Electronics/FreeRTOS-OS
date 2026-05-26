@@ -111,7 +111,7 @@
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /** @brief SPI management request queue handle */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static QueueHandle_t _mgmt_queue = NULL;
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -121,7 +121,7 @@ static QueueHandle_t _mgmt_queue = NULL;
  * @details Called from ISR context when SPI TX/RX/TRANSFER completes.
  * Notifies the waiting task via FreeRTOS task notification.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _spi_done_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
 {
     (void)id;
@@ -137,7 +137,7 @@ static void _spi_done_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
  *
  * @details Called when SPI hardware error occurs. Only signals task.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _spi_err_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
 {
     (void)id;
@@ -156,7 +156,7 @@ static void _spi_err_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
  * Initializes SPI peripherals from board configuration and processes
  * queued SPI requests in an infinite loop.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void spi_mgmt_thread(void *arg)
 {
     (void)arg;
@@ -304,7 +304,7 @@ notify:
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /** @brief Start SPI management service */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t spi_mgmt_start(void)
 {
     _mgmt_queue = xQueueCreate(SPI_MGMT_QUEUE_DEPTH,
@@ -323,14 +323,14 @@ int32_t spi_mgmt_start(void)
 }
 
 /** @brief Get SPI management queue */
-__SECTION_OS __USED
+__SECTION_OS
 QueueHandle_t spi_mgmt_get_queue(void)
 {
     return _mgmt_queue;
 }
 
 /** @brief Synchronous SPI transfer */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
                                 const uint8_t *tx,
                                 uint8_t *rx,
@@ -361,7 +361,7 @@ int32_t spi_mgmt_sync_transfer(uint8_t bus_id,
 }
 
 /** @brief Async transmit */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t spi_mgmt_async_transmit(uint8_t bus_id,
                                  const uint8_t *data,
                                  uint16_t len)
@@ -382,7 +382,7 @@ int32_t spi_mgmt_async_transmit(uint8_t bus_id,
 }
 
 /** @brief Synchronous SPI transmit-only */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t spi_mgmt_sync_transmit(uint8_t bus_id,
                                 const uint8_t *data,
                                 uint16_t len,
@@ -411,7 +411,7 @@ int32_t spi_mgmt_sync_transmit(uint8_t bus_id,
 }
 
 /** @brief Synchronous SPI receive-only */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t spi_mgmt_sync_receive(uint8_t bus_id,
                                uint8_t *data,
                                uint16_t len,
@@ -440,7 +440,7 @@ int32_t spi_mgmt_sync_receive(uint8_t bus_id,
 }
 
 /** @brief Async full-duplex SPI transfer */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t spi_mgmt_async_transfer(uint8_t bus_id,
                                  const uint8_t *tx,
                                  uint8_t *rx,

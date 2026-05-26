@@ -62,7 +62,7 @@
 #if (CONFIG_MCU_WDG_EN == 1)
 
 /** @brief Singleton watchdog handle */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_wdg_handle_t _wdg_handle;
 
 /**
@@ -71,7 +71,7 @@ static drv_wdg_handle_t _wdg_handle;
  * @param ops Pointer to HAL ops table
  * @return OS_ERR_NONE on success, OS_ERR_OP on failure
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_wdg_register(const drv_wdg_hal_ops_t *ops)
 {
     if (ops == NULL)
@@ -94,7 +94,7 @@ int32_t drv_wdg_register(const drv_wdg_hal_ops_t *ops)
  *
  * @return Pointer to watchdog handle
  */
-__SECTION_OS __USED
+__SECTION_OS
 drv_wdg_handle_t *drv_wdg_get_handle(void)
 {
     return &_wdg_handle;
@@ -106,7 +106,7 @@ drv_wdg_handle_t *drv_wdg_get_handle(void)
  * Safe to call periodically to prevent system reset.
  * Does nothing if watchdog is not initialized.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_wdg_refresh(void)
 {
     if (!_wdg_handle.initialized || _wdg_handle.ops == NULL)
@@ -120,7 +120,7 @@ void drv_wdg_refresh(void)
 /**
  * @brief Stub implementation when watchdog is disabled
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_wdg_register(const drv_wdg_hal_ops_t *ops)
 {
     (void)ops;
@@ -130,7 +130,7 @@ int32_t drv_wdg_register(const drv_wdg_hal_ops_t *ops)
 /**
  * @brief Stub handle getter
  */
-__SECTION_OS __USED
+__SECTION_OS
 drv_wdg_handle_t *drv_wdg_get_handle(void)
 {
     return NULL;
@@ -139,7 +139,7 @@ drv_wdg_handle_t *drv_wdg_get_handle(void)
 /**
  * @brief Stub refresh function
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_wdg_refresh(void)
 {
     /* Watchdog disabled */

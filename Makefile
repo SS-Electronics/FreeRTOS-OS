@@ -67,17 +67,51 @@ endif
 
 
 ##############################################################
-# conpiler setup and configuration
+# Debug / release build control
+#
+# Usage:
+#   make dev-stm32h723            — debug build (default, -g3, no LTO)
+#   make dev-stm32h723 DEBUG=0    — release build (-flto, stripped, smallest binary)
+#   make os TARGET=stm32h723 DEBUG=0
+#
+# DEBUG=1 (default): -g3 DWARF info embedded, no LTO, no stripping
+# DEBUG=0 (release): -flto cross-TU dead-code removal, debug sections stripped
+DEBUG ?= 1
+
+ifeq ($(DEBUG),1)
+_DBG_FLAGS   := -g3
+_NDEBUG      :=
+else
+_DBG_FLAGS   :=
+_NDEBUG      := -DNDEBUG
+endif
+# LTO (-flto) intentionally omitted: on arm-none-eabi-gcc 13.x it aggressively
+# promotes zero-init variables into .data and inlines across TUs, adding ~7 KB
+# to flash on this codebase.  --gc-sections + -ffunction-sections after
+# removing __USED attributes is the correct dead-code elimination strategy here.
+
+export DEBUG
+##############################################################
+
+
+##############################################################
+# Compiler setup and configuration
 CC 							:= arm-none-eabi-gcc
 CPP							:= arm-none-eabi-g++
 CC_OBJDUMP					:= arm-none-eabi-objdump
 CC_OBJCPY					:= arm-none-eabi-objcopy
-CC_OPTIMIZATION				:= -Os -g -ffunction-sections -fdata-sections -c
-CC_EXTRA_FLAGS				:= --specs=nano.specs
+# -Os                    optimize for code size
+# -ffunction-sections /  each function/variable in its own ELF section;
+#  -fdata-sections:      --gc-sections prunes unreferenced ones at link time
+# -fomit-frame-pointer:  frees one callee-save register; smaller prologue/epilogue
+# $(_LTO_FLAGS):         release only — LTO prunes dead code across .o boundaries
+# $(_DBG_FLAGS):         debug only — -g3 embeds full DWARF + macro info
+CC_OPTIMIZATION				:= -Os $(_DBG_FLAGS) -ffunction-sections -fdata-sections -fomit-frame-pointer
+CC_EXTRA_FLAGS				:= --specs=nano.specs $(_NDEBUG)
 CC_INPUT_STD				:= -std=gnu99
 CPP_INPUT_STD				:= -std=gnu++14
 CC_WARNINGS					:= -Wall
-CC_TARGET_PROP				:= 
+CC_TARGET_PROP				:=
 CC_LINKER_INPUT				:= -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 CC_ASSEMBLER_FLAGS			:= -x assembler-with-cpp
 # CPU-specific flags (-mcpu, -mfpu, -mfloat-abi, -mthumb) are set per-target
@@ -363,6 +397,7 @@ dev-stm32f411: dev-stm32f411-gen
 	@echo "### [dev-stm32f411] Activating Kconfig from $(F411_DIR)/kconfig.conf ..."
 	@cp $(F411_DIR)/kconfig.conf .config
 	@$(MAKE) config-outputs
+	@echo "### [dev-stm32f411] Build mode: $(if $(filter 1,$(DEBUG)),DEBUG (DEBUG=1 — pass DEBUG=0 for release),RELEASE (DEBUG=0 — -Os -DNDEBUG, no LTO))"
 	@echo "### [dev-stm32f411] Cleaning stale build artifacts ..."
 	@$(MAKE) clean
 	@echo "### [dev-stm32f411] Building firmware → build/stm32f411.elf ..."
@@ -400,6 +435,7 @@ dev-stm32h723: dev-stm32h723-gen
 	@echo "### [dev-stm32h723] Activating Kconfig from $(H723_DIR)/kconfig.conf ..."
 	@cp $(H723_DIR)/kconfig.conf .config
 	@$(MAKE) config-outputs
+	@echo "### [dev-stm32h723] Build mode: $(if $(filter 1,$(DEBUG)),DEBUG (DEBUG=1 — pass DEBUG=0 for release),RELEASE (DEBUG=0 — -Os -DNDEBUG, no LTO))"
 	@echo "### [dev-stm32h723] Cleaning stale build artifacts ..."
 	@$(MAKE) clean
 	@echo "### [dev-stm32h723] Building firmware → build/stm32h723.elf ..."
@@ -437,6 +473,7 @@ dev-stm32u575: dev-stm32u575-gen
 	@echo "### [dev-stm32u575] Activating Kconfig from $(U575_DIR)/kconfig.conf ..."
 	@cp $(U575_DIR)/kconfig.conf .config
 	@$(MAKE) config-outputs
+	@echo "### [dev-stm32u575] Build mode: $(if $(filter 1,$(DEBUG)),DEBUG (DEBUG=1 — pass DEBUG=0 for release),RELEASE (DEBUG=0 — -Os -DNDEBUG, no LTO))"
 	@echo "### [dev-stm32u575] Cleaning stale build artifacts ..."
 	@$(MAKE) clean
 	@echo "### [dev-stm32u575] Building firmware → build/stm32u575.elf ..."
@@ -509,9 +546,10 @@ all: $(BOARD_PREREQS) $(BUILD)/$(TARGET_NAME).elf
 $(BUILD)/$(TARGET_NAME).elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo '**********************************************'
 	@echo 'Linking together...'
+	@echo 'Build mode: $(if $(filter 1,$(DEBUG)),DEBUG  (-g3 DWARF  no LTO),RELEASE (-flto  stripped))'
 	@echo '**********************************************'
 
-	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) $(CC_TARGET_PROP) -T"$(LINKER_SCRIPT)" -o $@ $(OBJS)
+	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) $(CC_TARGET_PROP) -T"$(LINKER_SCRIPT)" -Wl,-Map=$(BUILD)/$(TARGET_NAME).map -o $@ $(OBJS)
 
 	@echo '##############################################'
 	@echo ' '
@@ -550,7 +588,7 @@ $(BUILD)/%.o: %.s | $(BUILD) $(AUTOCONF)
 	@echo 'Building Assembly source: $< ...'
 	@echo '----------------------'
 	@mkdir -p $(dir $@)
-	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES)-c $< -o $@
+	@$(CC) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_OPTIMIZATION) $(CC_ASSEMBLER_FLAGS) $(CC_EXTRA_FLAGS) $(CC_INPUT_STD) $(CC_WARNINGS) $(CC_TARGET_PROP) $(INCLUDES) -c $< -o $@
 	@echo '**********************************************'
 
 # Rule for compiling app sources into build/app/
@@ -770,7 +808,28 @@ app-flash:
 
 
 ##############################################################
-.PHONY: print-interface print-target flash docs clean-docs \
+##############################################################
+# Project scaffolding
+# Creates a new application project at ../app.
+#
+#   make setup-project                     — blank starter (empty app_main.c)
+#   make setup-project EXAMPLE=stm32h723  — scaffold from examples/stm32h723
+#   make setup-project EXAMPLE=stm32f411
+#   make setup-project EXAMPLE=stm32u575
+#
+# If ../app already exists you will be prompted to overwrite.
+# Use FORCE=1 to skip the prompt (useful in scripts / CI):
+#   make setup-project EXAMPLE=stm32h723 FORCE=1
+EXAMPLE ?=
+FORCE   ?= 0
+
+.PHONY: setup-project
+setup-project:
+	@FORCE=$(FORCE) bash scripts/setup_project.sh "$(EXAMPLE)"
+##############################################################
+
+
+.PHONY: print-interface print-target flash docs clean-docs setup-project \
         dev-stm32f411 dev-stm32f411-gen dev-stm32f411-clean dev-stm32f411-flash \
         dev-stm32h723 dev-stm32h723-gen dev-stm32h723-clean dev-stm32h723-flash \
         dev-stm32u575 dev-stm32u575-gen dev-stm32u575-clean dev-stm32u575-flash \

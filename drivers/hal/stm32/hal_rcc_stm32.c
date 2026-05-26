@@ -132,7 +132,7 @@
  * The F4-only manual computation below works against the F4 RCC layout and
  * is compiled only for that family. */
 #if !defined(STM32H7) && !defined(STM32U5)
-__SECTION_OS __USED
+__SECTION_OS
 void SystemCoreClockUpdate(void)
 {
     uint32_t tmp, pllvco, pllp, pllm;
@@ -197,7 +197,7 @@ void SystemCoreClockUpdate(void)
  * USART3 @ 115200 baud is correct at PCLK1 = 64 MHz.
  * HAL_UART_Init() calls SystemCoreClockUpdate() internally which reads HSI.
  * PLL configuration can be added here once UART bring-up is confirmed. */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _stm32_clock_init(void)
 {
     return OS_ERR_NONE;
@@ -210,7 +210,7 @@ static int32_t _stm32_clock_init(void)
  * clock (fractional baud divider). The example board doesn't need 160 MHz
  * for the trustcore + heartbeat demo. Switch to PLL1 = 160 MHz here once
  * the U5 board calls for it (see BOARD_RCC_PLL* macros in board_config.h). */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _stm32_clock_init(void)
 {
     return OS_ERR_NONE;
@@ -218,7 +218,7 @@ static int32_t _stm32_clock_init(void)
 
 #else /* !STM32H7 && !STM32U5 — F4-family clock init */
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _stm32_clock_init(void)
 {
     RCC_OscInitTypeDef osc = {0};
@@ -260,21 +260,21 @@ static int32_t _stm32_clock_init(void)
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /** @brief Get SYSCLK frequency (Hz) */
-__SECTION_OS __USED
+__SECTION_OS
 static uint32_t _stm32_get_sysclk_hz(void)
 {
     return HAL_RCC_GetSysClockFreq();
 }
 
 /** @brief Get APB1 frequency (Hz) */
-__SECTION_OS __USED
+__SECTION_OS
 static uint32_t _stm32_get_apb1_hz(void)
 {
     return HAL_RCC_GetPCLK1Freq();
 }
 
 /** @brief Get APB2 frequency (Hz) */
-__SECTION_OS __USED
+__SECTION_OS
 static uint32_t _stm32_get_apb2_hz(void)
 {
     return HAL_RCC_GetPCLK2Freq();
@@ -285,7 +285,7 @@ static uint32_t _stm32_get_apb2_hz(void)
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /* ── Named per-peripheral clock enables ──────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_pwr_clk_en(void)
 {
 #if !defined(STM32H7) && !defined(STM32U5)
@@ -295,37 +295,37 @@ void hal_rcc_stm32_pwr_clk_en(void)
      * U5: PWR in AHB3, always clocked once VOS scaling is programmed. */
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_syscfg_clk_en(void) 
 { 
     __HAL_RCC_SYSCFG_CLK_ENABLE(); 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_usart1_clk_en(void) 
 {
     __HAL_RCC_USART1_CLK_ENABLE(); 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_usart2_clk_en(void) 
 {
     __HAL_RCC_USART2_CLK_ENABLE();
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_i2c1_clk_en(void)   
 { 
     __HAL_RCC_I2C1_CLK_ENABLE(); 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_spi1_clk_en(void)   
 { 
     __HAL_RCC_SPI1_CLK_ENABLE(); 
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_tim1_clk_en(void)   
 { 
     __HAL_RCC_TIM1_CLK_ENABLE(); 
@@ -340,7 +340,7 @@ void hal_rcc_stm32_tim1_clk_en(void)
  * Centralized control for all peripheral clock enables.
  * Prevents direct HAL_RCC_* usage in upper layers.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
 {
     switch (periph)
@@ -383,7 +383,7 @@ void hal_rcc_stm32_periph_clk_en(drv_rcc_periph_t periph)
  *
  * @param port GPIO port base address (GPIOA, GPIOB, ...)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_rcc_stm32_gpio_clk_en(void *port)
 {
     if      (port == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
@@ -416,7 +416,7 @@ static const drv_rcc_hal_ops_t _stm32_rcc_ops = {
  *
  * @param ops_out Output pointer to HAL ops table
  */
-__SECTION_OS __USED
+__SECTION_OS
 void _hal_rcc_stm32_register(const drv_rcc_hal_ops_t **ops_out)
 {
     *ops_out = &_stm32_rcc_ops;

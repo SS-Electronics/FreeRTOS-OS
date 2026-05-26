@@ -62,13 +62,13 @@
 /**
  * @brief GPIO handle storage
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_gpio_handle_t _gpio_handles[DRV_GPIO_MAX_LINES];
 
 /**
  * @brief Number of registered GPIO lines
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static uint8_t _gpio_registered_count = 0;
 
 /* ── Registration API ─────────────────────────────────────────────────── */
@@ -83,7 +83,7 @@ static uint8_t _gpio_registered_count = 0;
  *
  * @context Task (initialization phase)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_gpio_register(uint8_t dev_id, const drv_gpio_hal_ops_t *ops)
 {
     if (dev_id >= DRV_GPIO_MAX_LINES || ops == NULL)
@@ -119,7 +119,7 @@ int32_t drv_gpio_register(uint8_t dev_id, const drv_gpio_hal_ops_t *ops)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 drv_gpio_handle_t *drv_gpio_get_handle(uint8_t dev_id)
 {
     if (dev_id >= DRV_GPIO_MAX_LINES)
@@ -137,7 +137,7 @@ drv_gpio_handle_t *drv_gpio_get_handle(uint8_t dev_id)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_gpio_set_pin(uint8_t dev_id)
 {
     drv_gpio_handle_t *h = drv_gpio_get_handle(dev_id);
@@ -156,7 +156,7 @@ int32_t drv_gpio_set_pin(uint8_t dev_id)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_gpio_clear_pin(uint8_t dev_id)
 {
     drv_gpio_handle_t *h = drv_gpio_get_handle(dev_id);
@@ -175,7 +175,7 @@ int32_t drv_gpio_clear_pin(uint8_t dev_id)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_gpio_toggle_pin(uint8_t dev_id)
 {
     drv_gpio_handle_t *h = drv_gpio_get_handle(dev_id);
@@ -196,7 +196,7 @@ int32_t drv_gpio_toggle_pin(uint8_t dev_id)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_gpio_write_pin(uint8_t dev_id, uint8_t state)
 {
     drv_gpio_handle_t *h = drv_gpio_get_handle(dev_id);
@@ -215,7 +215,7 @@ int32_t drv_gpio_write_pin(uint8_t dev_id, uint8_t state)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 uint8_t drv_gpio_read_pin(uint8_t dev_id)
 {
     drv_gpio_handle_t *h = drv_gpio_get_handle(dev_id);

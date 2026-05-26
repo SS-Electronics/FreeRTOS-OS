@@ -72,7 +72,7 @@
  *
  * @pre GPIO clock must be enabled before calling this function
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_gpio_hw_init(drv_gpio_handle_t *h)
 {
     if (h == NULL || h->hw.port == NULL)
@@ -98,7 +98,7 @@ static int32_t stm32_gpio_hw_init(drv_gpio_handle_t *h)
  * @retval OS_ERR_NONE on success
  * @retval OS_ERR_OP   on failure
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_gpio_hw_deinit(drv_gpio_handle_t *h)
 {
     if (h == NULL || h->hw.port == NULL)
@@ -114,7 +114,7 @@ static int32_t stm32_gpio_hw_deinit(drv_gpio_handle_t *h)
  *
  * @param h Pointer to GPIO handle
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void stm32_gpio_set(drv_gpio_handle_t *h)
 {
     if (h != NULL && h->initialized)
@@ -126,7 +126,7 @@ static void stm32_gpio_set(drv_gpio_handle_t *h)
  *
  * @param h Pointer to GPIO handle
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void stm32_gpio_clear(drv_gpio_handle_t *h)
 {
     if (h != NULL && h->initialized)
@@ -138,7 +138,7 @@ static void stm32_gpio_clear(drv_gpio_handle_t *h)
  *
  * @param h Pointer to GPIO handle
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void stm32_gpio_toggle(drv_gpio_handle_t *h)
 {
     if (h != NULL && h->initialized)
@@ -153,7 +153,7 @@ static void stm32_gpio_toggle(drv_gpio_handle_t *h)
  * @retval 0 Pin is low or invalid handle
  * @retval 1 Pin is high
  */
-__SECTION_OS __USED
+__SECTION_OS
 static uint8_t stm32_gpio_read(drv_gpio_handle_t *h)
 {
     if (h == NULL || !h->initialized)
@@ -168,7 +168,7 @@ static uint8_t stm32_gpio_read(drv_gpio_handle_t *h)
  * @param h     Pointer to GPIO handle
  * @param state Desired pin state (0 = low, non-zero = high)
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void stm32_gpio_write(drv_gpio_handle_t *h, uint8_t state)
 {
     if (h == NULL || !h->initialized)
@@ -204,7 +204,7 @@ static const drv_gpio_hal_ops_t _stm32_gpio_ops = {
  *
  * @return Pointer to GPIO HAL ops structure
  */
-__SECTION_OS __USED
+__SECTION_OS
 const drv_gpio_hal_ops_t *hal_gpio_stm32_get_ops(void)
 {
     return &_stm32_gpio_ops;
@@ -227,7 +227,7 @@ const drv_gpio_hal_ops_t *hal_gpio_stm32_get_ops(void)
  *
  * @pre board_gpio_clk_enable(port) must be called before registration
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_gpio_stm32_set_config(drv_gpio_handle_t *h,
                                GPIO_TypeDef      *port,
                                uint16_t           pin,

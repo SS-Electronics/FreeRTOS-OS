@@ -60,7 +60,7 @@
 /**
  * @brief Internal I2C handle storage
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_iic_handle_t _iic_handles[BOARD_IIC_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
@@ -77,7 +77,7 @@ static drv_iic_handle_t _iic_handles[BOARD_IIC_COUNT];
  *
  * @context Task (initialization phase)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_iic_register(uint8_t dev_id,
                          const drv_iic_hal_ops_t *ops,
                          uint32_t clock_hz,
@@ -108,7 +108,7 @@ int32_t drv_iic_register(uint8_t dev_id,
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 drv_iic_handle_t *drv_iic_get_handle(uint8_t dev_id)
 {
     if (dev_id >= BOARD_IIC_COUNT)
@@ -131,7 +131,7 @@ drv_iic_handle_t *drv_iic_get_handle(uint8_t dev_id)
  *
  * @context Task (blocking call)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_iic_transmit(uint8_t dev_id, uint16_t dev_addr,
                          uint8_t reg_addr, const uint8_t *data, uint16_t len)
 {
@@ -159,7 +159,7 @@ int32_t drv_iic_transmit(uint8_t dev_id, uint16_t dev_addr,
  *
  * @context Task (blocking call)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_iic_receive(uint8_t dev_id, uint16_t dev_addr,
                         uint8_t reg_addr, uint8_t *data, uint16_t len)
 {
@@ -184,7 +184,7 @@ int32_t drv_iic_receive(uint8_t dev_id, uint16_t dev_addr,
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_iic_device_ready(uint8_t dev_id, uint16_t dev_addr)
 {
     if (dev_id >= BOARD_IIC_COUNT)

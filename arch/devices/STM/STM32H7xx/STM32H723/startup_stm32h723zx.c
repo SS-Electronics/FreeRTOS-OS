@@ -48,7 +48,7 @@ void SysTick_Handler(void)          __attribute__((weak, alias("Default_Handler"
 #include <board/irq_periph_handlers_generated.h>
 
 /* Vector table (goes into .isr_vector section at FLASH_BOOT origin) */
-__attribute__((section(".isr_vector")))
+__attribute__((section(".isr_vector"), used))
 const void* const g_pfnVectors[] =
 {
     /* ── System / Cortex-M7 core handlers ───────────────────────────────────── */
@@ -74,7 +74,7 @@ const void* const g_pfnVectors[] =
 };
 
 /* Reset Handler implementation */
-__SECTION_BOOT __USED __attribute__((noreturn)) void Reset_Handler(void)
+__SECTION_BOOT __attribute__((noreturn)) void Reset_Handler(void)
 {
     uint32_t *src, *dst;
 

@@ -159,21 +159,21 @@
 
 
 /* ── Module state ─────────────────────────────────────────────────────────── */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static sys_health_t _health;
 
 /* ── Hook counters (written from hook context) ────────────────────────────── */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static volatile uint32_t _stack_overflow_count = 0;
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static volatile uint32_t _malloc_fail_count    = 0;
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static volatile uint32_t _idle_tick_count      = 0;
 
 /* ── Internal: collect one task's metrics ─────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static void _collect_task(task_health_t *out, TaskHandle_t h, uint32_t tid)
 {
     out->handle    = h;
@@ -184,7 +184,7 @@ static void _collect_task(task_health_t *out, TaskHandle_t h, uint32_t tid)
 }
 
 /* ── Internal: scan the entire thread_list ────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static void _scan_tasks(void)
 {
     _health.task_count = 0;
@@ -203,7 +203,7 @@ static void _scan_tasks(void)
 }
 
 /* ── Internal: collect timer-daemon metrics ───────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static void _scan_timer_task(void)
 {
 #if (configUSE_TIMERS == 1)
@@ -221,7 +221,7 @@ static void _scan_timer_task(void)
 }
 
 /* ── Internal: heap snapshot ──────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static void _scan_heap(void)
 {
     _health.heap_free          = xPortGetFreeHeapSize();
@@ -229,14 +229,14 @@ static void _scan_heap(void)
 }
 
 /* ── Public: query API ────────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 const sys_health_t *task_mgr_get_health(void)
 {
     return &_health;
 }
 
 /* ── FreeRTOS application hooks ───────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
                                    StackType_t  **ppxIdleTaskStackBuffer,
                                    configSTACK_DEPTH_TYPE *pulIdleTaskStackSize)
@@ -248,7 +248,7 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
     *pulIdleTaskStackSize   = configMINIMAL_STACK_SIZE;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
                                     StackType_t  **ppxTimerTaskStackBuffer,
                                     configSTACK_DEPTH_TYPE *pulTimerTaskStackSize)
@@ -260,13 +260,13 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
     *pulTimerTaskStackSize   = configTIMER_TASK_STACK_DEPTH;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void vApplicationIdleHook(void)
 {
     _idle_tick_count++;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
     (void)xTask;
@@ -280,7 +280,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
     safety_enter_safe_state(SAFE_REASON_STACK_OVF);
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void vApplicationMallocFailedHook(void)
 {
     _malloc_fail_count++;
@@ -290,7 +290,7 @@ void vApplicationMallocFailedHook(void)
 }
 
 /* ── Service start ────────────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t task_mgr_start(void)
 {
     if (os_thread_create(thread_task_mgmt, "MGMT_TASK",
@@ -302,7 +302,7 @@ int32_t task_mgr_start(void)
 }
 
 /* ── Background monitor task ──────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 void thread_task_mgmt(void *arg)
 {
     (void)arg;

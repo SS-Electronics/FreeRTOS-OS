@@ -66,7 +66,7 @@
 /**
  * @brief SPI handle storage (owned by this module)
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_spi_handle_t _spi_handles[BOARD_SPI_COUNT];
 
 /* ── Registration API ─────────────────────────────────────────────────── */
@@ -87,7 +87,7 @@ static drv_spi_handle_t _spi_handles[BOARD_SPI_COUNT];
  *
  * @context Task (initialization phase)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_spi_register(uint8_t dev_id,
                          const drv_spi_hal_ops_t *ops,
                          uint32_t clock_hz,
@@ -118,7 +118,7 @@ int32_t drv_spi_register(uint8_t dev_id,
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 drv_spi_handle_t *drv_spi_get_handle(uint8_t dev_id)
 {
     if (dev_id >= BOARD_SPI_COUNT)
@@ -139,7 +139,7 @@ drv_spi_handle_t *drv_spi_get_handle(uint8_t dev_id)
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_spi_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
 {
     if (dev_id >= BOARD_SPI_COUNT || data == NULL)
@@ -164,7 +164,7 @@ int32_t drv_spi_transmit(uint8_t dev_id, const uint8_t *data, uint16_t len)
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_spi_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
 {
     if (dev_id >= BOARD_SPI_COUNT || data == NULL)
@@ -190,7 +190,7 @@ int32_t drv_spi_receive(uint8_t dev_id, uint8_t *data, uint16_t len)
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_spi_transfer(uint8_t dev_id,
                          const uint8_t *tx,
                          uint8_t *rx,

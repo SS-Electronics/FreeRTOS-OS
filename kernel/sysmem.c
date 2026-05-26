@@ -48,9 +48,9 @@ static uint8_t *__sbrk_heap_end = NULL;
  
 void *_sbrk(ptrdiff_t incr)
 {
-    extern uint8_t  _end;
-    extern uint8_t  _estack;
-    extern uint32_t _Min_Stack_Size;
+    extern uint8_t   _end;
+    extern uint32_t  _estack;
+    extern uint32_t  _Min_Stack_Size;
 
     const uint32_t stack_limit = (uint32_t)&_estack - (uint32_t)&_Min_Stack_Size;
     const uint8_t *max_heap    = (uint8_t *)stack_limit;

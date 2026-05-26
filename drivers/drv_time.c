@@ -68,7 +68,7 @@
  *
  * @context ISR (writer), Task (reader)
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 volatile uint32_t g_ms_ticks = 0;
 
 /* ── Systick-based utilities (always available) ───────────────────────── */
@@ -81,7 +81,7 @@ volatile uint32_t g_ms_ticks = 0;
  * @context Task/ISR
  * @reentrant Yes
  */
-__SECTION_OS __USED
+__SECTION_OS
 uint32_t drv_time_get_ticks(void)
 {
     return g_ms_ticks;
@@ -99,7 +99,7 @@ uint32_t drv_time_get_ticks(void)
  * @context Task only
  * @warning Busy-wait; blocks CPU execution
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_time_delay_ms(uint32_t ms)
 {
     uint32_t start = g_ms_ticks;
@@ -111,7 +111,7 @@ void drv_time_delay_ms(uint32_t ms)
 #if (NO_OF_TIMER > 0)
 
 /* Timer handle storage */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_timer_handle_t _timer_handles[NO_OF_TIMER];
 
 /**
@@ -124,7 +124,7 @@ static drv_timer_handle_t _timer_handles[NO_OF_TIMER];
  *
  * @context Task (initialization phase)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_timer_register(uint8_t dev_id, const drv_timer_hal_ops_t *ops)
 {
     if (dev_id >= NO_OF_TIMER || ops == NULL)
@@ -153,7 +153,7 @@ int32_t drv_timer_register(uint8_t dev_id, const drv_timer_hal_ops_t *ops)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 drv_timer_handle_t *drv_timer_get_handle(uint8_t dev_id)
 {
     if (dev_id >= NO_OF_TIMER)
@@ -169,7 +169,7 @@ drv_timer_handle_t *drv_timer_get_handle(uint8_t dev_id)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 uint32_t drv_timer_get_counter(uint8_t dev_id)
 {
     if (dev_id >= NO_OF_TIMER)
@@ -191,7 +191,7 @@ uint32_t drv_timer_get_counter(uint8_t dev_id)
  *
  * @context Task/ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_timer_set_counter(uint8_t dev_id, uint32_t val)
 {
     if (dev_id >= NO_OF_TIMER)

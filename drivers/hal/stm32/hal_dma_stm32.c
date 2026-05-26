@@ -113,10 +113,10 @@ static const IRQn_Type _dma2_irqn[8] = {
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Hardware contexts                                                         */
 /* ────────────────────────────────────────────────────────────────────────── */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_hw_dma_chan_ctx_t _dma1_ctx[8];
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_hw_dma_chan_ctx_t _dma2_ctx[8];
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -126,7 +126,7 @@ static drv_hw_dma_chan_ctx_t _dma2_ctx[8];
 /**
  * @brief DMA transfer complete callback (HAL → engine)
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _hal_cplt_cb(DMA_HandleTypeDef *hdma)
 {
     dma_complete_callback((dma_chan_t *)hdma->Parent);
@@ -135,7 +135,7 @@ static void _hal_cplt_cb(DMA_HandleTypeDef *hdma)
 /**
  * @brief DMA error callback (HAL → engine)
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _hal_error_cb(DMA_HandleTypeDef *hdma)
 {
     dma_error_callback((dma_chan_t *)hdma->Parent);
@@ -148,7 +148,7 @@ static void _hal_error_cb(DMA_HandleTypeDef *hdma)
 /**
  * @brief Convert generic DMA direction to HAL constant
  */
-__SECTION_OS __USED
+__SECTION_OS
 static uint32_t _hal_dir(dma_transfer_direction_t d)
 {
     switch (d) {
@@ -162,7 +162,7 @@ static uint32_t _hal_dir(dma_transfer_direction_t d)
 /**
  * @brief Convert bus width to HAL alignment
  */
-__SECTION_OS __USED
+__SECTION_OS
 static uint32_t _hal_align(dma_slave_buswidth_t w)
 {
     switch (w) {
@@ -179,7 +179,7 @@ static uint32_t _hal_align(dma_slave_buswidth_t w)
 /**
  * @brief Initialize DMA channel
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _chan_init(dma_chan_t *chan)
 {
     (void)chan;
@@ -189,7 +189,7 @@ static int32_t _chan_init(dma_chan_t *chan)
 /**
  * @brief Deinitialize DMA channel
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _chan_deinit(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
@@ -204,7 +204,7 @@ static int32_t _chan_deinit(dma_chan_t *chan)
 /**
  * @brief Configure DMA slave parameters
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _slave_config(dma_chan_t *chan, const dma_slave_config_t *cfg)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
@@ -242,7 +242,7 @@ static int32_t _slave_config(dma_chan_t *chan, const dma_slave_config_t *cfg)
 /**
  * @brief Start DMA transfer
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _dma_start(dma_chan_t *chan, dma_async_tx_descriptor_t *desc)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
@@ -259,7 +259,7 @@ static int32_t _dma_start(dma_chan_t *chan, dma_async_tx_descriptor_t *desc)
 /**
  * @brief Terminate all DMA transfers
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _terminate_all(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
@@ -270,7 +270,7 @@ static int32_t _terminate_all(dma_chan_t *chan)
 /**
  * @brief Pause DMA channel
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _pause(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
@@ -282,7 +282,7 @@ static int32_t _pause(dma_chan_t *chan)
 /**
  * @brief Resume DMA channel
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _resume(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
@@ -293,7 +293,7 @@ static int32_t _resume(dma_chan_t *chan)
 /**
  * @brief Get remaining bytes in DMA transfer
  */
-__SECTION_OS __USED
+__SECTION_OS
 static uint32_t _get_residue(dma_chan_t *chan)
 {
     drv_hw_dma_chan_ctx_t *ctx = (drv_hw_dma_chan_ctx_t *)chan->hw_ctx;
@@ -319,14 +319,14 @@ static const dma_chan_hal_ops_t _stm32_ops = {
 /* Device instances                                                          */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 dma_device_t hal_dma1_device = {
     .name        = "DMA1",
     .nr_channels = 8,
     .ops         = &_stm32_ops,
 };
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 dma_device_t hal_dma2_device = {
     .name        = "DMA2",
     .nr_channels = 8,
@@ -340,7 +340,7 @@ dma_device_t hal_dma2_device = {
 /**
  * @brief Initialize STM32 DMA subsystem
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_dma_stm32_init(void)
 {
     __HAL_RCC_DMA1_CLK_ENABLE();
@@ -367,7 +367,7 @@ void hal_dma_stm32_init(void)
  * @param ctrl_idx   DMA controller index (1 or 2)
  * @param stream_idx DMA stream index (0–7)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_dma_stm32_irq_dispatch(uint8_t ctrl_idx, uint8_t stream_idx)
 {
     if (stream_idx >= 8)

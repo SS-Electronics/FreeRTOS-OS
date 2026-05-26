@@ -160,18 +160,18 @@
 
 #define SHELL_PROMPT "\r\nOS >"
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static char     _line_buf[SHELL_LINE_BUF_LEN];
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static uint16_t _line_pos;
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static char     _out_buf[SHELL_OUT_BUF_LEN];
 
 
 /* ── TX helper (UART ringbuffer backend) ────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static void _shell_write(const char *str, uint16_t len)
 {
     if (str == NULL || len == 0)
@@ -191,7 +191,7 @@ static void _shell_write(const char *str, uint16_t len)
 
 /* ── Boot banner printer ────────────────────────────────────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 static void _print_banner(void)
 {
     extern uint32_t SystemCoreClock;
@@ -237,7 +237,7 @@ os_thread_delay(100);
 
 
 /* ── Command processing ─────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static void _shell_process_line(void)
 {
     BaseType_t more;
@@ -267,7 +267,7 @@ static void _shell_process_line(void)
 }
 
 /* ── Shell task ─────────────────────────────────────────────────────────── */
-__SECTION_OS __USED
+__SECTION_OS
 static void _os_shell_task(void *arg)
 {
     (void)arg;
@@ -344,7 +344,7 @@ static void _os_shell_task(void *arg)
 
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 int32_t os_shell_mgmt_start(void)
 {
     int32_t tid = os_thread_create(_os_shell_task,

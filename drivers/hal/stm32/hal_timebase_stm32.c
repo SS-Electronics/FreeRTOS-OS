@@ -91,7 +91,7 @@
 
 /* H7: TIM6 (APB1 basic timer) — dispatched via TIM6_DAC_IRQHandler in generated code.
  * F4: TIM1 (APB2 advanced timer) — dispatched via TIM1_UP_TIM10_IRQHandler. */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static TIM_HandleTypeDef _htim_base;
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -119,7 +119,7 @@ static TIM_HandleTypeDef _htim_base;
  * @note
  * Overrides the weak HAL_InitTick() implementation.
  */
-__SECTION_OS __USED
+__SECTION_OS
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 {
     uint32_t          uwTimclock;
@@ -251,7 +251,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
  * @note
  * Does not stop the timer counter itself.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void HAL_SuspendTick(void)
 {
     __HAL_TIM_DISABLE_IT(&_htim_base, TIM_IT_UPDATE);
@@ -263,7 +263,7 @@ void HAL_SuspendTick(void)
  * @details
  * Re-enables TIM1 update interrupt, restoring HAL tick updates.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void HAL_ResumeTick(void)
 {
     __HAL_TIM_ENABLE_IT(&_htim_base, TIM_IT_UPDATE);
@@ -300,7 +300,7 @@ void HAL_ResumeTick(void)
  * - Tick update is unconditional (works before IRQ subsystem init)
  * - IRQ dispatch is conditional (depends on irq_desc setup)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_timebase_stm32_irq_handler(void)
 {
     BaseType_t pxHPT = pdFALSE;

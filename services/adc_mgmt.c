@@ -106,19 +106,19 @@ typedef struct {
     uint32_t          decimate_cnt;   /* ISR sample counter */
 } adc_mgmt_ch_t;
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static adc_mgmt_ch_t _ch[BOARD_ADC_COUNT];
 
 /* Ring buffer storage (flat arrays behind the ringbuffer structs) */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static uint8_t _rb_storage[BOARD_ADC_COUNT][ADC_MGMT_RING_BUF_SIZE * sizeof(uint16_t)];
 
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static struct ringbuffer _rb[BOARD_ADC_COUNT];
 
 /* ── ISR callback — fires in interrupt context ────────────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 static void _adc_data_cb(irq_id_t id,
                          void    *data,
                          void    *arg,
@@ -147,7 +147,7 @@ static void _adc_data_cb(irq_id_t id,
 
 /* ── Management thread ────────────────────────────────────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 static void adc_mgmt_thread(void *arg)
 {
     (void)arg;
@@ -216,7 +216,7 @@ static void adc_mgmt_thread(void *arg)
 #define PROC_SERVICE_ADC_MGMT_PRIORITY    1
 #endif
 
-__SECTION_OS __USED
+__SECTION_OS
 int32_t adc_mgmt_start(void)
 {
     int32_t tid = os_thread_create(adc_mgmt_thread,
@@ -227,7 +227,7 @@ int32_t adc_mgmt_start(void)
     return (tid >= 0) ? OS_ERR_NONE : OS_ERR_OP;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int32_t adc_mgmt_read_sample(uint8_t dev_id, uint16_t *sample)
 {
     if (dev_id >= BOARD_ADC_COUNT || sample == NULL)
@@ -247,7 +247,7 @@ int32_t adc_mgmt_read_sample(uint8_t dev_id, uint16_t *sample)
     return OS_ERR_NONE;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 uint32_t adc_mgmt_available(uint8_t dev_id)
 {
     if (dev_id >= BOARD_ADC_COUNT || _ch[dev_id].sample_rb == NULL)

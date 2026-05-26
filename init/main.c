@@ -114,7 +114,7 @@ static void _boot_enter(boot_phase_t phase, const char *name)
 
 /* ── OS boot entry point ──────────────────────────────────────────────────── */
 
-__SECTION_BOOT __USED
+__SECTION_BOOT
 void main(void)
 {
     int32_t st;

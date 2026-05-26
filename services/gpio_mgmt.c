@@ -81,7 +81,7 @@
 /**
  * @brief GPIO management command queue handle
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static QueueHandle_t _mgmt_queue = NULL;
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -100,7 +100,7 @@ static QueueHandle_t _mgmt_queue = NULL;
  *  3. HAL ops registration (platform-specific backend)
  *  4. Continuous processing of GPIO command queue
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void gpio_mgmt_thread(void *arg)
 {
     (void)arg;
@@ -205,7 +205,7 @@ static void gpio_mgmt_thread(void *arg)
  * @return OS_ERR_MEM_OF if queue allocation fails
  * @return OS_ERR_OP if thread creation fails
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t gpio_mgmt_start(void)
 {
     _mgmt_queue = xQueueCreate(GPIO_MGMT_QUEUE_DEPTH,
@@ -230,7 +230,7 @@ int32_t gpio_mgmt_start(void)
  *
  * @return QueueHandle_t queue reference or NULL if not initialized
  */
-__SECTION_OS __USED
+__SECTION_OS
 QueueHandle_t gpio_mgmt_get_queue(void)
 {
     return _mgmt_queue;
@@ -247,7 +247,7 @@ QueueHandle_t gpio_mgmt_get_queue(void)
  * @return OS_ERR_NONE on success
  * @return OS_ERR_OP if queue is not available or send fails
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t gpio_mgmt_post(uint8_t gpio_id,
                        gpio_mgmt_cmd_t cmd,
                        uint8_t state,

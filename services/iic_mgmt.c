@@ -112,7 +112,7 @@
 /**
  * @brief I2C management command queue handle
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static QueueHandle_t _mgmt_queue = NULL;
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -130,7 +130,7 @@ static QueueHandle_t _mgmt_queue = NULL;
  * @param arg    drv_iic_handle_t pointer
  * @param pxHPT  FreeRTOS ISR context switch flag
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _iic_done_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
 {
     (void)id;
@@ -148,7 +148,7 @@ static void _iic_done_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
  * @details
  * Signals task wake-up on bus error, arbitration loss, or timeout.
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _iic_err_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
 {
     (void)id;
@@ -176,7 +176,7 @@ static void _iic_err_cb(irq_id_t id, void *data, void *arg, BaseType_t *pxHPT)
  *   3. Subscribes to IRQ completion notifications
  *   4. Processes queued I2C requests sequentially
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void iic_mgmt_thread(void *arg)
 {
     (void)arg;
@@ -321,7 +321,7 @@ notify:
 /**
  * @brief Start I2C management service
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t iic_mgmt_start(void)
 {
     _mgmt_queue = xQueueCreate(IIC_MGMT_QUEUE_DEPTH,
@@ -343,7 +343,7 @@ int32_t iic_mgmt_start(void)
 /**
  * @brief Get I2C management queue handle
  */
-__SECTION_OS __USED
+__SECTION_OS
 QueueHandle_t iic_mgmt_get_queue(void)
 {
     return _mgmt_queue;
@@ -352,7 +352,7 @@ QueueHandle_t iic_mgmt_get_queue(void)
 /**
  * @brief Asynchronous I2C transmit
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t iic_mgmt_async_transmit(uint8_t bus_id, uint16_t dev_addr,
                                  uint8_t reg_addr, uint8_t use_reg,
                                  const uint8_t *data, uint16_t len)
@@ -379,7 +379,7 @@ int32_t iic_mgmt_async_transmit(uint8_t bus_id, uint16_t dev_addr,
 /**
  * @brief Synchronous I2C transmit
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t iic_mgmt_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
                                 uint8_t reg_addr, uint8_t use_reg,
                                 const uint8_t *data, uint16_t len,
@@ -413,7 +413,7 @@ int32_t iic_mgmt_sync_transmit(uint8_t bus_id, uint16_t dev_addr,
 /**
  * @brief Synchronous I2C device probe
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
                              uint32_t timeout_ms)
 {
@@ -445,7 +445,7 @@ int32_t iic_mgmt_sync_probe(uint8_t bus_id, uint16_t dev_addr,
 /**
  * @brief Asynchronous I2C receive
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t iic_mgmt_async_receive(uint8_t bus_id, uint16_t dev_addr,
                                uint8_t reg_addr, uint8_t use_reg,
                                uint8_t *data, uint16_t len)
@@ -472,7 +472,7 @@ int32_t iic_mgmt_async_receive(uint8_t bus_id, uint16_t dev_addr,
 /**
  * @brief Synchronous I2C receive
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t iic_mgmt_sync_receive(uint8_t bus_id, uint16_t dev_addr,
                                uint8_t reg_addr, uint8_t use_reg,
                                uint8_t *data, uint16_t len,

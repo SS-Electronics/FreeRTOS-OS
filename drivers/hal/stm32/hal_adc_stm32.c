@@ -95,7 +95,7 @@ static drv_adc_handle_t *_find_handle_by_instance(ADC_TypeDef *inst)
 
 /* ── HAL ops implementations ──────────────────────────────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _stm32_adc_hw_init(drv_adc_handle_t *h)
 {
     ADC_HandleTypeDef *hadc = &h->hw.hadc;
@@ -165,7 +165,7 @@ static int32_t _stm32_adc_hw_init(drv_adc_handle_t *h)
     return OS_ERR_NONE;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _stm32_adc_hw_deinit(drv_adc_handle_t *h)
 {
     HAL_ADC_Stop_IT(&h->hw.hadc);
@@ -174,7 +174,7 @@ static int32_t _stm32_adc_hw_deinit(drv_adc_handle_t *h)
     return _hal_to_os_err(st);
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _stm32_adc_start(drv_adc_handle_t *h)
 {
     __HAL_ADC_ENABLE_IT(&h->hw.hadc, ADC_IT_EOC);
@@ -182,7 +182,7 @@ static int32_t _stm32_adc_start(drv_adc_handle_t *h)
     return _hal_to_os_err(st);
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _stm32_adc_stop(drv_adc_handle_t *h)
 {
     HAL_StatusTypeDef st = HAL_ADC_Stop_IT(&h->hw.hadc);

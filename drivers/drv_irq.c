@@ -73,7 +73,7 @@
  *
  * @context Early initialization
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_cpu_interrupt_prio_set(void)
 {
 #if (__ARM_ARCH_7A__ == 0U)
@@ -89,7 +89,7 @@ void drv_cpu_interrupt_prio_set(void)
  *
  * @context Any (typically fatal error handling)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void reset_mcu(void)
 {
     NVIC_SystemReset();
@@ -103,7 +103,7 @@ void reset_mcu(void)
  *
  * @context Task (initialization/config phase)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_irq_enable(int32_t irqn, uint32_t preempt_priority)
 {
     HAL_NVIC_SetPriority((IRQn_Type)irqn, preempt_priority, 0);
@@ -118,7 +118,7 @@ void drv_irq_enable(int32_t irqn, uint32_t preempt_priority)
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_irq_set_priority(int32_t irqn, uint32_t preempt_priority)
 {
     HAL_NVIC_SetPriority((IRQn_Type)irqn, preempt_priority, 0);
@@ -131,7 +131,7 @@ void drv_irq_set_priority(int32_t irqn, uint32_t preempt_priority)
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_irq_disable(int32_t irqn)
 {
     HAL_NVIC_DisableIRQ((IRQn_Type)irqn);
@@ -152,7 +152,7 @@ void drv_irq_disable(int32_t irqn)
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_irq_register(irq_id_t id, irq_notify_cb_t cb, void *arg)
 {
     return irq_register(id, cb, arg);
@@ -166,7 +166,7 @@ int32_t drv_irq_register(irq_id_t id, irq_notify_cb_t cb, void *arg)
  *
  * @context Task
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_irq_dispatch(irq_id_t id, void *data)
 {
     __do_IRQ(id, data);
@@ -181,7 +181,7 @@ void drv_irq_dispatch(irq_id_t id, void *data)
  *
  * @context ISR
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_irq_dispatch_from_isr(irq_id_t id, void *data, BaseType_t *pxHPT)
 {
     __do_IRQ_from_isr(id, data, pxHPT);

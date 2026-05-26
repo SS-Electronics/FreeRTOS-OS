@@ -41,7 +41,7 @@
 #if defined(BOARD_ADC_COUNT) && (BOARD_ADC_COUNT > 0)
 
 /* ── Handle storage ───────────────────────────────────────────────────── */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static drv_adc_handle_t _adc_handles[BOARD_ADC_COUNT];
 
 /* ── Registration ─────────────────────────────────────────────────────── */
@@ -51,7 +51,7 @@ static drv_adc_handle_t _adc_handles[BOARD_ADC_COUNT];
  *
  * Called by adc_mgmt_thread at startup.
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_adc_register(uint8_t dev_id,
                          const drv_adc_hal_ops_t *ops)
 {
@@ -74,7 +74,7 @@ int32_t drv_adc_register(uint8_t dev_id,
 
 /* ── Handle accessor ──────────────────────────────────────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 drv_adc_handle_t *drv_adc_get_handle(uint8_t dev_id)
 {
     if (dev_id >= BOARD_ADC_COUNT)
@@ -84,7 +84,7 @@ drv_adc_handle_t *drv_adc_get_handle(uint8_t dev_id)
 
 /* ── Start / Stop ─────────────────────────────────────────────────────── */
 
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_adc_start(uint8_t dev_id)
 {
     drv_adc_handle_t *h = drv_adc_get_handle(dev_id);
@@ -93,7 +93,7 @@ int32_t drv_adc_start(uint8_t dev_id)
     return h->ops->start(h);
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_adc_stop(uint8_t dev_id)
 {
     drv_adc_handle_t *h = drv_adc_get_handle(dev_id);

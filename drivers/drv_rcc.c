@@ -84,7 +84,7 @@ void hal_rcc_stm32_gpio_clk_en(void *port);
  * @details
  * Populated during initialization via vendor-specific registration.
  */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static const drv_rcc_hal_ops_t *_ops;
 
 /**
@@ -95,7 +95,7 @@ static const drv_rcc_hal_ops_t *_ops;
  *
  * @context Task (initialization phase)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_rcc_register(const drv_rcc_hal_ops_t *ops)
 {
     if (ops == NULL)
@@ -118,7 +118,7 @@ int32_t drv_rcc_register(const drv_rcc_hal_ops_t *ops)
  *
  * @context Task (early initialization)
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t drv_rcc_clock_init(void)
 {
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
@@ -139,7 +139,7 @@ int32_t drv_rcc_clock_init(void)
  * @context Task/ISR
  * @reentrant Yes
  */
-__SECTION_OS __USED
+__SECTION_OS
 uint32_t drv_rcc_get_sysclk_hz(void)
 {
     if (_ops && _ops->get_sysclk_hz)
@@ -155,7 +155,7 @@ uint32_t drv_rcc_get_sysclk_hz(void)
  * @context Task/ISR
  * @reentrant Yes
  */
-__SECTION_OS __USED
+__SECTION_OS
 uint32_t drv_rcc_get_apb1_hz(void)
 {
     if (_ops && _ops->get_apb1_hz)
@@ -171,7 +171,7 @@ uint32_t drv_rcc_get_apb1_hz(void)
  * @context Task/ISR
  * @reentrant Yes
  */
-__SECTION_OS __USED
+__SECTION_OS
 uint32_t drv_rcc_get_apb2_hz(void)
 {
     if (_ops && _ops->get_apb2_hz)
@@ -186,7 +186,7 @@ uint32_t drv_rcc_get_apb2_hz(void)
  *
  * @context Task (typically during initialization)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_rcc_periph_clk_en(drv_rcc_periph_t periph)
 {
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)
@@ -201,7 +201,7 @@ void drv_rcc_periph_clk_en(drv_rcc_periph_t periph)
  *
  * @context Task (typically during initialization)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void drv_rcc_gpio_clk_en(void *port)
 {
 #if (CONFIG_DEVICE_VARIANT == MCU_VAR_STM)

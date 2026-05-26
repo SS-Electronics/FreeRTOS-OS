@@ -78,7 +78,7 @@
  * @retval OS_ERR_NONE Success
  * @retval OS_ERR_OP   Failure
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
 {
     return (s == HAL_OK) ? OS_ERR_NONE : OS_ERR_OP;
@@ -96,7 +96,7 @@ static int32_t _hal_to_os_err(HAL_StatusTypeDef s)
  * @retval OS_ERR_NONE Success
  * @retval OS_ERR_OP   Failure
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
 {
     if (h == NULL)
@@ -156,7 +156,7 @@ static int32_t stm32_iic_hw_init(drv_iic_handle_t *h)
  * @retval OS_ERR_NONE Success
  * @retval OS_ERR_OP   Failure
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_iic_hw_deinit(drv_iic_handle_t *h)
 {
     if (h == NULL)
@@ -182,7 +182,7 @@ static int32_t stm32_iic_hw_deinit(drv_iic_handle_t *h)
 /**
  * @brief Blocking I2C transmit
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_iic_transmit(drv_iic_handle_t *h,
                                   uint16_t dev_addr,
                                   uint8_t  reg_addr,
@@ -213,7 +213,7 @@ static int32_t stm32_iic_transmit(drv_iic_handle_t *h,
 /**
  * @brief Blocking I2C receive
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_iic_receive(drv_iic_handle_t *h,
                                  uint16_t dev_addr,
                                  uint8_t  reg_addr,
@@ -243,7 +243,7 @@ static int32_t stm32_iic_receive(drv_iic_handle_t *h,
 /**
  * @brief Check if I2C device is ready
  */
-__SECTION_OS __USED
+__SECTION_OS
 static int32_t stm32_iic_is_device_ready(drv_iic_handle_t *h,
                                          uint16_t dev_addr,
                                          uint32_t timeout_ms)
@@ -301,7 +301,7 @@ void hal_iic_stm32_set_config(drv_iic_handle_t *h,
  * Detects completion by observing state transition to READY.
  * Dispatches TX_DONE or RX_DONE accordingly.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
 {
     for (uint8_t id = 0; id < BOARD_IIC_COUNT; id++)
@@ -336,7 +336,7 @@ void hal_iic_stm32_ev_irq_handler(I2C_TypeDef *instance)
  * @details
  * Dispatches error event after HAL error handling.
  */
-__SECTION_OS __USED
+__SECTION_OS
 void hal_iic_stm32_er_irq_handler(I2C_TypeDef *instance)
 {
     for (uint8_t id = 0; id < BOARD_IIC_COUNT; id++)

@@ -54,24 +54,24 @@
 /* ── Global device registry ──────────────────────────────────────────────── */
 
 /** @brief Global list of registered DMA devices */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static LIST_NODE_HEAD(_dev_list);
 
 /** @brief Number of registered DMA devices */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static uint8_t _dev_count = 0;
 
 /* ── Cookie allocator ───────────────────────────────────────────────────── */
 
 /** @brief Next cookie value */
-__SECTION_OS_DATA __USED
+__SECTION_OS_DATA
 static dma_cookie_t _next_cookie = DMA_MIN_COOKIE;
 
 /**
  * @brief Allocate a unique DMA cookie
  * @return Cookie identifier
  */
-__SECTION_OS __USED
+__SECTION_OS
 static dma_cookie_t _cookie_alloc(void)
 {
     dma_cookie_t c = _next_cookie++;
@@ -85,7 +85,7 @@ static dma_cookie_t _cookie_alloc(void)
 /**
  * @brief Allocate descriptor from channel pool
  */
-__SECTION_OS __USED
+__SECTION_OS
 static dma_async_tx_descriptor_t *_desc_alloc(dma_chan_t *chan)
 {
     for (int i = 0; i < DMA_DESC_POOL_SIZE; i++)
@@ -104,7 +104,7 @@ static dma_async_tx_descriptor_t *_desc_alloc(dma_chan_t *chan)
 /**
  * @brief Free descriptor back to pool
  */
-__SECTION_OS __USED
+__SECTION_OS
 static void _desc_free(dma_async_tx_descriptor_t *desc)
 {
     desc->state = DMA_DESC_FREE;
@@ -118,7 +118,7 @@ static void _desc_free(dma_async_tx_descriptor_t *desc)
  * @param dev Pointer to DMA device structure
  * @return OS_ERR_NONE on success
  */
-__SECTION_OS __USED
+__SECTION_OS
 int32_t dma_register_device(dma_device_t *dev)
 {
     if (!dev || !dev->ops || _dev_count >= DMA_MAX_DEVICES)
@@ -155,7 +155,7 @@ int32_t dma_register_device(dma_device_t *dev)
 /**
  * @brief Request a DMA channel by name and ID
  */
-__SECTION_OS __USED
+__SECTION_OS
 dma_chan_t *dma_request_chan(const char *dev_name, uint8_t chan_id)
 {
     if (!dev_name)
@@ -186,7 +186,7 @@ dma_chan_t *dma_request_chan(const char *dev_name, uint8_t chan_id)
 /**
  * @brief Release DMA channel
  */
-__SECTION_OS __USED
+__SECTION_OS
 void dma_release_chan(dma_chan_t *chan)
 {
     if (!chan)
@@ -196,7 +196,7 @@ void dma_release_chan(dma_chan_t *chan)
     chan->state = DMA_CHAN_IDLE;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void dmaengine_terminate_all(dma_chan_t *chan)
 {
     if (!chan || !chan->device || !chan->device->ops->terminate_all)
@@ -205,7 +205,7 @@ void dmaengine_terminate_all(dma_chan_t *chan)
     chan->active_desc = NULL;
 }
 
-__SECTION_OS __USED
+__SECTION_OS
 void dma_async_issue_pending(dma_chan_t *chan)
 {
     if (!chan || !chan->device || !chan->device->ops->start)
@@ -229,7 +229,7 @@ void dma_async_issue_pending(dma_chan_t *chan)
 /**
  * @brief DMA transfer complete callback (called from ISR)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void dma_complete_callback(dma_chan_t *chan)
 {
     if (!chan)
@@ -262,7 +262,7 @@ void dma_complete_callback(dma_chan_t *chan)
 /**
  * @brief DMA error callback (called from ISR)
  */
-__SECTION_OS __USED
+__SECTION_OS
 void dma_error_callback(dma_chan_t *chan)
 {
     if (!chan)
