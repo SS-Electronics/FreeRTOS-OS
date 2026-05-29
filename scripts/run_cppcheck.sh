@@ -192,7 +192,13 @@ cleanup() {
         -not -path "*/build/*" \
         -delete 2>/dev/null || true
     # Clean up DUMP_DIR itself (intermediate artefacts, not committed)
-    [[ -d "${OUTPUT_DIR}/dumps" ]] && rm -rf "${OUTPUT_DIR}/dumps"
+    if [[ -d "${OUTPUT_DIR}/dumps" ]]; then
+        rm -rf "${OUTPUT_DIR}/dumps"
+    fi
+    # Never let the trap's last command leak a non-zero status over the
+    # script's real exit code (e.g. a false [[ -d ]] test → exit 1 on a
+    # clean, error-free --severity=warning run).
+    return 0
 }
 trap cleanup EXIT
 

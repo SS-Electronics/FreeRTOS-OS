@@ -166,6 +166,19 @@ SECTIONS
     __axi_data_end = .;
   } > AXI_SRAM
 
+  /* TFLite Micro tensor arena — too large for DTCM, lives in AXI SRAM.
+   * Opt-in via __attribute__((section(".inference_arena"))) in the ECG app.
+   * NOLOAD: uninitialised scratch, not zeroed at boot (the interpreter owns it). */
+  .inference_arena (NOLOAD) :
+  {
+    . = ALIGN(16);
+    __inference_arena_start = .;
+    KEEP(*(.inference_arena))
+    KEEP(*(.inference_arena*))
+    . = ALIGN(16);
+    __inference_arena_end = .;
+  } > AXI_SRAM
+
   /* Uninitialized data (BSS) */
   .bss (NOLOAD) :
   {
