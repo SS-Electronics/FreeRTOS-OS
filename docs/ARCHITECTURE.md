@@ -198,6 +198,54 @@ byte-identical outputs.  CI verifies this so generator drift is caught.
 
 ---
 
+## Configuration Model — Enabling & Disabling Features {#configuration-model}
+
+A peripheral or service is configured by **two inputs**, each owning a
+distinct concern.  Keeping them orthogonal is what makes the OS portable
+across MCUs without editing C source.
+
+| Input | Owns | Edited with |
+|---|---|---|
+| **Board XML** (`<app>/board/<board>.xml`) | *Instances* — which UART/I²C/SPI/GPIO exist on **this board**, their pins, alternate functions, baud rates, IRQ priorities. | A text editor; regenerate with `make dev-<target>-gen`. |
+| **Kconfig** (`<app>/kconfig.conf` → `autoconf.h`) | *Capabilities* — target MCU, clock tree, which vendor HAL modules compile (`CONFIG_HAL_*_MODULE_ENABLED`), which service threads link in (`CONFIG_INC_SERVICE_*`), RTOS tuning, IPC byte sizes, `CONFIG_NET`. | `make menuconfig`, then `make config-outputs`. |
+
+### Single source of truth per concern {#single-source-of-truth}
+
+To **add** a communication peripheral on a board you describe it **once** in
+the board XML.  The generator emits the instance table, the handle externs,
+the pin-mux, the clock enables, and `BOARD_<PERIPH>_COUNT`.  Service code keys
+off these generated counts (e.g. `iic-scan` reads `BOARD_IIC_COUNT`), so there
+is no second list of instances to keep in sync.
+
+Kconfig only answers *“is this peripheral class and its service compiled into
+the image at all?”* — a build-size switch, not a per-instance description.
+The two never restate the same fact: pins/instances live **only** in XML;
+module/service link-in lives **only** in Kconfig.
+
+### Worked examples {#config-worked-examples}
+
+* **Disable a peripheral on one board** — delete its element from that board's
+  XML and regenerate.  The pin-mux, clock enable and handle disappear; nothing
+  else changes.  No `#ifdef` edits in application code.
+
+* **Mutually-exclusive pins (guard attribute)** — when two peripherals share a
+  pin, the XML element carries a `guard` expression.  On the H723, SPI1 MOSI
+  (PA7) and RMII `CRS_DV` share PA7, so the `<spi>` element is
+  `guard="!defined(CONFIG_NET)"`: enabling networking (`CONFIG_NET=y`)
+  automatically compiles SPI out and frees the pin.  The conflict is resolved
+  in the board description, not in driver code.
+
+* **Networking identity** — all lwIP addresses (IP, netmask, gateway, MAC) live
+  in one place, `lwipopts.h` (`NET_IP_ADDR*`, `NET_MAC_ADDR*`, …).  The netif
+  service and the Ethernet glue both read those macros, so re-IP-ing a board is
+  a single-file edit.
+
+* **A service with no hardware** — task-manager, watchdog and shell are pure
+  software services; they are gated by `CONFIG_INC_SERVICE_*` alone and need no
+  XML entry.
+
+---
+
 ## Driver Layer {#driver-layer}
 
 The driver layer (`drivers/drv_*.c` + `include/drivers/drv_*.h`) defines

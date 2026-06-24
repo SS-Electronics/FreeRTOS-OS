@@ -5,15 +5,16 @@
  *
  * @author      Subhajit Roy <subhajitroy005@gmail.com>
  * @module      STM32 HAL
- * @info        Implements drv_eth.h on the STM32H7 ETH peripheral driving the
- *              on-board LAN8742 PHY over RMII. Owns the DMA descriptors and
- *              packet buffers (placed in D2 SRAM, made non-cacheable by the
- *              MPU), the RMII pin mux and the PHY auto-negotiation. RX is
- *              interrupt-driven: HAL_ETH_RxCpltCallback gives a semaphore the
- *              net service thread blocks on (drv_eth_rx_wait).
- * @dependency  stm32h7xx-hal-driver (ETH, GPIO, CORTEX/MPU), drv_eth.h
+ * @info        STM32-specific HAL backend implementing the generic driver vtables for STM32F4 / STM32H7.
+ * @dependency  stm32f4xx-hal-driver, stm32h7xx-hal-driver
  *
  * @details
+ * Implements drv_eth.h on the STM32H7 ETH peripheral, driving the on-board
+ * LAN8742 PHY over RMII. Owns the DMA descriptors and packet buffers (placed
+ * in D2 SRAM, made non-cacheable by the MPU), the RMII pin mux and the PHY
+ * auto-negotiation. RX is interrupt-driven: HAL_ETH_RxCpltCallback gives a
+ * semaphore the net service thread blocks on (drv_eth_rx_wait).
+ *
  * Buffer ownership
  * ────────────────
  * HAL_ETH_ReadData() drives three weak callbacks that we override globally

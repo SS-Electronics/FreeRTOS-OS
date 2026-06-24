@@ -138,6 +138,10 @@ header "Collecting source files"
 #       surfaces noise (e.g. logf(0) false-positives in arm_logsumexp_*.c
 #       and printf-format warnings in CMSIS-DSP examples) that aren't ours
 #       to fix.
+# NOTE: net/ is included for the project-owned lwIP glue (ethernetif.c,
+#       services/, port/), but net/lwip/ is the upstream lwIP source tree
+#       (vendor code, incl. contrib/ Windows ports, ppp/ and unit tests) and
+#       is excluded below for the same reason as lib/.
 PROJECT_SRC_DIRS=(
     "${PROJECT_ROOT}/drivers"
     "${PROJECT_ROOT}/drv_app"
@@ -164,6 +168,7 @@ for dir in "${PROJECT_SRC_DIRS[@]}"; do
             TOTAL_FILES=$((TOTAL_FILES + 1))
         done < <(find "$dir" -name "*.c" \
             -not -path "*/build/*" \
+            -not -path "*/net/lwip/*" \
             -print0 2>/dev/null)
     fi
 done

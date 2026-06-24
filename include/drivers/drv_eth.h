@@ -4,12 +4,14 @@
  * @ingroup     drivers
  *
  * @author      Subhajit Roy <subhajitroy005@gmail.com>
- * @module      Drivers
- * @info        Thin frame-level API the lwIP ethernetif glue builds on. The
+ * @module      Driver Layer
+ * @info        Vendor-agnostic driver vtables; concrete backends live under drivers/hal/<vendor>/.
+ * @dependency  HAL backend (selected by CONFIG_DEVICE_VARIANT)
+ *
+ * @details
  *              STM32H7 backend (drivers/hal/stm32/hal_eth_stm32.c) owns the
  *              ETH peripheral, RMII pins, MPU setup for the D2 buffers, and
  *              the LAN8742 PHY. RX is interrupt-driven (drv_eth_rx_wait).
- * @dependency  STM32H7 HAL ETH
  *
  * @copyright
  * This file is part of FreeRTOS-OS Project.

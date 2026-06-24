@@ -30,7 +30,8 @@ medical-grade safety stack.
 
 > **Documentation:**  [Architecture deep-dive](docs/ARCHITECTURE.md) ·
 > [Per-vendor `/arch` contract](arch/README.md) ·
-> [Per-devboard examples](examples/README.md)
+> [Per-devboard examples](examples/README.md) ·
+> [Test plan](TEST.md)
 
 <hr/>
 
@@ -41,7 +42,8 @@ medical-grade safety stack.
 | 🐧 **Linux-inspired API**            | `os_thread_create()`, `request_irq()`, intrusive `list_head`, `kmalloc/kfree` — familiar mental model, embedded footprint. |
 | 🔌 **Vendor-agnostic driver model**  | Generic `drv_*` vtables, vendor HALs under `drivers/hal/<vendor>/`.  Drop in a new MCU without touching the application. |
 | 🧵 **Service-thread architecture**   | UART, I²C, SPI, GPIO, ADC peripherals are each owned by a FreeRTOS task — no ad-hoc concurrency in app code. |
-| 🐚 **Interactive shell**             | FreeRTOS-Plus-CLI on UART, ready to register custom commands.  Built-in `ps`, `mem`, `log dump`, `reset`. |
+| 🐚 **Interactive shell**             | FreeRTOS-Plus-CLI on UART with Linux-style commands: `ps`, `free`, `heap`, `tasks`, `uname`, `uptime`, `echo`, `clear`, `whoami`, `hostname`, `iic-scan`, `ping`, `reboot`.  Register your own with one descriptor. |
+| 🌐 **TCP/IP networking**             | lwIP (threaded, `NO_SYS=0`) over on-board Ethernet (STM32H7 + LAN8742 RMII).  ICMP responder **and** a `ping` client; static identity configured entirely in `lwipopts.h`. |
 | 🛡️ **Medical-grade safety stack**   | IWDG + per-task software watchdog + `.noinit` fault record + safe-state shutdown — designed against IEC 62304 / 60601-1. |
 | 🏭 **Code-gen pipeline**             | One XML per board → BSP, IRQ tables, NVIC init.  One XML per DSP module set → CMSIS-DSP build slice. |
 | 🧪 **Per-target CI**                 | 5-stage pipeline (gen → cppcheck → MISRA → build → Doxygen) runs for every supported target on every push. |
