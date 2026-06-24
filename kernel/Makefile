@@ -42,6 +42,7 @@ obj-y += kernel/FreeRTOS-Kernel/tasks.o
 obj-y += kernel/FreeRTOS-Kernel/timers.o
 obj-y += kernel/FreeRTOS-Kernel/event_groups.o
 obj-y += kernel/kernel_thread.o
+obj-y += kernel/kernel_ipc.o
 obj-y += kernel/FreeRTOS-Kernel/portable/MemMang/heap_4.o
 obj-y += kernel/FreeRTOS-Plus-CLI/FreeRTOS_CLI.o
 

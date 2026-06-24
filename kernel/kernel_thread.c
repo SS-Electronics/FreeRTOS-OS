@@ -222,6 +222,17 @@ void __SECTION_OS os_resume_thread(uint32_t thread_id)
 }
 
 
+/**
+ * @brief  Milliseconds elapsed since the scheduler started.
+ * @note   Converts the FreeRTOS tick count to milliseconds. With a 1 kHz
+ *         tick the conversion is 1:1; the value wraps after ~49 days.
+ */
+uint32_t __SECTION_OS os_uptime_ms(void)
+{
+	return (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+}
+
+
 /* ── Thread diagnostic accessors ─────────────────────────────────────────── */
 
 /**

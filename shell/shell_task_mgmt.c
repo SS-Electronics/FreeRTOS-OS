@@ -1,6 +1,6 @@
 /**
  * @file        shell_task_mgmt.c
- * @brief       shell_task_mgmt.c — CLI commands: heap, tasks, iic-scan
+ * @brief       shell_task_mgmt.c — OS + Linux-style CLI commands
  * @ingroup     shell
  *
  * @author      Subhajit Roy <subhajitroy005@gmail.com>
@@ -9,7 +9,8 @@
  * @dependency  FreeRTOS-Plus-CLI, UART mgmt service
  *
  * @details
- * shell_task_mgmt.c — CLI commands: heap, tasks, iic-scan
+ * shell_task_mgmt.c — CLI commands: heap, tasks, iic-scan plus Linux-style
+ * commands (echo, clear, uname, ps, free, whoami, hostname).
  *
  * heap
  * ────
@@ -75,6 +76,10 @@
 #include <drv_app/iic_app.h>
 #endif
 #include <board/board_config.h>
+#include <autoconf.h>
+#if defined(CONFIG_NET)
+#include <net/net_ping.h>
+#endif
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -82,6 +87,15 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+
+/* ── uname / hostname identity ────────────────────────────────────────────── */
+
+#define UNAME_SYSNAME   "FreeRTOS-OS"
+#define UNAME_NODENAME  "freertos-os"
+#define UNAME_RELEASE   "1.0"
+#define UNAME_MACHINE   "STM32H723ZG"
+#define UNAME_PROC      "Cortex-M7"
 
 /* ── Forward declarations ─────────────────────────────────────────────────── */
 
@@ -94,6 +108,18 @@ static BaseType_t _cmd_uptime_fn  (char *out, size_t len, const char *in);
 static BaseType_t _cmd_reboot_fn  (char *out, size_t len, const char *in);
 #if defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
 static BaseType_t _cmd_iic_scan_fn(char *out, size_t len, const char *in);
+#endif
+
+/* Linux-style commands. */
+static BaseType_t _cmd_echo_fn    (char *out, size_t len, const char *in);
+static BaseType_t _cmd_clear_fn   (char *out, size_t len, const char *in);
+static BaseType_t _cmd_uname_fn   (char *out, size_t len, const char *in);
+static BaseType_t _cmd_ps_fn      (char *out, size_t len, const char *in);
+static BaseType_t _cmd_free_fn    (char *out, size_t len, const char *in);
+static BaseType_t _cmd_whoami_fn  (char *out, size_t len, const char *in);
+static BaseType_t _cmd_hostname_fn(char *out, size_t len, const char *in);
+#if defined(CONFIG_NET)
+static BaseType_t _cmd_ping_fn    (char *out, size_t len, const char *in);
 #endif
 
 /* ── CLI command descriptors ──────────────────────────────────────────────── */
@@ -152,6 +178,61 @@ static const CLI_Command_Definition_t _cmd_iic_scan = {
 };
 #endif
 
+/* ── Linux-style command descriptors ──────────────────────────────────────── */
+
+static const CLI_Command_Definition_t _cmd_echo = {
+    "echo",
+    "echo [-n] [text...]\r\n"
+    "  Write the arguments to the console. -n omits the trailing newline.\r\n",
+    _cmd_echo_fn, -1
+};
+
+static const CLI_Command_Definition_t _cmd_clear = {
+    "clear",
+    "clear\r\n  Clear the terminal screen.\r\n",
+    _cmd_clear_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_uname = {
+    "uname",
+    "uname [-a|-s|-n|-r|-m]\r\n"
+    "  Print system information (sysname/nodename/release/machine).\r\n",
+    _cmd_uname_fn, -1
+};
+
+static const CLI_Command_Definition_t _cmd_ps = {
+    "ps",
+    "ps\r\n  Report task status, Linux ps style (PID STAT STACK COMMAND).\r\n",
+    _cmd_ps_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_free = {
+    "free",
+    "free\r\n  Display heap memory usage (total/used/free/min-free) in bytes.\r\n",
+    _cmd_free_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_whoami = {
+    "whoami",
+    "whoami\r\n  Print the effective user name.\r\n",
+    _cmd_whoami_fn, 0
+};
+
+static const CLI_Command_Definition_t _cmd_hostname = {
+    "hostname",
+    "hostname\r\n  Print the system host name.\r\n",
+    _cmd_hostname_fn, 0
+};
+
+#if defined(CONFIG_NET)
+static const CLI_Command_Definition_t _cmd_ping = {
+    "ping",
+    "ping <ip> [count]\r\n"
+    "  Send ICMP echo requests to an IPv4 host (default 4 packets).\r\n",
+    _cmd_ping_fn, -1
+};
+#endif
+
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
 static const char * const _state_str[] = {
@@ -163,6 +244,20 @@ static const char *_state_to_str(eTaskState s)
     if ((unsigned)s < (sizeof(_state_str) / sizeof(_state_str[0])))
         return _state_str[(unsigned)s];
     return "?";
+}
+
+/* Map a FreeRTOS task state to a Linux ps STAT letter. */
+static char _state_to_linux(eTaskState s)
+{
+    switch (s)
+    {
+        case eRunning:   return 'R';   /* running                */
+        case eReady:     return 'R';   /* runnable               */
+        case eBlocked:   return 'S';   /* interruptible sleep    */
+        case eSuspended: return 'T';   /* stopped                */
+        case eDeleted:   return 'Z';   /* zombie / being deleted */
+        default:         return '?';
+    }
 }
 
 /* ── heap command ─────────────────────────────────────────────────────────── */
@@ -430,6 +525,371 @@ static BaseType_t _cmd_iic_scan_fn(char *out, size_t len, const char *in)
 
 #endif /* CONFIG_INC_SERVICE_IIC_MGMT */
 
+/* ── echo command ─────────────────────────────────────────────────────────── */
+
+__SECTION_OS
+static BaseType_t _cmd_echo_fn(char *out, size_t len, const char *in)
+{
+    BaseType_t  plen;
+    UBaseType_t idx        = 1;
+    bool        no_newline = false;
+    size_t      pos        = 0;
+
+    out[0] = '\0';
+
+    const char *p = FreeRTOS_CLIGetParameter(in, idx, &plen);
+
+    /* A leading -n suppresses the trailing newline, like /bin/echo. */
+    if (p != NULL && plen == 2 && strncmp(p, "-n", 2) == 0)
+    {
+        no_newline = true;
+        idx++;
+        p = FreeRTOS_CLIGetParameter(in, idx, &plen);
+    }
+
+    /* Join the remaining parameters with single spaces. */
+    while (p != NULL && pos < (len - 1U))
+    {
+        if (pos != 0U)
+        {
+            out[pos++] = ' ';
+        }
+
+        int n = snprintf(out + pos, len - pos, "%.*s", (int)plen, p);
+        if (n < 0)
+        {
+            break;
+        }
+        pos += ((size_t)n < (len - pos)) ? (size_t)n : (len - pos - 1U);
+
+        idx++;
+        p = FreeRTOS_CLIGetParameter(in, idx, &plen);
+    }
+
+    if (!no_newline && pos < (len - 2U))
+    {
+        out[pos++] = '\r';
+        out[pos++] = '\n';
+    }
+    out[pos] = '\0';
+
+    return pdFALSE;
+}
+
+/* ── clear command ────────────────────────────────────────────────────────── */
+
+__SECTION_OS
+static BaseType_t _cmd_clear_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+    /* ANSI: erase screen + home cursor. */
+    snprintf(out, len, "\033[2J\033[H");
+    return pdFALSE;
+}
+
+/* ── uname command ────────────────────────────────────────────────────────── */
+
+__SECTION_OS
+static BaseType_t _cmd_uname_fn(char *out, size_t len, const char *in)
+{
+    BaseType_t  plen;
+    const char *p = FreeRTOS_CLIGetParameter(in, 1, &plen);
+
+    if (p == NULL)
+    {
+        snprintf(out, len, "%s\r\n", UNAME_SYSNAME);
+        return pdFALSE;
+    }
+
+    if (plen == 2 && strncmp(p, "-a", 2) == 0)
+    {
+        snprintf(out, len, "%s %s %s %s %s\r\n",
+                 UNAME_SYSNAME, UNAME_NODENAME, UNAME_RELEASE,
+                 UNAME_MACHINE, UNAME_PROC);
+    }
+    else if (plen == 2 && strncmp(p, "-s", 2) == 0)
+    {
+        snprintf(out, len, "%s\r\n", UNAME_SYSNAME);
+    }
+    else if (plen == 2 && strncmp(p, "-n", 2) == 0)
+    {
+        snprintf(out, len, "%s\r\n", UNAME_NODENAME);
+    }
+    else if (plen == 2 && strncmp(p, "-r", 2) == 0)
+    {
+        snprintf(out, len, "%s\r\n", UNAME_RELEASE);
+    }
+    else if (plen == 2 && strncmp(p, "-m", 2) == 0)
+    {
+        snprintf(out, len, "%s\r\n", UNAME_MACHINE);
+    }
+    else
+    {
+        snprintf(out, len, "uname: unknown option '%.*s'\r\n", (int)plen, p);
+    }
+
+    return pdFALSE;
+}
+
+/* ── ps command (multi-shot, Linux style) ─────────────────────────────────── */
+
+/* Same multi-shot convention as 'tasks': -1 header, 0..N rows, then timer. */
+static int16_t _ps_line = -1;
+
+__SECTION_OS
+static BaseType_t _cmd_ps_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+
+    const sys_health_t *h = task_mgr_get_health();
+
+    if (h == NULL)
+    {
+        _ps_line = -1;
+        snprintf(out, len, "ps: task manager unavailable\r\n");
+        return pdFALSE;
+    }
+
+    /* ── Header ── */
+    if (_ps_line == -1)
+    {
+        snprintf(out, len, "  PID S  STACK  COMMAND\r\n");
+        _ps_line = 0;
+        return pdTRUE;
+    }
+
+    /* ── Per-task rows ── */
+    if (_ps_line < (int16_t)h->task_count)
+    {
+        const task_health_t *t = &h->tasks[_ps_line];
+        snprintf(out, len, "  %3lu %c %6u  %s\r\n",
+                 (unsigned long)t->thread_id,
+                 _state_to_linux(t->state),
+                 (unsigned)t->stack_hwm,
+                 t->name ? t->name : "?");
+        _ps_line++;
+
+        vTaskDelay(pdMS_TO_TICKS(10));
+
+        return pdTRUE;
+    }
+
+    /* ── Timer-daemon row ── */
+    if (_ps_line == (int16_t)h->task_count && h->timer_task_valid)
+    {
+        const task_health_t *t = &h->timer_task;
+        snprintf(out, len, "    T %c %6u  %s\r\n",
+                 _state_to_linux(t->state),
+                 (unsigned)t->stack_hwm,
+                 t->name ? t->name : "Tmr Svc");
+        _ps_line++;
+        return pdTRUE;
+    }
+
+    /* ── Done ── */
+    out[0] = '\0';
+    _ps_line = -1;
+    return pdFALSE;
+}
+
+/* ── free command ─────────────────────────────────────────────────────────── */
+
+__SECTION_OS
+static BaseType_t _cmd_free_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+
+    size_t total = (size_t)configTOTAL_HEAP_SIZE;
+    size_t fr    = (size_t)xPortGetFreeHeapSize();
+    size_t used  = total - fr;
+    size_t minf  = (size_t)xPortGetMinimumEverFreeHeapSize();
+
+    snprintf(out, len,
+             "              total       used       free   min-free\r\n"
+             "Mem:     %10u %10u %10u %10u\r\n",
+             (unsigned)total, (unsigned)used, (unsigned)fr, (unsigned)minf);
+
+    return pdFALSE;
+}
+
+/* ── whoami / hostname commands ───────────────────────────────────────────── */
+
+__SECTION_OS
+static BaseType_t _cmd_whoami_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+    snprintf(out, len, "root\r\n");
+    return pdFALSE;
+}
+
+__SECTION_OS
+static BaseType_t _cmd_hostname_fn(char *out, size_t len, const char *in)
+{
+    (void)in;
+    snprintf(out, len, "%s\r\n", UNAME_NODENAME);
+    return pdFALSE;
+}
+
+/* ── ping command (multi-shot) ────────────────────────────────────────────── */
+
+#if defined(CONFIG_NET)
+
+#define _PING_DEFAULT_COUNT   4U
+#define _PING_MAX_COUNT       64U
+#define _PING_TIMEOUT_MS      1000U
+#define _PING_INTERVAL_MS     1000U
+
+/*
+ * Multi-shot state:
+ *   -1            parse args, open session, print header
+ *   0..count-1    one echo request + result line per shot
+ *   count         print the statistics summary, close, reset to -1
+ */
+static int16_t  _ping_state = -1;
+static uint16_t _ping_count;
+static uint16_t _ping_tx;
+static uint16_t _ping_rx;
+static uint32_t _ping_rtt_min;
+static uint32_t _ping_rtt_max;
+static uint32_t _ping_rtt_sum;
+static char     _ping_ip[16];
+
+__SECTION_OS
+static BaseType_t _cmd_ping_fn(char *out, size_t len, const char *in)
+{
+    /* ── First call: parse args, open session, emit header ── */
+    if (_ping_state == -1)
+    {
+        BaseType_t  plen;
+        const char *ip = FreeRTOS_CLIGetParameter(in, 1, &plen);
+
+        if (ip == NULL || plen == 0 || plen >= (BaseType_t)sizeof(_ping_ip))
+        {
+            snprintf(out, len, "Usage: ping <ip> [count]\r\n");
+            return pdFALSE;
+        }
+
+        memcpy(_ping_ip, ip, (size_t)plen);
+        _ping_ip[plen] = '\0';
+
+        /* Optional decimal packet count. */
+        uint16_t    count = _PING_DEFAULT_COUNT;
+        const char *cnt   = FreeRTOS_CLIGetParameter(in, 2, &plen);
+        if (cnt != NULL && plen > 0)
+        {
+            uint32_t v = 0;
+            for (BaseType_t i = 0; i < plen; i++)
+            {
+                if (cnt[i] < '0' || cnt[i] > '9') { v = 0; break; }
+                v = (v * 10U) + (uint32_t)(cnt[i] - '0');
+            }
+            if (v == 0)               v = _PING_DEFAULT_COUNT;
+            if (v > _PING_MAX_COUNT)   v = _PING_MAX_COUNT;
+            count = (uint16_t)v;
+        }
+
+        int32_t rc = net_ping_open(_ping_ip);
+        if (rc == OS_ERR_INVALID_ARG)
+        {
+            snprintf(out, len, "ping: invalid address '%s'\r\n", _ping_ip);
+            return pdFALSE;
+        }
+        if (rc != OS_ERR_NONE)
+        {
+            snprintf(out, len, "ping: cannot start session (err %ld)\r\n",
+                     (long)rc);
+            return pdFALSE;
+        }
+
+        _ping_count   = count;
+        _ping_tx      = 0;
+        _ping_rx      = 0;
+        _ping_rtt_min = 0xFFFFFFFFUL;
+        _ping_rtt_max = 0;
+        _ping_rtt_sum = 0;
+        _ping_state   = 0;
+
+        snprintf(out, len, "PING %s: %u data bytes\r\n",
+                 _ping_ip, (unsigned)(NET_PING_PAYLOAD_LEN + 8U));
+        return pdTRUE;
+    }
+
+    /* ── Per-packet shots ── */
+    if (_ping_state < (int16_t)_ping_count)
+    {
+        uint16_t seq    = (uint16_t)(_ping_state + 1);
+        uint32_t rtt_us = 0;
+
+        _ping_tx++;
+        int32_t rc = net_ping_once(seq, _PING_TIMEOUT_MS, &rtt_us);
+
+        if (rc == OS_ERR_NONE)
+        {
+            _ping_rx++;
+            _ping_rtt_sum += rtt_us;
+            if (rtt_us < _ping_rtt_min) _ping_rtt_min = rtt_us;
+            if (rtt_us > _ping_rtt_max) _ping_rtt_max = rtt_us;
+
+            snprintf(out, len,
+                     "%u bytes from %s: icmp_seq=%u time=%lu.%03lu ms\r\n",
+                     (unsigned)(NET_PING_PAYLOAD_LEN + 8U),
+                     _ping_ip, (unsigned)seq,
+                     (unsigned long)(rtt_us / 1000U),
+                     (unsigned long)(rtt_us % 1000U));
+
+            /* Pace to ~1 packet/sec like the classic ping. */
+            uint32_t rtt_ms = rtt_us / 1000U;
+            if (rtt_ms < _PING_INTERVAL_MS)
+                vTaskDelay(pdMS_TO_TICKS(_PING_INTERVAL_MS - rtt_ms));
+        }
+        else
+        {
+            snprintf(out, len, "Request timeout for icmp_seq %u\r\n",
+                     (unsigned)seq);
+            /* A timeout already consumed ~1 s in the wait — no extra delay. */
+        }
+
+        _ping_state++;
+        return pdTRUE;
+    }
+
+    /* ── Statistics summary (final shot) ── */
+    {
+        unsigned loss = (_ping_tx > 0)
+            ? (unsigned)(((uint32_t)(_ping_tx - _ping_rx) * 100U) / _ping_tx)
+            : 0U;
+
+        if (_ping_rx > 0)
+        {
+            uint32_t avg = _ping_rtt_sum / _ping_rx;
+            snprintf(out, len,
+                     "--- %s ping statistics ---\r\n"
+                     "%u transmitted, %u received, %u%% packet loss\r\n"
+                     "rtt min/avg/max = %lu.%03lu/%lu.%03lu/%lu.%03lu ms\r\n",
+                     _ping_ip, (unsigned)_ping_tx, (unsigned)_ping_rx, loss,
+                     (unsigned long)(_ping_rtt_min / 1000U),
+                     (unsigned long)(_ping_rtt_min % 1000U),
+                     (unsigned long)(avg / 1000U),
+                     (unsigned long)(avg % 1000U),
+                     (unsigned long)(_ping_rtt_max / 1000U),
+                     (unsigned long)(_ping_rtt_max % 1000U));
+        }
+        else
+        {
+            snprintf(out, len,
+                     "--- %s ping statistics ---\r\n"
+                     "%u transmitted, 0 received, 100%% packet loss\r\n",
+                     _ping_ip, (unsigned)_ping_tx);
+        }
+    }
+
+    net_ping_close();
+    _ping_state = -1;
+    return pdFALSE;
+}
+
+#endif /* CONFIG_NET */
+
 /* ── Registration ─────────────────────────────────────────────────────────── */
 
 void shell_task_mgmt_register_cmds(void)
@@ -444,5 +904,17 @@ void shell_task_mgmt_register_cmds(void)
     FreeRTOS_CLIRegisterCommand(&_cmd_debug);
 #if defined(CONFIG_INC_SERVICE_IIC_MGMT) && (CONFIG_INC_SERVICE_IIC_MGMT == 1)
     FreeRTOS_CLIRegisterCommand(&_cmd_iic_scan);
+#endif
+
+    /* Linux-style commands. */
+    FreeRTOS_CLIRegisterCommand(&_cmd_echo);
+    FreeRTOS_CLIRegisterCommand(&_cmd_clear);
+    FreeRTOS_CLIRegisterCommand(&_cmd_uname);
+    FreeRTOS_CLIRegisterCommand(&_cmd_ps);
+    FreeRTOS_CLIRegisterCommand(&_cmd_free);
+    FreeRTOS_CLIRegisterCommand(&_cmd_whoami);
+    FreeRTOS_CLIRegisterCommand(&_cmd_hostname);
+#if defined(CONFIG_NET)
+    FreeRTOS_CLIRegisterCommand(&_cmd_ping);
 #endif
 }

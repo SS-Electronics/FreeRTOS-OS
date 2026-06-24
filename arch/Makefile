@@ -149,6 +149,11 @@ obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_i2c_ex.o
 obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_spi.o
 obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_spi_ex.o
 
+# Ethernet MAC — enabled when CONFIG_NET=y (lwIP ping bring-up)
+ifeq ($(CONFIG_NET),1)
+obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_eth.o
+endif
+
 # ADC — enabled when CONFIG_HAL_ADC_MODULE_ENABLED=y
 ifeq ($(CONFIG_HAL_ADC_MODULE_ENABLED),1)
 obj-y += arch/devices/STM/stm32h7xx-hal-driver/Src/stm32h7xx_hal_adc.o

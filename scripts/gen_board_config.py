@@ -68,7 +68,8 @@ class VendorCodegen:
         """Return (fn_name: str, fn_definition: str) for a clock-enable wrapper."""
         raise NotImplementedError
 
-    def all_clk_enable_body(self, ports: set, uarts: list, i2cs: list, spis: list) -> str:
+    def all_clk_enable_body(self, ports: set, uarts: list, i2cs: list, spis: list,
+                            spi_guard: str = None) -> str:
         """Return body of board_clk_enable(void) — all RCC clock enables."""
         raise NotImplementedError
 
@@ -202,7 +203,7 @@ class STM32Codegen(VendorCodegen):
         body = f'static void {fn}(void) {{ __HAL_RCC_{instance}_CLK_ENABLE(); }}'
         return fn, body
 
-    def all_clk_enable_body(self, ports, uarts, i2cs, spis):
+    def all_clk_enable_body(self, ports, uarts, i2cs, spis, spi_guard=None):
         lines = ['    /* System bus clocks */',
                  '    __HAL_RCC_SYSCFG_CLK_ENABLE();']
         if self._family != 'H7':
@@ -220,11 +221,14 @@ class STM32Codegen(VendorCodegen):
                 lines.append(f'    __HAL_RCC_{inst}_CLK_ENABLE();')
             lines.append('#endif /* HAL_I2C_MODULE_ENABLED */')
         if spis:
-            lines += ['', '#ifdef HAL_SPI_MODULE_ENABLED',
-                      '    /* SPI peripheral clocks */']
+            spi_if  = ('#if defined(HAL_SPI_MODULE_ENABLED) && '
+                       f'({spi_guard})') if spi_guard else '#ifdef HAL_SPI_MODULE_ENABLED'
+            spi_end = (f'#endif /* HAL_SPI_MODULE_ENABLED && {spi_guard} */'
+                       if spi_guard else '#endif /* HAL_SPI_MODULE_ENABLED */')
+            lines += ['', spi_if, '    /* SPI peripheral clocks */']
             for inst in spis:
                 lines.append(f'    __HAL_RCC_{inst}_CLK_ENABLE();')
-            lines.append('#endif /* HAL_SPI_MODULE_ENABLED */')
+            lines.append(spi_end)
         if ports:
             lines += ['', '    /* GPIO port clocks for alternate-function peripheral pins */']
             for p in sorted(ports):
@@ -339,7 +343,7 @@ class InfineonCodegen(VendorCodegen):
                 f'}}')
         return fn, body
 
-    def all_clk_enable_body(self, ports, uarts, i2cs, spis):
+    def all_clk_enable_body(self, ports, uarts, i2cs, spis, spi_guard=None):
         return '    /* INFO: Infineon XMC GPIO ports are always clocked — no enable needed. */'
 
     def gpio_port(self, letter):          return f'XMC_GPIO_PORT{letter.upper()}'
@@ -392,7 +396,7 @@ class MicrochipCodegen(VendorCodegen):
                 f'}}')
         return fn, body
 
-    def all_clk_enable_body(self, ports, uarts, i2cs, spis):
+    def all_clk_enable_body(self, ports, uarts, i2cs, spis, spi_guard=None):
         return '    /* TODO: Microchip — enable GPIO port clocks via PORT/GPIO SFRs */'
 
     def gpio_port(self, letter):          return f'PORT_{letter.upper()}'
@@ -592,6 +596,15 @@ class BoardConfigGenerator:
         self.gpios = periph.findall('gpio')
         self.adcs  = periph.findall('adc')
 
+        # Optional board-level pin-conflict guard for the whole SPI subsystem.
+        # A `guard="..."` attribute on any <spi> element compiles the SPI device
+        # IDs, table, clocks and handle behind `#if (<guard>)`. Used when an SPI
+        # pin collides with another peripheral on the same board (e.g. SPI1 MOSI
+        # on PA7 vs. the RMII ETH CRS_DV): guard="!defined(CONFIG_NET)" yields
+        # SPI when Ethernet is out, Ethernet owning the pin when CONFIG_NET=y.
+        self.spi_guard = next(
+            (s.get('guard') for s in self.spis if s.get('guard')), None)
+
         # Detect role-assigned UARTs (role="shell", role="debug", …)
         self.uart_roles = {}   # role_name → uart element
         for u in self.uarts:
@@ -638,21 +651,31 @@ class BoardConfigGenerator:
         L = []
         L.append(_BANNER.format(xml_path=self.xml_path, date=date.today()))
         L.append(_INC_GUARD_OPEN.format(guard=guard))
+        # autoconf.h gives CONFIG_* visibility for any group_guard below,
+        # regardless of this header's include order in a consumer.
+        L.append('#include "autoconf.h"')
+        L.append('')
         L.append(f'/* Board: {self.board_name}  MCU: {self.mcu} */\n')
 
-        def section(tag, items, label):
+        def section(tag, items, label, group_guard=None):
             if not items: return
             L.append(f'/* {label} device IDs */')
+            if group_guard:
+                L.append(f'#if ({group_guard})')
             for i, el in enumerate(items):
                 uid = el.get('id', f'{tag.upper()}_{i}')
                 dev = el.get('dev_id', str(i))
                 L.append(f'#define {uid:<32} {dev}')
             L.append(f'#define BOARD_{tag.upper()}_COUNT             {len(items)}')
+            if group_guard:
+                L.append('#else')
+                L.append(f'#define BOARD_{tag.upper()}_COUNT             0')
+                L.append(f'#endif /* {group_guard} */')
             L.append('')
 
         section('uart', self.uarts, 'UART')
         section('iic',  self.i2cs,  'I2C')
-        section('spi',  self.spis,  'SPI')
+        section('spi',  self.spis,  'SPI', self.spi_guard)
         section('gpio', self.gpios, 'GPIO')
         section('adc',  self.adcs,  'ADC')
 
@@ -686,10 +709,13 @@ class BoardConfigGenerator:
             htype = cg.hal_handle_type(ptype)
             if not htype or not items:
                 continue
-            mod_guard = cg.hal_handle_guard(ptype)
+            mod_guard   = cg.hal_handle_guard(ptype)
+            extra_guard = self.spi_guard if ptype == 'spi' else None
             includes  = cg.hal_handle_includes(ptype)
             if mod_guard:
                 L.append(f'#ifdef {mod_guard}')
+            if extra_guard:
+                L.append(f'#if ({extra_guard})')
             for inc in includes:
                 L.append(inc)
             for item in items:
@@ -697,6 +723,8 @@ class BoardConfigGenerator:
                 hname = cg.hal_handle_name(inst)
                 if hname:
                     L.append(f'extern {htype} {hname};')
+            if extra_guard:
+                L.append(f'#endif /* {extra_guard} */')
             if mod_guard:
                 L.append(f'#endif /* {mod_guard} */')
             L.append('')
@@ -1000,14 +1028,19 @@ class BoardConfigGenerator:
                 htype = cg.hal_handle_type(ptype)
                 if not htype or not items:
                     continue
-                mod_guard = cg.hal_handle_guard(ptype)
+                mod_guard   = cg.hal_handle_guard(ptype)
+                extra_guard = self.spi_guard if ptype == 'spi' else None
                 if mod_guard:
                     L.append(f'#ifdef {mod_guard}')
+                if extra_guard:
+                    L.append(f'#if ({extra_guard})')
                 for item in items:
                     inst  = item.get('instance', '')
                     hname = cg.hal_handle_name(inst)
                     if hname:
                         L.append(f'{htype} {hname};')
+                if extra_guard:
+                    L.append(f'#endif /* {extra_guard} */')
                 if mod_guard:
                     L.append(f'#endif /* {mod_guard} */')
             L.append('')
@@ -1067,8 +1100,13 @@ class BoardConfigGenerator:
 
         # ── SPI table
         if self.spis:
+            spi_if  = ('#if defined(HAL_SPI_MODULE_ENABLED) && '
+                       f'({self.spi_guard})') if self.spi_guard \
+                      else '#ifdef HAL_SPI_MODULE_ENABLED'
+            spi_end = (f'#endif /* HAL_SPI_MODULE_ENABLED && {self.spi_guard} */'
+                       if self.spi_guard else '#endif /* HAL_SPI_MODULE_ENABLED */')
             L.append('/* ── SPI table ──────────────────────────────────────────────────────────── */')
-            L.append('#ifdef HAL_SPI_MODULE_ENABLED')
+            L.append(spi_if)
             L.append('static const board_spi_desc_t _spi_table[BOARD_SPI_COUNT] = {')
             for i, s in enumerate(self.spis):
                 L.extend(self._spi_entry(s, i))
@@ -1078,7 +1116,7 @@ class BoardConfigGenerator:
             L.append('#define _SPI_TABLE  NULL')
             L.append('#undef  BOARD_SPI_COUNT')
             L.append('#define BOARD_SPI_COUNT 0')
-            L.append('#endif /* HAL_SPI_MODULE_ENABLED */')
+            L.append(spi_end)
             L.append('')
 
         # ── GPIO table
@@ -1367,7 +1405,8 @@ class BoardConfigGenerator:
             '',
             'void board_clk_enable(void)',
             '{',
-            cg.all_clk_enable_body(all_ports, uart_insts, i2c_insts, spi_insts),
+            cg.all_clk_enable_body(all_ports, uart_insts, i2c_insts, spi_insts,
+                                   self.spi_guard),
             '}',
             '',
         ]

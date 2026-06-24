@@ -184,7 +184,20 @@ static void _shell_write(const char *str, uint16_t len)
         return;
 
     for (uint16_t i = 0; i < len; i++)
-        ringbuffer_putchar(rb, (uint8_t)str[i]);
+    {
+        /* Back-pressure: when the TX ring is full, kick the drain and yield so
+         * the UART can catch up. Without this, long output (e.g. 'help') runs
+         * faster than 115200 baud drains and overflows the ring, dropping and
+         * corrupting bytes. Bounded so a stuck UART cannot hang the shell. */
+        uint16_t guard = 0;
+        while (ringbuffer_putchar(rb, (uint8_t)str[i]) == 0U)
+        {
+            drv_uart_tx_start(UART_SHELL_HW_ID);
+            os_thread_delay(1);
+            if (++guard > 1000U)        /* ~1 s: give up rather than block forever */
+                return;
+        }
+    }
 
     drv_uart_tx_start(UART_SHELL_HW_ID);
 }

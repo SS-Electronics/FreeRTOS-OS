@@ -356,9 +356,13 @@ def parse_dispatch_data(root):
             irqn             = elem.get("irqn")
             name             = elem.get("name", "")
             if dispatch_call and irqn:
+                # 'self_guard' (optional) wraps the dispatch body in #ifdef with
+                # an #else empty stub, so the handler symbol still exists when
+                # the guarded driver is compiled out (e.g. ETH without CONFIG_NET).
                 handler_map[_irqn_to_handler(irqn)] = {
                     'kind': 'sys_dispatch', 'call': dispatch_call,
-                    'guard': '', 'label': name,
+                    'guard': '', 'self_guard': elem.get("guard", ""),
+                    'label': name,
                 }
                 if dispatch_include:
                     extra_includes.add(dispatch_include)
@@ -656,9 +660,15 @@ def gen_periph_dispatch_c(handler_map, extra_includes, vec_entries, out_path):
         elif kind == 'sys_dispatch':
             label = info.get('label', '')
             call  = info['call']
+            sguard = info.get('self_guard', '')
             if label:
                 lines.append(f'/* {label} */\n')
-            lines.append(f'void {handler}(void)\n{{\n    {call};\n}}\n\n')
+            if sguard:
+                lines.append(f'#ifdef {sguard}\n')
+                lines.append(f'void {handler}(void)\n{{\n    {call};\n}}\n')
+                lines.append(f'#else\nvoid {handler}(void) {{}}\n#endif\n\n')
+            else:
+                lines.append(f'void {handler}(void)\n{{\n    {call};\n}}\n\n')
 
         elif kind == 'exti_direct':
             n = info['n']

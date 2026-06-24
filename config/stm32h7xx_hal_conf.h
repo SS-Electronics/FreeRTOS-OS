@@ -44,6 +44,7 @@ extern "C" {
 #define HAL_UART_MODULE_ENABLED
 #define HAL_SPI_MODULE_ENABLED
 #define HAL_I2C_MODULE_ENABLED
+#define HAL_ETH_MODULE_ENABLED
 
 /* Timer */
 #define HAL_TIM_MODULE_ENABLED
@@ -174,6 +175,7 @@ extern "C" {
 #include "stm32h7xx_hal_spi.h"
 #include "stm32h7xx_hal_tim.h"
 #include "stm32h7xx_hal_uart.h"
+#include "stm32h7xx_hal_eth.h"
 
 
 #include "device.h"

@@ -91,6 +91,18 @@
        dispatch="hal_timebase_stm32_irq_handler()"
        dispatch_include="&lt;drivers/hal/stm32/hal_timebase_stm32.h&gt;"/>
 
+  <!--
+    Ethernet global IRQ (irqn=61). RX path for the lwIP stack: the ISR runs
+    HAL_ETH_IRQHandler, which fires HAL_ETH_RxCpltCallback to wake the net
+    thread. Priority 6 (>= configLIBRARY_MAX_SYSCALL_IRQ_PRIORITY) so the
+    handler may use FreeRTOS *FromISR APIs. Guarded so non-CONFIG_NET builds
+    still link (empty stub when the ETH driver is compiled out).
+  -->
+  <sys name="Ethernet" irqn="ETH_IRQn" priority="6" action="enable"
+       guard="HAL_ETH_MODULE_ENABLED"
+       dispatch="hal_eth_stm32_irq_handler()"
+       dispatch_include="&lt;drivers/hal/stm32/hal_eth_stm32.h&gt;"/>
+
   <!-- ═══════════════════════════════════════════════════════════════════════
        STM32H723 peripheral vector table  (RM0468 Table 122)
        Only vectors that have dedicated handlers are listed; remaining

@@ -54,6 +54,7 @@ MEMORY
 {
   DTCM          (xrw) : ORIGIN = 0x20000000, LENGTH = 128K   /* primary CPU RAM         */
   AXI_SRAM      (xrw) : ORIGIN = 0x24000000, LENGTH = 320K   /* DMA-accessible SRAM     */
+  RAM_D2        (xrw) : ORIGIN = 0x30000000, LENGTH = 32K    /* D2 SRAM1/2 — ETH DMA    */
   FLASH         (rx)  : ORIGIN = 0x08000000, LENGTH = 1024K  /* single flat flash region */
 }
 
@@ -178,6 +179,21 @@ SECTIONS
     . = ALIGN(16);
     __inference_arena_end = .;
   } > AXI_SRAM
+
+  /* D2 SRAM — Ethernet DMA descriptors and packet buffers.
+   * The MAC DMA can reach D2 (0x30000000) but not DTCM. The ETH driver makes
+   * this window MPU non-cacheable at runtime, so contents stay coherent with
+   * DMA. NOLOAD: scratch, not zeroed at boot (the driver owns initialisation).
+   * Opt-in via __attribute__((section(".eth_d2"))). */
+  .eth_d2 (NOLOAD) :
+  {
+    . = ALIGN(4);
+    __eth_d2_start = .;
+    KEEP(*(.eth_d2))
+    KEEP(*(.eth_d2*))
+    . = ALIGN(4);
+    __eth_d2_end = .;
+  } > RAM_D2
 
   /* Uninitialized data (BSS) */
   .bss (NOLOAD) :

@@ -44,6 +44,10 @@ obj-y += drivers/hal/stm32/hal_dma_stm32.o
 ifeq ($(CONFIG_HAL_ADC_MODULE_ENABLED),1)
 obj-y += drivers/hal/stm32/hal_adc_stm32.o
 endif
+# Ethernet MAC backend — only the H7 target carries the lwIP ping stack
+ifeq ($(CONFIG_NET),1)
+obj-y += drivers/hal/stm32/hal_eth_stm32.o
+endif
 endif
 
 # ── Vendor HAL backend — Infineon ──────────────────────────────────────────

@@ -129,6 +129,14 @@ void		 os_suspend_thread(uint32_t thread_id);
 void		 os_resume_thread(uint32_t thread_id);
 
 /**
+ * Milliseconds elapsed since the scheduler started.
+ * @note  Derived from the RTOS tick; wraps after ~49 days at 1 kHz.
+ *        Used by the lwIP sys_now() port and any service needing a
+ *        monotonic millisecond clock.
+ */
+uint32_t	 os_uptime_ms(void);
+
+/**
  * @defgroup Thread diagnostic accessors
  * @brief Read-only access to the kernel thread list — for use by
  *        kernel_service_task_manager only.  Do not modify the list.
@@ -142,6 +150,94 @@ struct list_node *os_thread_list_get(void);
 int32_t           os_thread_count_get(void);
 
 /** @} */
+
+
+
+/**
+ * @defgroup IPC primitives
+ * @brief    Semaphore / mutex / mailbox wrappers over the underlying RTOS.
+ *
+ * These are thin, vendor-neutral handles intended for OS services and
+ * out-of-tree subsystems (e.g. the lwIP @c sys_arch port) that must not
+ * depend on FreeRTOS headers directly.  Handles are opaque pointers; a
+ * @c NULL handle is always invalid.
+ *
+ * Timeouts are expressed in milliseconds.  Pass @ref OS_WAIT_FOREVER to
+ * block indefinitely.  Blocking calls return @ref OS_ERR_NONE on success
+ * and @ref OS_ERR_TIMEOUT when the deadline elapses.
+ * @{
+ */
+
+/** Opaque counting/binary-semaphore handle. */
+typedef void *os_sem_t;
+/** Opaque mutex handle. */
+typedef void *os_mutex_t;
+/** Opaque mailbox handle (FIFO of @c void* messages). */
+typedef void *os_mbox_t;
+
+/** Block forever (no timeout) sentinel for the IPC wait calls. */
+#define OS_WAIT_FOREVER     (0xFFFFFFFFUL)
+
+/* ── Semaphores ─────────────────────────────────────────────────────────── */
+
+/**
+ * Create a counting semaphore.
+ * @param max_count      Maximum count (use 1 for a binary semaphore).
+ * @param initial_count  Initial count (0..max_count).
+ * @return               Valid handle, or @c NULL on allocation failure.
+ */
+os_sem_t  os_sem_create(uint32_t max_count, uint32_t initial_count);
+
+/** Delete a semaphore and release its resources. */
+void      os_sem_delete(os_sem_t sem);
+
+/** Take (wait/decrement). @return OS_ERR_NONE | OS_ERR_TIMEOUT | OS_ERR_NULL_PTR. */
+int32_t   os_sem_take(os_sem_t sem, uint32_t timeout_ms);
+
+/** Give (signal/increment) from thread context. */
+int32_t   os_sem_give(os_sem_t sem);
+
+/** Give from ISR context; sets *@p hp_task_woken non-zero if a yield is needed. */
+int32_t   os_sem_give_from_isr(os_sem_t sem, int32_t *hp_task_woken);
+
+/* ── Mutexes ────────────────────────────────────────────────────────────── */
+
+/** Create a (priority-inheriting) mutex. @return handle or @c NULL. */
+os_mutex_t os_mutex_create(void);
+
+/** Delete a mutex. */
+void       os_mutex_delete(os_mutex_t mtx);
+
+/** Lock. @return OS_ERR_NONE | OS_ERR_TIMEOUT | OS_ERR_NULL_PTR. */
+int32_t    os_mutex_lock(os_mutex_t mtx, uint32_t timeout_ms);
+
+/** Unlock. */
+int32_t    os_mutex_unlock(os_mutex_t mtx);
+
+/* ── Mailboxes (FIFO of void* pointers) ─────────────────────────────────── */
+
+/** Create a mailbox holding up to @p size pointer-sized messages. */
+os_mbox_t  os_mbox_create(uint32_t size);
+
+/** Delete a mailbox. */
+void       os_mbox_delete(os_mbox_t mbox);
+
+/** Post a message, blocking up to @p timeout_ms if the mailbox is full. */
+int32_t    os_mbox_post(os_mbox_t mbox, void *msg, uint32_t timeout_ms);
+
+/** Post without blocking. @return OS_ERR_NONE | OS_ERR_OP (full) | OS_ERR_NULL_PTR. */
+int32_t    os_mbox_trypost(os_mbox_t mbox, void *msg);
+
+/** Post from ISR context; sets *@p hp_task_woken if a yield is needed. */
+int32_t    os_mbox_trypost_from_isr(os_mbox_t mbox, void *msg, int32_t *hp_task_woken);
+
+/** Fetch a message, blocking up to @p timeout_ms. @c *msg receives the pointer. */
+int32_t    os_mbox_fetch(os_mbox_t mbox, void **msg, uint32_t timeout_ms);
+
+/** Fetch without blocking. @return OS_ERR_NONE | OS_ERR_OP (empty) | OS_ERR_NULL_PTR. */
+int32_t    os_mbox_tryfetch(os_mbox_t mbox, void **msg);
+
+/** @} */ // end of IPC primitives
 
 #ifdef __cplusplus
 }

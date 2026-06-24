@@ -108,10 +108,17 @@
       SPI_FLASH_BUS → SPI1  PA5/SCK  PA6/MISO  PA7/MOSI  (software NSS)
       SPI master, APB2/16 ≈ 17 MHz for external flash / peripheral chips.
       AF5 = SPI1 on STM32H723 pins PA5 / PA6 / PA7.
+
+      PIN CONFLICT: PA7 is also the RMII ETH CRS_DV (carrier/data-valid, AF11).
+      SPI1 and the on-board LAN8742 Ethernet cannot share PA7, so the whole SPI
+      subsystem is guarded off whenever the network stack is built in. With
+      CONFIG_NET=y the SPI device IDs/table/clock/handle all vanish and PA7 is
+      left for hal_eth_stm32's MspInit; with CONFIG_NET unset SPI is available.
     -->
     <spi id="SPI_FLASH_BUS"
          dev_id="0"
          instance="SPI1"
+         guard="!defined(CONFIG_NET)"
          mode="master"
          direction="2lines"
          data_size="8"
