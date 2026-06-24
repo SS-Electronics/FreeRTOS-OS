@@ -103,8 +103,8 @@ done
 
 # Validate --target
 case "$TARGET" in
-    stm32f411|stm32h723) ;;
-    *) error "Unknown --target='${TARGET}'. Valid: stm32f411, stm32h723"; exit 2 ;;
+    stm32f411|stm32h723|stm32u575) ;;
+    *) error "Unknown --target='${TARGET}'. Valid: stm32f411, stm32h723, stm32u575"; exit 2 ;;
 esac
 info "Analysis target: ${TARGET}"
 
@@ -256,6 +256,25 @@ case "$TARGET" in
             "-D__ICACHE_PRESENT=1"
         )
         ;;
+    stm32u575)
+        TARGET_INCLUDES=(
+            "-I${PROJECT_ROOT}/arch/devices/STM/STM32U5xx"
+            "-I${PROJECT_ROOT}/arch/devices/STM/stm32u5xx-hal-driver/Inc"
+            "-I${PROJECT_ROOT}/arch/devices/STM/cmsis-device-u5/Include"
+            "-I${PROJECT_ROOT}/arch/arm/CMSIS_6/CMSIS/Core/Include"
+            # Single-image (non-TrustZone) port — mirrors kernel/Makefile.
+            "-I${PROJECT_ROOT}/kernel/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure"
+        )
+        TARGET_DEFINES=(
+            "-DSTM32U575xx"
+            "-DSTM32U5"
+            "-DARM_MATH_CM33"
+            "-DCORTEX_M33"
+            # M33 has a single-precision FPU (fpv5-sp-d16).
+            "-D__FPU_PRESENT=1"
+            "-D__FPU_USED=1"
+        )
+        ;;
 esac
 
 INCLUDES=(
@@ -291,6 +310,7 @@ CPPCHECK_BOARD_DIR="${PROJECT_ROOT}/build/cppcheck-board/${TARGET}"
 case "$TARGET" in
     stm32f411) BOARD_XML="stm32f411_devboard.xml" ;;
     stm32h723) BOARD_XML="stm32h723_devboard.xml" ;;
+    stm32u575) BOARD_XML="stm32u575_devboard.xml" ;;
 esac
 
 if [[ -d "$APP_BOARD_DIR" && -f "${APP_BOARD_DIR}/irq_hw_conf.h" ]]; then
