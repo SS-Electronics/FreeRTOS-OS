@@ -549,7 +549,7 @@ $(BUILD)/$(TARGET_NAME).elf: $(OBJS) | $(BUILD) $(AUTOCONF)
 	@echo 'Build mode: $(if $(filter 1,$(DEBUG)),DEBUG  (-g3 DWARF  no LTO),RELEASE (-flto  stripped))'
 	@echo '**********************************************'
 
-	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) $(CC_TARGET_PROP) -T"$(LINKER_SCRIPT)" -Wl,-Map=$(BUILD)/$(TARGET_NAME).map -o $@ $(OBJS)
+	@$(CPP) $(TARGET_SYSMBOL_DEF) $(SYMBOL_DEF) $(CC_LINKER_FLAGS) $(CC_TARGET_PROP) -T"$(LINKER_SCRIPT)" -Wl,-Map=$(BUILD)/$(TARGET_NAME).map -o $@ $(OBJS) $(APP_LIBS)
 
 	@echo '##############################################'
 	@echo ' '
